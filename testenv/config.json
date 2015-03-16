@@ -1,0 +1,40 @@
+{
+  "global": {
+    "port": "8080",
+    "hostname": "wiki.hostbaitor.com"
+  },
+  "server": [
+    {
+      "Path": "/var/www/wiki/",
+      "Prefix": "/",
+      "Default": "index",
+      "ServerType": "markdown",
+      "Restricted": [
+        "internal",
+        "handbook"
+      ]
+    },
+    {
+      "Path": "/var/www/wiki/",
+      "Prefix": "/raw/",
+      "Default": {},
+      "ServerType": "raw",
+      "Restricted": [
+        "md",
+        "ini",
+        "json"
+      ]
+    },
+    {
+      "Path": "/var/www/backend/public/",
+      "Prefix": "/site/",
+      "Default": {},
+      "ServerType": "raw",
+      "Restricted": [
+        "md",
+        "ini",
+        "json"
+      ]
+    }
+  ]
+}

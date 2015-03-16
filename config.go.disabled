@@ -1,0 +1,235 @@
+package main
+
+import (
+	"encoding/json"
+	"log"
+	"regexp"
+	"sync"
+)
+
+type ServerConfig struct {
+	Path string
+	Prefix string
+	ServerType string
+	Restricted []string
+}
+
+/*
+type GlobalConfig struct {
+	Port string
+	Hostname string
+}
+*/
+
+/*
+type FullConfig struct {
+	Global globalConfig
+	Servers []serverConfig
+}
+*/
+
+/*
+type configErrorCatcher struct { // TODO come up with a better name for this struct
+	config FullConfig
+	err error
+}
+
+var {
+	config *fullConfig
+	configLock = new(sync.RWMutex)
+}
+*/
+
+func GetConfig() *mini.Config {
+	configLock.RLock()
+	defer configLock.RUnlock()
+	return config
+}
+
+func validateConfig(input interface{}) (bool, []error, interface{}) {
+	allErrors = error
+
+	// set up regex used later on to verify the config file's contents
+	validPath := regexp.MustCompile("^/?([^ /\\]+/)*$")
+	validPort := regexp.MustCompile("^[0-9]+$")
+	validRestriction := regexp.MustCompile("^[a-zA-Z0-9]+$")
+
+	// all of this catches any errors
+	for sectionType, section := range input {
+		switch sectionType {
+		case "global":
+			for configKey, configValue := range section {
+				switch configKey {
+				case "Path":
+					if isStr(onfigValue) == false {
+						allErrors.append("non-string path in config")
+						delete(input[section], configValue)
+					} else if validPath.Find(configValue) == nil {
+						allErrors.append("invalid path in config: " + configValue)
+						delete(input[section], configValue)
+					} else if configValue == "" {
+						allErrors.append(" found an empty path")
+						delete(input[section], configValue)
+					}
+				case "Prefix":
+					if isStr(configValue) == false {
+						allErrors.append("non-string prefix in config")
+					} else if validPath.Find(configValue) == nil {
+						allErrors.append("invalid prefix in config: " + configValue)
+						delete(input[section], configValue)
+					} else if configValue == "" {
+						allErrors.append("empty prefix in config: "+ configValue)
+						delete(input[section], configValue)
+					}
+				case "ServerType":
+					if configValue != "markdown" && configValue != "raw" {
+						allErrors.append("invalid server type: " + configValue)]
+						delete(input[section], configValue)
+					}
+				case "Restricted":
+					if isStrArr(configValue) == false {
+						allErrors.append("invalid restricted list")
+						delete(input[section], configValue)
+					}
+				}
+			}
+		case "server":
+			for configKey, configValue := range section {
+				switch configKey {
+				case "port":
+					if isStr(configValue) == false {
+						allErrors.append("non-string port in config")
+						delete(input[section], configValue)
+					} else if configValue == ""{
+						allErrors.append("empty port number in config")
+						delete(input[section], configValue)
+					} else if validPort.Find(configValue) == nil {
+						allErrors.append("bad port number in config: " + configValue)
+						delete(input[section], configValue)
+					}
+				case "hostname":
+					if isStr(configValue) == false {
+						allErrors.append("non-string hostname in config")
+						delete(input[section], configValue)
+					} else if configValue == ""{
+						allErrors.append("empty hostname in config")
+						delete(input[section], configValue)
+					}
+				}
+			}
+		default:
+			allErrors.append("found disallowed section - discarding")	
+			delete(input, "sectionType")
+		}
+	}
+
+	// everything was successful - return everything
+	return true, allErrors, input
+}
+
+func supplementConfig (input interface{}) (bool, []error, interface{}) {
+
+	allErrors = []error
+
+	// check for missing config sections - if there isn't one, create an empty one
+	if _, err := input["global"]; err != nil {
+		input["global"] = map[]interface{}
+		allErrors.append("no global config section, added")
+	}
+
+	value, test := input["global"]["port"]
+	if test != nil || value == "" {
+		input["global"]["port"] = "8080"
+		allErrors.append("using default port for global")
+	}
+
+	value, test := input["global"]["hostname"]
+	if test != nil || value == "" {
+		input["global"]["hostname"] = "localhost"
+		allErrors.append("using localhost for global")
+	}
+
+	defaultServer := ServerConfig{ServerType: "markdown", Path: "./", Prefix: "/"}
+
+	// if there is no server section, create it
+	if _, err := input["server"]; err != nil {
+		input["server"] = []interface{}
+		allErrors.append("no server section, added"}
+	}
+
+	validMarkdownServerExists := false
+
+	for id, oneServer := range input["server"] {
+
+		// verifing Path
+		value, test := oneServer["Path"]
+		if test != nil || value == "" {
+			input["Path"][id] = "./"
+			allErrors.append("no path specified for server, using ./")
+		}
+
+		// verifing Prefix
+		value, test := oneServer["Prefix"]
+		if test != nil || value == "" {
+			input["Prefix"][id] = "/"
+			allErrors.append("no Prefix specified for server, using /")
+		}
+
+		// verifing ServerType
+		value, test := oneServer["ServerType"]
+		if test != nil || value == "" {
+			input["ServerType"][id] = "markdown"
+			allErrors.append("no ServerType specified for server, using markdown")
+		}
+
+		if oneServer["ServerType"] == "markdown" {
+			validMarkdownServerExists = true
+		}
+
+		// verifing Restricted
+		value, test := oneServer["Restricted"]
+		if test != nil {
+			input["Restricted"][id] = []string
+			allErrors.append("no Restrictions for server, using none")
+		}
+	}
+
+	if len(input["server"] < 1) || validMarkdownServerExists == false {
+		input["servers"].append(defaultServer)
+		allErrors.append("no servers in the server section, added a default server")
+	}
+
+	// everything was successful, return stuff
+	return true, allErrors, input
+}
+
+func LoadConfig(configFile string) bool {
+
+	if configFile == "" {
+		log.Println("no configuration file specified, using ./config.json")
+		// return an empty config file
+		configFile = "config.json"
+	}
+	//temp, err := mini.LoadConfiguration(configFile)
+
+	// have to read in the line into a byte[] array
+	if configContents, err := io.ReadFile(configFile); err != nil {
+		log.Println("Problem loading config file: ", err)
+	}
+
+	// UnMarshal the config file that was read in
+	temp := new(interface{})
+	err := json.Unmarshal(configContents, temp)
+
+	//Make sure you were able to read it in
+	if err != nil {
+		log.Println("parse config error: ", err)
+		return false
+	}
+
+	configLock.Lock()
+	config = temp
+	configLock.Unlock()
+
+	return true
+}
