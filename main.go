@@ -27,39 +27,37 @@ var templates = template.Must(template.ParseFiles("wiki.html"))
 
 var validWiki = regexp.MustCompile("^/([a-zA-Z0-9_ ]+)$")
 
-var (
-	configFile = flag.String("config", "", "specify a configuration file")
-	config = map[]interface{}
-)
+var	configFile = flag.String("config", "", "specify a configuration file")
+
+var staticConfig *configStruct
+var configLock = new(sync.RWMutex)
 
 //var validFiles = regexp.MustCompile("^/raw/([a-zA-Z0-9]+)\\.(jpg|gif|jpeg|md|png)$")
 
 //var validSupport = regexp.MustCompile("^/global/([a-zA-Z0-9]+)\\.(css|js)$")
-
-func markdownHandler(responsePipe http.ResponseWriter, request *http.Request) {
-	validRequest := validWiki.FindStringSubmatch(request.URL.Path)
-	config := stormcall.GetConfig()
-	if validRequest == nil {
-		http.Error(responsePipe, "Request not allowed", 403)
-	}
-	contents, err := loadFile(config.StringFromSection("global", "wiki", "./") + validRequest[1] + ".md")
-	if err != nil {
-		http.Error(responsePipe, err.Error(), 500)
-	}
-	// parse any markdown in the input
-	body := template.HTML(blackfriday.MarkdownCommon(contents))
-
-	response := WikiPage{Title: validRequest[1], Body: body}
-	err = templates.ExecuteTemplate(responsePipe, "wiki.html", response)
-	if err != nil {
-		http.Error(responsePipe, err.Error(), http.StatusInternalServerError)
-	}
+type globalConfigStruct struct{
+	port string
+	hostname string
 }
 
-func GetConfig() *map[]interface{} {
+type serverConfigStruct struct {
+	path string
+	prefix string
+	defaultPage string
+	serverType string
+	restricted []string
+}
+
+type configStruct struct {
+	global globalConfigStruct
+	mainserver serverConfigStruct
+	server []serverConfigStruct
+}
+
+func GetConfig() *configStruct {
 	configLock.RLock()
 	defer configLock.RUnlock()
-	return config
+	return staticConfig
 }
 
 func LoadConfig(configFile string) bool {
@@ -71,14 +69,16 @@ func LoadConfig(configFile string) bool {
 	}
 	//temp, err := mini.LoadConfiguration(configFile)
 
+	//var fileContents []byte
+	//var err error
 	// have to read in the line into a byte[] array
-	if configContents, err := io.ReadFile(configFile); err != nil {
+	fileContents, err := ioutil.ReadFile(configFile); if err != nil {
 		log.Println("Problem loading config file: ", err)
 	}
 
 	// UnMarshal the config file that was read in
-	temp := new(interface{})
-	err := json.Unmarshal(configContents, temp)
+	temp := new(configStruct)
+	err = json.Unmarshal(fileContents, temp)
 
 	//Make sure you were able to read it in
 	if err != nil {
@@ -87,10 +87,30 @@ func LoadConfig(configFile string) bool {
 	}
 
 	configLock.Lock()
-	config = temp
+	staticConfig = temp
 	configLock.Unlock()
 
 	return true
+}
+
+func markdownHandler(responsePipe http.ResponseWriter, request *http.Request) {
+	validRequest := validWiki.FindStringSubmatch(request.URL.Path)
+	config := GetConfig()
+	if validRequest == nil {
+		http.Error(responsePipe, "Request not allowed", 403)
+	}
+	contents, err := loadFile(config.mainserver.prefix + validRequest[1] + ".md")
+	if err != nil {
+		http.Error(responsePipe, err.Error(), 500)
+	}
+	// parse any markdown in the input
+	body := template.HTML(blackfriday.MarkdownCommon(contents))
+
+	response := WikiPage{Title: validRequest[1], Body: body}
+	err = templates.ExecuteTemplate(responsePipe, "wiki.html", response)
+	if err != nil {
+		http.Error(responsePipe, err.Error(), http.StatusInternalServerError)
+	}
 }
 
 /*
@@ -126,16 +146,16 @@ func loadFile(filename string) ([]byte, error) {
 func main() {
 	flag.Parse()
 
-	stormcall.LoadConfig(*configFile)
+	LoadConfig(*configFile)
 
-	config := stormcall.GetConfig()
+	config := GetConfig()
 
-	rawFiles := http.FileServer(http.Dir(config.StringFromSection("global", "raw", "./")))
-	siteFiles := http.FileServer(http.Dir(config.StringFromSection("global", "site", "./")))
+	rawFiles := http.FileServer(http.Dir(config.mainserver.path))
+	siteFiles := http.FileServer(http.Dir(config.mainserver.path))
 
 	http.Handle("/raw/", http.StripPrefix("/raw/", rawFiles))
 	http.Handle("/site/", http.StripPrefix("/site/", siteFiles))
 	http.HandleFunc("/", markdownHandler)
 
-	log.Println(http.ListenAndServe(":"+config.StringFromSection("global", "port", "80"), nil))
+	log.Println(http.ListenAndServe(":"+config.global.port, nil))
 }
