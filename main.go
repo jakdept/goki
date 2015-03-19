@@ -3,17 +3,16 @@ package main
 import (
 	"html/template"
 	"io/ioutil"
-	"regexp"
 	"log"
-
+	"regexp"
 
 	"net/http"
 
 	"flag"
 	//"github.com/FogCreek/mini"
 
-	"github.com/JackKnifed/gnosis"
 	"github.com/JackKnifed/blackfriday"
+	"github.com/JackKnifed/gnosis"
 	//"github.com/russross/blackfriday"
 )
 
@@ -27,13 +26,11 @@ var templates = template.Must(template.ParseFiles("wiki.html"))
 
 var validWiki = regexp.MustCompile("^/([a-zA-Z0-9_ ]+)$")
 
-var	configFile = flag.String("config", "", "specify a configuration file")
-
+var configFile = flag.String("config", "", "specify a configuration file")
 
 //var validFiles = regexp.MustCompile("^/raw/([a-zA-Z0-9]+)\\.(jpg|gif|jpeg|md|png)$")
 
 //var validSupport = regexp.MustCompile("^/global/([a-zA-Z0-9]+)\\.(css|js)$")
-
 
 func markdownHandler(responsePipe http.ResponseWriter, request *http.Request) {
 	validRequest := validWiki.FindStringSubmatch(request.URL.Path)
@@ -103,3 +100,4 @@ func main() {
 
 	log.Println(http.ListenAndServe(":"+config.global.port, nil))
 
+}
