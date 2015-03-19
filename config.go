@@ -1,14 +1,19 @@
 package gnosis
 
-var staticConfig *configStruct
+import {
+	"sync"
+	"encoding/json"
+}
+
+var staticConfig *ConfigStruct
 var configLock = new(sync.RWMutex)
 
-type globalConfigStruct struct {
+type GlobalConfigStruct struct {
 	port     string
 	hostname string
 }
 
-type serverConfigStruct struct {
+type ServerConfigStruct struct {
 	path        string
 	prefix      string
 	defaultPage string
@@ -16,13 +21,13 @@ type serverConfigStruct struct {
 	restricted  []string
 }
 
-type configStruct struct {
-	global     globalConfigStruct
-	mainserver serverConfigStruct
-	server     []serverConfigStruct
+type ConfigStruct struct {
+	global     GlobalConfigStruct
+	mainserver ServerConfigStruct
+	server     []ServerConfigStruct
 }
 
-func GetConfig() *configStruct {
+func GetConfig() *ConfigStruct {
 	configLock.RLock()
 	defer configLock.RUnlock()
 	return staticConfig
@@ -46,7 +51,7 @@ func LoadConfig(configFile string) bool {
 	}
 
 	// UnMarshal the config file that was read in
-	temp := new(configStruct)
+	temp := new(ConfigStruct)
 	err = json.Unmarshal(fileContents, temp)
 
 	//Make sure you were able to read it in
