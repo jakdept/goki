@@ -1,13 +1,13 @@
 package gnosis
 
-import {
+import (
 	"encoding/json"
-	"sync"
 	"io/ioutil"
 	"log"
-}
+	"sync"
+)
 
-var staticConfig *ConfigStruct
+var staticConfig *Config
 var configLock = new(sync.RWMutex)
 
 type GlobalSection struct {
