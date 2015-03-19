@@ -1,8 +1,10 @@
 package gnosis
 
 import {
-	"sync"
 	"encoding/json"
+	"sync"
+	"io/ioutil"
+	"log"
 }
 
 var staticConfig *ConfigStruct
