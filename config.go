@@ -10,12 +10,12 @@ import {
 var staticConfig *ConfigStruct
 var configLock = new(sync.RWMutex)
 
-type GlobalConfigStruct struct {
+type GlobalSection struct {
 	port     string
 	hostname string
 }
 
-type ServerConfigStruct struct {
+type ServerSection struct {
 	path        string
 	prefix      string
 	defaultPage string
@@ -23,13 +23,13 @@ type ServerConfigStruct struct {
 	restricted  []string
 }
 
-type ConfigStruct struct {
-	global     GlobalConfigStruct
-	mainserver ServerConfigStruct
-	server     []ServerConfigStruct
+type Config struct {
+	global     GlobalSection
+	mainserver ServerSection
+	server     []ServerSection
 }
 
-func GetConfig() *ConfigStruct {
+func GetConfig() *Config {
 	configLock.RLock()
 	defer configLock.RUnlock()
 	return staticConfig
@@ -53,7 +53,7 @@ func LoadConfig(configFile string) bool {
 	}
 
 	// UnMarshal the config file that was read in
-	temp := new(ConfigStruct)
+	temp := new(Config)
 	err = json.Unmarshal(fileContents, temp)
 
 	//Make sure you were able to read it in
