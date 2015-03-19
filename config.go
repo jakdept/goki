@@ -42,10 +42,7 @@ func LoadConfig(configFile string) bool {
 		// return an empty config file
 		configFile = "config.json"
 	}
-	//temp, err := mini.LoadConfiguration(configFile)
 
-	//var fileContents []byte
-	//var err error
 	// have to read in the line into a byte[] array
 	fileContents, err := ioutil.ReadFile(configFile)
 	if err != nil {
