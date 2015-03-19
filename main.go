@@ -9,7 +9,6 @@ import (
 	"net/http"
 
 	"flag"
-	//"github.com/FogCreek/mini"
 
 	"github.com/JackKnifed/blackfriday"
 	"github.com/JackKnifed/gnosis"
@@ -18,7 +17,7 @@ import (
 
 type WikiPage struct {
 	Title string
-	//Body  stringo
+	//Body  string
 	Body template.HTML
 }
 
