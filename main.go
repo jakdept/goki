@@ -5,14 +5,14 @@ import (
 	"io/ioutil"
 	"regexp"
 	"log"
-	"sync"
-	"encoding/json"
+
 
 	"net/http"
 
 	"flag"
 	//"github.com/FogCreek/mini"
 
+	"github.com/JackKnifed/gnosis"
 	"github.com/JackKnifed/blackfriday"
 	//"github.com/russross/blackfriday"
 )
@@ -37,11 +37,11 @@ var	configFile = flag.String("config", "", "specify a configuration file")
 
 func markdownHandler(responsePipe http.ResponseWriter, request *http.Request) {
 	validRequest := validWiki.FindStringSubmatch(request.URL.Path)
-	config := GetConfig()
+	config := gnosis.GetConfig()
 	if validRequest == nil {
 		http.Error(responsePipe, "Request not allowed", 403)
 	}
-	contents, err := loadFile(config.mainserver.prefix + validRequest[1] + ".md")
+	contents, err := ioutil.ReadFile(config.mainserver.prefix + validRequest[1] + ".md")
 	if err != nil {
 		http.Error(responsePipe, err.Error(), 500)
 	}
@@ -77,6 +77,7 @@ func contentHandler(responsePipe http.ResponseWriter, request *http.Request) {
 }
 */
 
+/*
 func loadFile(filename string) ([]byte, error) {
 	contents, err := ioutil.ReadFile(filename)
 	if err != nil {
@@ -84,13 +85,14 @@ func loadFile(filename string) ([]byte, error) {
 	}
 	return contents, nil
 }
+*/
 
 func main() {
 	flag.Parse()
 
-	LoadConfig(*configFile)
+	gnosis.LoadConfig(*configFile)
 
-	config := GetConfig()
+	config := gnosis.GetConfig()
 
 	rawFiles := http.FileServer(http.Dir(config.mainserver.path))
 	siteFiles := http.FileServer(http.Dir(config.mainserver.path))
