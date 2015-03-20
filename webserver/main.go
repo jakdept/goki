@@ -15,6 +15,7 @@ import (
 	//"github.com/russross/blackfriday"
 )
 
+/*
 type WikiPage struct {
 	Title string
 	//Body  string
@@ -24,6 +25,7 @@ type WikiPage struct {
 var templates = template.Must(template.ParseFiles("wiki.html"))
 
 var validWiki = regexp.MustCompile("^/([a-zA-Z0-9_ ]+)$")
+*/
 
 var configFile = flag.String("config", "", "specify a configuration file")
 
@@ -31,6 +33,7 @@ var configFile = flag.String("config", "", "specify a configuration file")
 
 //var validSupport = regexp.MustCompile("^/global/([a-zA-Z0-9]+)\\.(css|js)$")
 
+/*
 func markdownHandler(responsePipe http.ResponseWriter, request *http.Request) {
 	validRequest := validWiki.FindStringSubmatch(request.URL.Path)
 	config := gnosis.GetConfig()
@@ -50,6 +53,7 @@ func markdownHandler(responsePipe http.ResponseWriter, request *http.Request) {
 		http.Error(responsePipe, err.Error(), http.StatusInternalServerError)
 	}
 }
+*/
 
 /*
 func contentHandler(responsePipe http.ResponseWriter, request *http.Request) {
@@ -95,7 +99,7 @@ func main() {
 
 	http.Handle("/raw/", http.StripPrefix("/raw/", rawFiles))
 	http.Handle("/site/", http.StripPrefix("/site/", siteFiles))
-	http.HandleFunc("/", markdownHandler)
+	http.HandleFunc("/", gnosis.MarkdownHandler)
 
 	log.Println(http.ListenAndServe(":"+config.global.port, nil))
 
