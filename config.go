@@ -29,7 +29,7 @@ type Config struct {
 	Server     []ServerSection
 }
 
-var defaultConfig = `{
+var defaultConfig = []byte(`{
   "Global": {
     "Port": "8080",
     "Hostname": "localhost"
@@ -46,7 +46,7 @@ var defaultConfig = `{
     },
   "Server": [
   ]
-}`
+}`)
 
 func GetConfig() *Config {
 	configLock.RLock()
