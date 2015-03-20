@@ -7,7 +7,10 @@ import (
 	"html/template"
 	"io/ioutil"
 	"log"
+	"net/http"
 	"regexp"
+
+	"github.com/JackKnifed/blackfriday"
 )
 
 type WikiPage struct {
@@ -22,9 +25,12 @@ var wikiFilter = regexp.MustCompile("^/([a-zA-Z0-9_ /]+/)?([a-zA-Z0-9_ ]+)$")
 var fileFIlter = regexp.MustCompile("^/([a-zA-Z0-9_ /]+/)?([a-zA-Z0-9_ ]+)?\\.([a-zA-Z0-9_ ]+))?")
 
 func markdownHandler(responsePipe http.ResponseWriter, request *http.Request) {
+	var err error
+
 	filteredRequest := wikiFilter.FindStringSubmatch(request.URL.Path)
 	config := GetConfig()
-	if validRequest == nil {
+
+	if filteredRequest == nil {
 		log.Printf("null request improperly routed to wiki handler %s", request.URL.Path, config.mainserver.prefix)
 		http.Error(responsePipe, "Request not allowed", 403)
 	}
@@ -69,3 +75,4 @@ func contentHandler(responsePipe http.ResponseWriter, request *http.Request) {
 	}
 
 }
+*/
