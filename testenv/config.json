@@ -1,46 +1,46 @@
 {
-  "global": {
-    "port": "8080",
-    "hostname": "wiki.hostbaitor.com"
+  "Global": {
+    "Port": "8080",
+    "Hostname": "wiki.hostbaitor.com"
   },
-  "mainServer": {
-      "path": "/var/www/wiki/",
-      "prefix": "/",
-      "default": "index",
-      "serverType": "markdown",
-      "restricted": [
+  "MainServer": {
+      "Path": "/var/www/wiki/",
+      "Prefix": "/",
+      "Default": "index",
+      "ServerType": "markdown",
+      "Restricted": [
         "internal",
         "handbook"
       ]
     },
-  "server": [
+  "Server": [
     {
-      "path": "/var/www/wiki/",
-      "prefix": "/",
-      "default": "index",
-      "serverType": "markdown",
-      "restricted": [
+      "Path": "/var/www/wiki/",
+      "Prefix": "/",
+      "Default": "index",
+      "ServerType": "markdown",
+      "Restricted": [
         "internal",
         "handbook"
       ]
     },
     {
-      "path": "/var/www/wiki/",
-      "prefix": "/raw/",
-      "default": {},
-      "serverType": "raw",
-      "restricted": [
+      "Path": "/var/www/wiki/",
+      "Prefix": "/raw/",
+      "Default": {},
+      "ServerType": "raw",
+      "Restricted": [
         "md",
         "ini",
         "json"
       ]
     },
     {
-      "path": "/var/www/backend/public/",
-      "prefix": "/site/",
-      "default": {},
-      "serverType": "raw",
-      "restricted": [
+      "Path": "/var/www/backend/public/",
+      "Prefix": "/site/",
+      "Default": {},
+      "ServerType": "raw",
+      "Restricted": [
         "md",
         "ini",
         "json"
