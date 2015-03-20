@@ -30,21 +30,21 @@ type Config struct {
 }
 
 var defaultConfig = `{
-  "global": {
-    "port": "8080",
-    "hostname": "wiki.hostbaitor.com"
+  "Global": {
+    "Port": "8080",
+    "Hostname": "localhost"
   },
-  "mainServer": {
-      "path": "/var/www/wiki/",
-      "prefix": "/",
-      "default": "index",
-      "serverType": "markdown",
-      "restricted": [
+  "MainServer": {
+      "Path": "/var/www/wiki/",
+      "Prefix": "/",
+      "Default": "index",
+      "ServerType": "markdown",
+      "Restricted": [
         "internal",
         "handbook"
       ]
     },
-  "server": [
+  "Server": [
   ]
 }`
 
