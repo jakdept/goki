@@ -24,7 +24,7 @@ var templates = template.Must(template.ParseFiles("wiki.html"))
 var wikiFilter = regexp.MustCompile("^/([a-zA-Z0-9_ /]+/)?([a-zA-Z0-9_ ]+)$")
 var fileFIlter = regexp.MustCompile("^/([a-zA-Z0-9_ /]+/)?([a-zA-Z0-9_ ]+)?\\.([a-zA-Z0-9_ ]+))?")
 
-func markdownHandler(responsePipe http.ResponseWriter, request *http.Request) {
+func MarkdownHandler(responsePipe http.ResponseWriter, request *http.Request) {
 	var err error
 
 	filteredRequest := wikiFilter.FindStringSubmatch(request.URL.Path)
@@ -55,7 +55,7 @@ func markdownHandler(responsePipe http.ResponseWriter, request *http.Request) {
 	}
 }
 
-func rawHandler(responsePipe http.ResponseWriter, request *http.Request) {
+func RawHandler(responsePipe http.ResponseWriter, request *http.Request) {
 	var err error
 
 	filteredRequest := wikiFilter.FindStringSubmatch(request.URL.Path)
