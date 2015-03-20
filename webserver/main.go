@@ -20,7 +20,7 @@ var configFile = flag.String("config", "config.json", "specify a configuration f
 func main() {
 	flag.Parse()
 
-	// ##TODO## check for false return - if null, the config could not be loaded
+	// ##TODO## check for false returnear- if null, the config could not be loaded
 	gnosis.LoadConfig(*configFile)
 
 	config := gnosis.GetConfig()
