@@ -31,18 +31,18 @@ func MarkdownHandler(responsePipe http.ResponseWriter, request *http.Request) {
 	config := GetConfig()
 
 	if filteredRequest == nil {
-		log.Printf("null request improperly routed to wiki handler %s", request.URL.Path, config.mainserver.prefix)
+		log.Printf("null request improperly routed to wiki handler %s", request.URL.Path, config.Mainserver.Prefix)
 		http.Error(responsePipe, "Request not allowed", 403)
 	}
 
-	if filteredRequest[1] != config.mainserver.prefix {
-		log.Printf("request %s was improperly routed to wiki handler %s", request.URL.Path, config.mainserver.prefix)
+	if filteredRequest[1] != config.Mainserver.Prefix {
+		log.Printf("request %s was improperly routed to wiki handler %s", request.URL.Path, config.Mainserver.Prefix)
 		http.Error(responsePipe, err.Error(), 500)
 	}
 
-	contents, err := ioutil.ReadFile(config.mainserver.prefix + filteredRequest[2] + ".md")
+	contents, err := ioutil.ReadFile(config.Mainserver.Prefix + filteredRequest[2] + ".md")
 	if err != nil {
-		log.Printf("request %s points to an bad file target sent to server %s", request.URL.Path, config.mainserver.prefix)
+		log.Printf("request %s points to an bad file target sent to server %s", request.URL.Path, config.Mainserver.Prefix)
 		http.Error(responsePipe, err.Error(), 403)
 	}
 	// parse any markdown in the input
@@ -62,18 +62,18 @@ func RawHandler(responsePipe http.ResponseWriter, request *http.Request) {
 	config := GetConfig()
 
 	if filteredRequest == nil {
-		log.Printf("null request improperly routed to wiki handler %s", request.URL.Path, config.mainserver.prefix)
+		log.Printf("null request improperly routed to wiki handler %s", request.URL.Path, config.Mainserver.Prefix)
 		http.Error(responsePipe, "Request not allowed", 403)
 	}
 
-	if filteredRequest[1] != config.mainserver.prefix {
-		log.Printf("request %s was improperly routed to wiki handler %s", request.URL.Path, config.mainserver.prefix)
+	if filteredRequest[1] != config.Mainserver.Prefix {
+		log.Printf("request %s was improperly routed to wiki handler %s", request.URL.Path, config.Mainserver.Prefix)
 		http.Error(responsePipe, err.Error(), 500)
 	}
 
-	contents, err := ioutil.ReadFile(config.mainserver.prefix + filteredRequest[2] + ".md")
+	contents, err := ioutil.ReadFile(config.Mainserver.Prefix + filteredRequest[2] + ".md")
 	if err != nil {
-		log.Printf("request %s points to an bad file target sent to server %s", request.URL.Path, config.mainserver.prefix)
+		log.Printf("request %s points to an bad file target sent to server %s", request.URL.Path, config.Mainserver.Prefix)
 		http.Error(responsePipe, err.Error(), 403)
 	}
 

@@ -11,22 +11,22 @@ var staticConfig *Config
 var configLock = new(sync.RWMutex)
 
 type GlobalSection struct {
-	port     string
-	hostname string
+	Port     string
+	Hostname string
 }
 
 type ServerSection struct {
-	path        string
-	prefix      string
-	defaultPage string
-	serverType  string
-	restricted  []string
+	Path        string
+	Prefix      string
+	DefaultPage string
+	ServerType  string
+	Restricted  []string
 }
 
 type Config struct {
-	global     GlobalSection
-	mainserver ServerSection
-	server     []ServerSection
+	Global     GlobalSection
+	Mainserver ServerSection
+	Server     []ServerSection
 }
 
 func GetConfig() *Config {
