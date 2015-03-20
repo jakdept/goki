@@ -15,7 +15,7 @@ import (
 	//"github.com/russross/blackfriday"
 )
 
-var configFile = flag.String("config", "", "specify a configuration file")
+var configFile = flag.String("config", "config.json", "specify a configuration file")
 
 func main() {
 	flag.Parse()
