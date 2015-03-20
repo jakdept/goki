@@ -29,6 +29,25 @@ type Config struct {
 	Server     []ServerSection
 }
 
+var defaultConfig = `{
+  "global": {
+    "port": "8080",
+    "hostname": "wiki.hostbaitor.com"
+  },
+  "mainServer": {
+      "path": "/var/www/wiki/",
+      "prefix": "/",
+      "default": "index",
+      "serverType": "markdown",
+      "restricted": [
+        "internal",
+        "handbook"
+      ]
+    },
+  "server": [
+  ]
+}`
+
 func GetConfig() *Config {
 	configLock.RLock()
 	defer configLock.RUnlock()
@@ -46,16 +65,23 @@ func LoadConfig(configFile string) bool {
 	// have to read in the line into a byte[] array
 	fileContents, err := ioutil.ReadFile(configFile)
 	if err != nil {
-		log.Println("Problem loading config file: ", err)
+		log.Printf("Problem loading config file: %s", err.Error())
 	}
 
 	// UnMarshal the config file that was read in
 	temp := new(Config)
-	err = json.Unmarshal(fileContents, temp)
 
+	err = json.Unmarshal(defaultConfig, temp)
+
+	if err != nil {
+		log.Println("problem parsing built in default configuration - this should not happen")
+		return false
+	}
+
+	err = json.Unmarshal(fileContents, temp)
 	//Make sure you were able to read it in
 	if err != nil {
-		log.Println("parse config error: ", err)
+		log.Printf("parse config error: %s", err.Error())
 		return false
 	}
 
