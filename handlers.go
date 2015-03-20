@@ -40,7 +40,7 @@ func markdownHandler(responsePipe http.ResponseWriter, request *http.Request) {
 		http.Error(responsePipe, err.Error(), 500)
 	}
 
-	contents, err := ioutil.ReadFile(config.mainserver.prefix + filteredRequest[1] + ".md")
+	contents, err := ioutil.ReadFile(config.mainserver.prefix + filteredRequest[2] + ".md")
 	if err != nil {
 		log.Printf("request %s points to an bad file target sent to server %s", request.URL.Path, config.mainserver.prefix)
 		http.Error(responsePipe, err.Error(), 403)
@@ -55,24 +55,30 @@ func markdownHandler(responsePipe http.ResponseWriter, request *http.Request) {
 	}
 }
 
-/*
-func contentHandler(responsePipe http.ResponseWriter, request *http.Request) {
-	validRequest := validFiles.FindStringSubmatch(request.URL.Path)
-	if validRequest == nil {
+func rawHandler(responsePipe http.ResponseWriter, request *http.Request) {
+	var err error
+
+	filteredRequest := wikiFilter.FindStringSubmatch(request.URL.Path)
+	config := GetConfig()
+
+	if filteredRequest == nil {
+		log.Printf("null request improperly routed to wiki handler %s", request.URL.Path, config.mainserver.prefix)
 		http.Error(responsePipe, "Request not allowed", 403)
 	}
-	strippedRequest := http.StripPrefix("/raw/", validRequest[0])
-	http.ServeFile(responsePipe, request, strippedRequest)
-	http.FileServer()
-	contents, err := loadFile(validRequest)
-	if err != nil {
-		http.Error(responsePipe, err, 500)
-	}
-	response := contents
-	err := templates.ExecuteTemplate(responsePipe, "markdown.html", p)
-	if err != nil {
-		http.Error(responsePipe, err.Error(), http.StatusInternalServerError)
+
+	if filteredRequest[1] != config.mainserver.prefix {
+		log.Printf("request %s was improperly routed to wiki handler %s", request.URL.Path, config.mainserver.prefix)
+		http.Error(responsePipe, err.Error(), 500)
 	}
 
+	contents, err := ioutil.ReadFile(config.mainserver.prefix + filteredRequest[2] + ".md")
+	if err != nil {
+		log.Printf("request %s points to an bad file target sent to server %s", request.URL.Path, config.mainserver.prefix)
+		http.Error(responsePipe, err.Error(), 403)
+	}
+
+	_, err = responsePipe.Write([]byte(contents))
+	if err != nil {
+		http.Error(responsePipe, err.Error(), 500)
+	}
 }
-*/
