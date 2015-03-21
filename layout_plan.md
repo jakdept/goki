@@ -65,4 +65,4 @@ We could create folders, and then lock down edits to files within those folders 
 Feature Requests
 ----------------
 
-[Use the issue tracker](https://git.liquidweb.com/jhayhurst/stormcall/issues). We will be using that for both feature requests, and for bugs that pop up.
+[Use the issue tracker](https://git.liquidweb.com/jhayhurst/gnosis/issues). We will be using that for both feature requests, and for bugs that pop up.
