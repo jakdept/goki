@@ -1,0 +1,16 @@
+{
+  "Global": {
+    "Port": "8080",
+    "Hostname": "localhost"
+  },
+  "MainServer": {
+      "Path": "./",
+      "Prefix": "/",
+      "Default": "index",
+      "ServerType": "markdown",
+      "Restricted": [
+      ]
+    },
+  "Server": [
+  ]
+}
