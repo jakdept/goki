@@ -8,6 +8,7 @@
       "Prefix": "/",
       "Default": "index",
       "ServerType": "markdown",
+      "Template": "wiki.html",
       "Restricted": [
         "internal",
         "handbook"
@@ -19,6 +20,7 @@
       "Prefix": "/",
       "Default": "index",
       "ServerType": "markdown",
+      "Template": "wiki.html",
       "Restricted": [
         "internal",
         "handbook"
