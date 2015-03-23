@@ -34,10 +34,10 @@ var defaultConfig = []byte(`{
     "Port": "8080",
     "Hostname": "localhost"
   },
-  "MainServer": {
+  "Mainserver": {
       "Path": "/var/www/wiki/",
       "Prefix": "/",
-      "Default": "index",
+      "DefaultPage": "index",
       "ServerType": "markdown",
       "Restricted": [
         "internal",
