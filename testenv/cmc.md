@@ -1,4 +1,4 @@
-ConfigServer MmmmmodSecurity Control (cmc)
+ConfigServer ModSecurity Control (cmc)
 ==========================================
 
 About
