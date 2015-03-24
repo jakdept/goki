@@ -19,6 +19,7 @@ type ServerSection struct {
 	Path        string
 	Prefix      string
 	DefaultPage string
+	Template    string
 	ServerType  string
 	Restricted  []string
 }
@@ -39,6 +40,7 @@ var defaultConfig = []byte(`{
       "Prefix": "/",
       "DefaultPage": "index",
       "ServerType": "markdown",
+      "Template": "wiki.html",
       "Restricted": [
         "internal",
         "handbook"
