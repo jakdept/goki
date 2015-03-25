@@ -25,12 +25,11 @@ func main() {
 
 	config := gnosis.GetConfig()
 
-	rawFiles := http.FileServer(http.Dir(config.Mainserver.Path))
-	siteFiles := http.FileServer(http.Dir(config.Mainserver.Path))
+	// ##TODO## add global redirects and set them up in here
 
-	http.Handle("/raw/", http.StripPrefix("/raw/", rawFiles))
-	http.Handle("/site/", http.StripPrefix("/site/", siteFiles))
-	http.HandleFunc("/", gnosis.MakeHandler(config.Mainserver))
+	for _, individualServer := range config.Server {
+		http.HandleFunc(individualServer.Prefix, gnosis.MakeHandler(individualServer))
+	}
 
 	log.Println(http.ListenAndServe(":"+config.Global.Port, nil))
 
