@@ -30,7 +30,7 @@ func main() {
 
 	http.Handle("/raw/", http.StripPrefix("/raw/", rawFiles))
 	http.Handle("/site/", http.StripPrefix("/site/", siteFiles))
-	http.HandleFunc("/", gnosis.MarkdownHandler)
+	http.HandleFunc("/", gnosis.MakeHandler(config.Mainserver))
 
 	log.Println(http.ListenAndServe(":"+config.Global.Port, nil))
 
