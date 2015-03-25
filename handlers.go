@@ -134,7 +134,7 @@ func MarkdownHandler(responsePipe http.ResponseWriter, request *http.Request) {
 }
 
 // Generate a Markdown Handler Function
-func GenerateMarkdownHandler(responsePipe http.ResponseWriter, request *http.Request, serverConfig ServerSection) http.HandlerFunc {
+func ConfiguredMarkdownHandler(responsePipe http.ResponseWriter, request *http.Request, serverConfig ServerSection) http.HandlerFunc {
 
 	return func(resposePipe http.ResponseWriter, request *http.Request) {
 
@@ -171,6 +171,21 @@ func GenerateMarkdownHandler(responsePipe http.ResponseWriter, request *http.Req
 		}
 	}
 }
+
+
+func makeHandler(handlerConfig ServerSection)) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		switch handlerConfig.ServerType {
+			case "markdown":
+				ConfiguredMarkdownHandler(w, r, handlerConfig)
+			case "raw":
+				ConfiguredRawHandler(w, r, handlerConfig)
+			default:
+				log.printf("Bad server type [%s]", handlerConfig.ServerType)
+		}
+	}
+}
+
 
 /*
 func GenerateRawHandler(responsePipe http.ResponseWriter, request *http.Request, serverConfig ServerSection) {
