@@ -134,40 +134,37 @@ func MarkdownHandler(responsePipe http.ResponseWriter, request *http.Request) {
 }
 
 // Generate a Markdown Handler Function
-func ConfiguredMarkdownHandler(responsePipe http.ResponseWriter, request *http.Request, serverConfig ServerSection) http.HandlerFunc {
+func ConfiguredMarkdownHandler(responsePipe http.ResponseWriter, request *http.Request, serverConfig ServerSection) {
 
-	return func(resposePipe http.ResponseWriter, request *http.Request) {
+	var err error
 
-		var err error
+	// break up the request parameters - for reference, regex is listed below
+	filteredRequest := wikiFilter.FindStringSubmatch(request.URL.Path)
 
-		// break up the request parameters - for reference, regex is listed below
-		filteredRequest := wikiFilter.FindStringSubmatch(request.URL.Path)
+	// if there are no matches, the regex ovbiously didn't match up
+	if filteredRequest == nil {
+		log.Printf("null request [ %s ] improperly routed to wiki handler [ %s ]", request.URL.Path, serverConfig.Prefix)
+		http.Error(responsePipe, "Request not allowed", 403)
+	} else {
+		if filteredRequest[1] != serverConfig.Prefix {
+			log.Printf("request %s was improperly routed to wiki handler %s", request.URL.Path, serverConfig.Prefix)
+			http.Error(responsePipe, err.Error(), 500)
+		}
 
-		// if there are no matches, the regex ovbiously didn't match up
-		if filteredRequest == nil {
-			log.Printf("null request [ %s ] improperly routed to wiki handler [ %s ]", request.URL.Path, serverConfig.Prefix)
-			http.Error(responsePipe, "Request not allowed", 403)
-		} else {
-			if filteredRequest[1] != serverConfig.Prefix {
-				log.Printf("request %s was improperly routed to wiki handler %s", request.URL.Path, serverConfig.Prefix)
-				http.Error(responsePipe, err.Error(), 500)
-			}
+		contents, err := ioutil.ReadFile(serverConfig.Path + filteredRequest[3] + ".md")
+		if err != nil {
+			log.Printf("request [ %s ] points to an bad file target [ %s ]sent to server %s", request.URL.Path, filteredRequest[3], serverConfig.Prefix)
+			http.Error(responsePipe, err.Error(), 404)
+		}
+		// parse any markdown in the input
+		body := template.HTML(bodyParseMarkdown(contents))
 
-			contents, err := ioutil.ReadFile(serverConfig.Path + filteredRequest[3] + ".md")
-			if err != nil {
-				log.Printf("request [ %s ] points to an bad file target [ %s ]sent to server %s", request.URL.Path, filteredRequest[3], serverConfig.Prefix)
-				http.Error(responsePipe, err.Error(), 404)
-			}
-			// parse any markdown in the input
-			body := template.HTML(bodyParseMarkdown(contents))
+		toc := template.HTML(tocParseMarkdown(contents))
 
-			toc := template.HTML(tocParseMarkdown(contents))
-
-			response := WikiPage{Title: filteredRequest[3], ToC: toc, Body: body}
-			err = templates.ExecuteTemplate(responsePipe, serverConfig.Template, response)
-			if err != nil {
-				http.Error(responsePipe, err.Error(), 500)
-			}
+		response := WikiPage{Title: filteredRequest[3], ToC: toc, Body: body}
+		err = templates.ExecuteTemplate(responsePipe, serverConfig.Template, response)
+		if err != nil {
+			http.Error(responsePipe, err.Error(), 500)
 		}
 	}
 }
