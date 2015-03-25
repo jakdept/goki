@@ -172,7 +172,7 @@ func MakeHandler(handlerConfig ServerSection) http.HandlerFunc {
 		case "markdown":
 			MarkdownHandler(w, r, handlerConfig)
 		case "raw":
-			ConfiguredRawHandler(w, r, handlerConfig)
+			RawHandler(w, r, handlerConfig)
 		default:
 			log.Printf("Bad server type [%s]", handlerConfig.ServerType)
 		}
