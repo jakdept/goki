@@ -13,36 +13,6 @@ import (
 	"github.com/JackKnifed/blackfriday"
 )
 
-var fileFilter = regexp.MustCompile("^(/([a-zA-Z0-9_ /]+/)?)([a-zA-Z0-9_ ]+)?(\\.)?([a-zA-Z0-9_ ]+)?")
-
-func oldRawHandler(responsePipe http.ResponseWriter, request *http.Request) {
-	var err error
-
-	filteredRequest := wikiFilter.FindStringSubmatch(request.URL.Path)
-	config := GetConfig()
-
-	if filteredRequest == nil {
-		log.Printf("null request improperly routed to wiki handler %s", request.URL.Path, config.Mainserver.Prefix)
-		http.Error(responsePipe, "Request not allowed", 403)
-	}
-
-	if filteredRequest[1] != config.Mainserver.Prefix {
-		log.Printf("request %s was improperly routed to wiki handler %s", request.URL.Path, config.Mainserver.Prefix)
-		http.Error(responsePipe, err.Error(), 500)
-	}
-
-	contents, err := ioutil.ReadFile(config.Mainserver.Prefix + filteredRequest[2] + ".md")
-	if err != nil {
-		log.Printf("request %s points to an bad file target sent to server %s", request.URL.Path, config.Mainserver.Prefix)
-		http.Error(responsePipe, err.Error(), 403)
-	}
-
-	_, err = responsePipe.Write([]byte(contents))
-	if err != nil {
-		http.Error(responsePipe, err.Error(), 500)
-	}
-}
-
 const (
 	bodyHtmlFlags = 0 |
 		blackfriday.HTML_USE_XHTML |
@@ -136,6 +106,8 @@ func MarkdownHandler(responsePipe http.ResponseWriter, request *http.Request, se
 	}
 }
 
+var fileFilter = regexp.MustCompile("^(/([a-zA-Z0-9_ /]+/)?)([a-zA-Z0-9_ ]+)?(\\.)?([a-zA-Z0-9_ ]+)?")
+
 func RawHandler(responsePipe http.ResponseWriter, request *http.Request, serverConfig ServerSection) {
 
 	var err error
@@ -178,34 +150,3 @@ func MakeHandler(handlerConfig ServerSection) http.HandlerFunc {
 		}
 	}
 }
-
-/*
-func GenerateRawHandler(responsePipe http.ResponseWriter, request *http.Request, serverConfig ServerSection) {
-	return func(responsePipe http.responseWriter, request *http.Request) {
-		var err error
-
-		filteredRequest := wikiFilter.FindStringSubmatch(request.URL.Path)
-
-		if filteredRequest == nil {
-			log.Printf("null request improperly routed to wiki handler %s", request.URL.Path, config.Mainserver.Prefix)
-			http.Error(responsePipe, "Request not allowed", 403)
-		}
-
-		if filteredRequest[1] != config.Mainserver.Prefix {
-			log.Printf("request %s was improperly routed to wiki handler %s", request.URL.Path, config.Mainserver.Prefix)
-			http.Error(responsePipe, err.Error(), 500)
-		}
-
-		contents, err := ioutil.ReadFile(config.Mainserver.Prefix + filteredRequest[2] + ".md")
-		if err != nil {
-			log.Printf("request %s points to an bad file target sent to server %s", request.URL.Path, config.Mainserver.Prefix)
-			http.Error(responsePipe, err.Error(), 403)
-		}
-
-		_, err = responsePipe.Write([]byte(contents))
-		if err != nil {
-			http.Error(responsePipe, err.Error(), 500)
-		}
-	}
-}
-*/
