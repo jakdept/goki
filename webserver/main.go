@@ -27,6 +27,8 @@ func main() {
 
 	// ##TODO## add global redirects and set them up in here
 
+	gnosis.ParseTemplates(config.Global.Templates)
+
 	for _, individualServer := range config.Server {
 		http.HandleFunc(individualServer.Prefix, gnosis.MakeHandler(individualServer))
 	}
