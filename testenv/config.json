@@ -23,7 +23,7 @@
       "Prefix": "/",
       "Default": "index",
       "ServerType": "markdown",
-    "Template": "/var/wiki-backend/wiki.html",
+      "Template": "/var/wiki-backend/wiki.html",
       "Restricted": [
         "internal",
         "handbook"
