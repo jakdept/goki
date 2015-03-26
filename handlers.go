@@ -54,8 +54,6 @@ type WikiPage struct {
 	Body  template.HTML
 }
 
-var templates = template.Must(template.ParseFiles("wiki.html"))
-
 var wikiFilter = regexp.MustCompile("^(/([a-zA-Z0-9_ /]+/)?)([a-zA-Z0-9_ ]+)$")
 
 func bodyParseMarkdown(input []byte) []byte {
