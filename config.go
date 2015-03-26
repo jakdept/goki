@@ -105,17 +105,30 @@ func LoadConfig(configFile string) bool {
 
 func ParseTemplates(globalConfig GlobalSection) {
 	var err error
-	nextTemplate := template.New("nextTemplate")
-	newTemplate := template.New("newTemplate")
-
-	for _, templateFile := range globalConfig.Templates {
-		nextTemplate, err = newTemplate.ParseFiles(globalConfig.TemplateDir + templateFile)
-		if nextTemplate != nil {
-			newTemplate = nextTemplate
-		} else {
-			log.Printf("Found an invalid template, abandoning updating templates")
-		}
+	//newTemplate := template.New("newTemplate")
+	newTemplate, err := template.ParseGlob(globalConfig.TemplateDir + "*.html")
+	if err != nil {
+		log.Println("Found an invalid template, abandoning updating templates")
+		return
 	}
+
+	loadedTemplates := newTemplate.Templates()
+	for _, individualTemplate := range loadedTemplates {
+		log.Printf("Loaded template %s ", individualTemplate.Name())
+	}
+
+	/*
+		for _, templateFile := range globalConfig.Templates {
+			nextTemplate, err = newTemplate.ParseFiles(globalConfig.TemplateDir + templateFile)
+			if nextTemplate != nil {
+				newTemplate = nextTemplate
+			} else {
+				log.Println("Found an invalid template, abandoning updating templates")
+			}
+		}
+	*/
+
+	// log.Printf("loaded templates - %s", newTemplate.Name())
 
 	if err == nil {
 		templateLock.Lock()
