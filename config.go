@@ -108,7 +108,10 @@ func ParseTemplates(globalConfig GlobalSection) {
 	newTemplate := template.New("newTemplate")
 
 	for _, templateFile := range globalConfig.Templates {
-		_, err = newTemplate.ParseFiles(globalConfig.TemplateDir + templateFile)
+		nextTemplate, err := newTemplate.ParseFiles(globalConfig.TemplateDir + templateFile)
+		if nextTemplate != nil {
+			newTemplate = nextTemplate
+		}
 	}
 
 	if err == nil {
