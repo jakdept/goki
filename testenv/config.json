@@ -2,7 +2,7 @@
   "Global": {
     "Port": "80",
     "Hostname": "wiki.hostbaitor.com",
-    "TemplateDir": "/var/www/wiki-backend/templates/"
+    "TemplateDir": "/var/wiki-backend/templates/"
   },
   "MainServer": {
     "Path": "/var/www/wiki/",
