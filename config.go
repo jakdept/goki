@@ -111,6 +111,8 @@ func ParseTemplates(globalConfig GlobalSection) {
 		nextTemplate, err := newTemplate.ParseFiles(globalConfig.TemplateDir + templateFile)
 		if nextTemplate != nil {
 			newTemplate = nextTemplate
+		} else {
+			log.Printf("Found an invalid template, abandoning updating templates")
 		}
 	}
 
