@@ -108,7 +108,7 @@ func ParseTemplates(allTemplateFiles []string) {
 	}
 
 	if err == nil {
-		templateLock.RLock()
+		templateLock.Lock()
 		defer templateLock.Unlock()
 		templates = newTemplate
 	}
