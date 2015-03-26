@@ -17,10 +17,11 @@ var allTemplates = template.New("allTemplates")
 var templateLock = new(sync.RWMutex)
 
 type GlobalSection struct {
-	Port      string
-	Hostname  string
-	Redirects map[string]string
-	Templates []string
+	Port        string
+	Hostname    string
+	TemplateDir string
+	Templates   []string
+	Redirects   map[string]string
 }
 
 type ServerSection struct {
@@ -102,12 +103,12 @@ func LoadConfig(configFile string) bool {
 	return true
 }
 
-func ParseTemplates(allTemplateFiles []string) {
+func ParseTemplates(globalConfig GlobalSection) {
 	var err error
 	newTemplate := template.New("newTemplate")
 
-	for _, templateFile := range allTemplateFiles {
-		_, err = newTemplate.ParseFiles(templateFile)
+	for _, templateFile := range globalConfig.Templates {
+		_, err = newTemplate.ParseFiles(globalConfig.TemplateDir + templateFile)
 	}
 
 	if err == nil {
