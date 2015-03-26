@@ -1,0 +1,15 @@
+[Unit]
+Description=gnosis
+After=firewalld.service
+Requires=firewalld.service
+After=rsyslog.service
+Requires=rsyslog.service
+After=network.target
+Requires=network.target
+
+[Service]
+ExecStart=/var/wiki-backend/webserver --config=/var/wiki-backend/config.json
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
