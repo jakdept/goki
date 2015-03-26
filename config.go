@@ -10,9 +10,14 @@ import (
 var staticConfig *Config
 var configLock = new(sync.RWMutex)
 
+var templates *Template
+var templateLock = new(sync.RWMutex)
+
 type GlobalSection struct {
-	Port     string
-	Hostname string
+	Port      string
+	Hostname  string
+	Redirects map[string]string
+	Templates []string
 }
 
 type ServerSection struct {
@@ -92,4 +97,20 @@ func LoadConfig(configFile string) bool {
 	configLock.Unlock()
 
 	return true
+}
+
+func ParseTemplates(allTemplateFiles []string) {
+	var err error
+	newTemplate = new(Template)
+
+	for _, templateFile := range allTemplateFiles {
+		_, err := newTemplate.ParseFiles(templateFile)
+	}
+
+	if err == nil {
+		templateLock.RLock()
+		defer templateLock.Unlock()
+		templates = newTemplate
+	}
+
 }
