@@ -2,8 +2,9 @@
   "Global": {
     "Port": "80",
     "Hostname": "wiki.hostbaitor.com",
+    "TemplateDirectory": "/var/www/wiki-backend/",
     "Templates": [
-      "/var/wiki-backend/wiki.html"
+      "wiki.html"
     ]
   },
   "MainServer": {
@@ -11,7 +12,7 @@
     "Prefix": "/",
     "Default": "index",
     "ServerType": "markdown",
-    "Template": "/var/wiki-backend/wiki.html",
+    "Template": "wiki.html",
     "Restricted": [
       "internal",
       "handbook"
@@ -23,7 +24,7 @@
       "Prefix": "/",
       "Default": "index",
       "ServerType": "markdown",
-      "Template": "/var/wiki-backend/wiki.html",
+      "Template": "wiki.html",
       "Restricted": [
         "internal",
         "handbook"
