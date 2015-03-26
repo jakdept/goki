@@ -105,7 +105,7 @@ func LoadConfig(configFile string) bool {
 
 func ParseTemplates(globalConfig GlobalSection) {
 	var err error
-	var nextTemplate Template
+	nextTemplate := template.New("nextTemplate")
 	newTemplate := template.New("newTemplate")
 
 	for _, templateFile := range globalConfig.Templates {
