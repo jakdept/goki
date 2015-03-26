@@ -2,6 +2,7 @@ package gnosis
 
 import (
 	"encoding/json"
+	"html/template"
 	"io/ioutil"
 	"log"
 	"sync"
@@ -10,7 +11,9 @@ import (
 var staticConfig *Config
 var configLock = new(sync.RWMutex)
 
-var templates *Template
+//var templates = template.Must(template.ParseFiles("/var/wiki-backend/wiki.html"))
+//template.New("allTemplates")
+var allTemplates = template.New("allTemplates")
 var templateLock = new(sync.RWMutex)
 
 type GlobalSection struct {
@@ -101,16 +104,16 @@ func LoadConfig(configFile string) bool {
 
 func ParseTemplates(allTemplateFiles []string) {
 	var err error
-	newTemplate = new(Template)
+	newTemplate := template.New("newTemplate")
 
 	for _, templateFile := range allTemplateFiles {
-		_, err := newTemplate.ParseFiles(templateFile)
+		_, err = newTemplate.ParseFiles(templateFile)
 	}
 
 	if err == nil {
 		templateLock.Lock()
 		defer templateLock.Unlock()
-		templates = newTemplate
+		allTemplates = newTemplate
 	}
 
 }

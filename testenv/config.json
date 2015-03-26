@@ -1,19 +1,22 @@
 {
   "Global": {
     "Port": "8080",
-    "Hostname": "wiki.hostbaitor.com"
+    "Hostname": "wiki.hostbaitor.com",
+    "Templates": [
+      "/var/wiki-backend/wiki.html"
+    ]
   },
   "MainServer": {
-      "Path": "/var/www/wiki/",
-      "Prefix": "/",
-      "Default": "index",
-      "ServerType": "markdown",
-      "Template": "wiki.html",
-      "Restricted": [
-        "internal",
-        "handbook"
-      ]
-    },
+    "Path": "/var/www/wiki/",
+    "Prefix": "/",
+    "Default": "index",
+    "ServerType": "markdown",
+    "Template": "wiki.html",
+    "Restricted": [
+      "internal",
+      "handbook"
+    ]
+  },
   "Server": [
     {
       "Path": "/var/www/wiki/",
