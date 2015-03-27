@@ -106,7 +106,7 @@ func LoadConfig(configFile string) bool {
 func ParseTemplates(globalConfig GlobalSection) {
 	var err error
 	//newTemplate := template.New("newTemplate")
-	newTemplate, err := template.ParseGlob(globalConfig.TemplateDir + "*.html")
+	newTemplate, err := template.ParseGlob(globalConfig.TemplateDir + "*")
 	if err != nil {
 		log.Println("Found an invalid template, abandoning updating templates")
 		return
