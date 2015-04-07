@@ -14,8 +14,6 @@ type pageMetadata struct {
 	Page     []byte
 }
 
-var isPageTitle = regexp.MustCompile(`^[ =]+$`)
-
 var pdata pageMetadata
 
 func (pdata *PageMetadata) lineIsTitle(line []byte) bool {
