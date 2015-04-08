@@ -57,26 +57,26 @@ func (pdata *PageMetadata) lineIsTitle(line []byte) bool {
 }
 
 func (pdata *PageMetadata) checkMatch(input []byte, looking []byte, tracker []string) {
+	// trim off any blank spaces at the start of the line
+	value := bytes.Trim(line, " \t")
+
 	if input[:len(looking)] == looking {
 		// trim off the target from the []byte
-		value := input[len(looking):]
+		value = input[len(looking):]
 
 		// trim spaces at the start and at the end
-		for value[0] == ' ' || value[0] == '\t' {
-			value = value[1:]
-		}
-		for value[len(value)-1] == ' ' || value[len(value)-1] == '\t' {
-			value = value[len(value)-1:]
+		value = bytes.Trim(value, " \t\n")
+
+		if value[0] == ':' || value[0] == '=' {
+			value = bytes.Trim(value, " \t\n=:")
 		}
 
 		// replace any spaces in the middle with -'s, and suppress double spaces
-		for i := 0; i < len(value); i++ {
-			if value[i] == ' ' || value[i] == '\t' {
-				if value[i-1] != '-' {
-					value[i] = '-'
-				} else {
-					value = value[:i-1] + value[i:]
-				}
+		bytes.Replace(value, " ", "-", -1)
+
+		for i := 1; i < len(value); i++ {
+			if value[i-1] == '-' && value[1] == '-' {
+				value = value[:i] + value[i+1:]
 			}
 		}
 
