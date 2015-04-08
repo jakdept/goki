@@ -9,7 +9,7 @@ import (
 )
 
 type pageMetadata struct {
-	Metadata []string
+	Keywords []string
 	Topics   []string
 	Page     []byte
 }
@@ -56,8 +56,49 @@ func (pdata *PageMetadata) lineIsTitle(line []byte) bool {
 	}
 }
 
-func (pdata *PageMetadata) ProcessMetadata(line []byte) error {
+func (pdata *PageMetadata) checkMatch(input []byte, looking []byte, tracker []string) {
+	if input[:len(looking)] == looking {
+		// trim off the target from the []byte
+		value := input[len(looking):]
 
+		// trim spaces at the start and at the end
+		for value[0] == ' ' || value[0] == '\t' {
+			value = value[1:]
+		}
+		for value[len(value)-1] == ' ' || value[len(value)-1] == '\t' {
+			value = value[len(value)-1:]
+		}
+
+		// replace any spaces in the middle with -'s, and suppress double spaces
+		for i := 0; i < len(value); i++ {
+			if value[i] == ' ' || value[i] == '\t' {
+				if value[i-1] != '-' {
+					value[i] = '-'
+				} else {
+					value = value[:i-1] + value[i:]
+				}
+			}
+		}
+
+		// now just add the value to the array that you're tracking
+		tracker.Append(string(value))
+	}
+}
+
+func (pdata *PageMetadata) ProcessMetadata(line []byte) error {
+	checkMatch(line, "tag=", pdata.Topics)
+	checkMatch(line, "tag =", pdata.Topics)
+	checkMatch(line, "topic=", pdata.Topics)
+	checkMatch(line, "topic =", pdata.Topics)
+	checkMatch(line, "category=", pdata.Topics)
+	checkMatch(line, "category =", pdata.Topics)
+
+	checkMatch(line, "keyword=", pdata.Keywords)
+	checkMatch(line, "keyword =", pdata.Keywords)
+	checkMatch(line, "keywords=", pdata.Keywords)
+	checkMatch(line, "keywords =", pdata.Keywords)
+	checkMatch(line, "meta=", pdata.Keywords)
+	checkMatch(line, "meta =", pdata.Keywords)
 }
 
 func (pdata *PageMetadata) LoadPage(pageName string) error {
