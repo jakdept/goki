@@ -71,9 +71,10 @@ func (pdata *PageMetadata) checkMatch(input []byte, looking []byte, tracker []st
 			value = bytes.Trim(value, " \t\n=:")
 		}
 
-		// replace any spaces in the middle with -'s, and suppress double spaces
+		// replace any spaces in the middle with -'s
 		bytes.Replace(value, " ", "-", -1)
 
+		// suppress any double dashes
 		for i := 1; i < len(value); i++ {
 			if value[i-1] == '-' && value[1] == '-' {
 				value = value[:i] + value[i+1:]
@@ -86,19 +87,13 @@ func (pdata *PageMetadata) checkMatch(input []byte, looking []byte, tracker []st
 }
 
 func (pdata *PageMetadata) ProcessMetadata(line []byte) error {
-	checkMatch(line, "tag=", pdata.Topics)
-	checkMatch(line, "tag =", pdata.Topics)
-	checkMatch(line, "topic=", pdata.Topics)
-	checkMatch(line, "topic =", pdata.Topics)
-	checkMatch(line, "category=", pdata.Topics)
-	checkMatch(line, "category =", pdata.Topics)
+	checkMatch(line, "tag", pdata.Topics)
+	checkMatch(line, "topic", pdata.Topics)
+	checkMatch(line, "category", pdata.Topics)
 
-	checkMatch(line, "keyword=", pdata.Keywords)
-	checkMatch(line, "keyword =", pdata.Keywords)
-	checkMatch(line, "keywords=", pdata.Keywords)
-	checkMatch(line, "keywords =", pdata.Keywords)
-	checkMatch(line, "meta=", pdata.Keywords)
-	checkMatch(line, "meta =", pdata.Keywords)
+	checkMatch(line, "keyword", pdata.Keywords)
+	checkMatch(line, "keywords", pdata.Keywords)
+	checkMatch(line, "meta", pdata.Keywords)
 }
 
 func (pdata *PageMetadata) LoadPage(pageName string) error {
