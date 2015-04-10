@@ -4,13 +4,14 @@ package gnosis
 
 import (
 	"bufio"
+	"bytes"
 	"io"
 	"os"
 )
 
 type pageMetadata struct {
-	Keywords []string
-	Topics   []string
+	Keywords map[string]bool
+	Tags   map[string]bool
 	Page     []byte
 }
 
@@ -82,18 +83,29 @@ func (pdata *PageMetadata) checkMatch(input []byte, looking []byte, tracker []st
 		}
 
 		// now just add the value to the array that you're tracking
-		tracker.Append(string(value))
+		tracker[value] = true
 	}
 }
 
-func (pdata *PageMetadata) ProcessMetadata(line []byte) error {
-	checkMatch(line, "tag", pdata.Topics)
-	checkMatch(line, "topic", pdata.Topics)
-	checkMatch(line, "category", pdata.Topics)
+// runs through all restricted tags, and looks for a match
+// if matched, returns true, otherwise false
+func (pdata *PageMetadata) MatchedTag(checkTags []string) bool {
+	for _, tag := checkTags {
+		if pdata.Tags[tag] == true {
+			return true
+		}
+	}
+	return false
+}
 
-	checkMatch(line, "keyword", pdata.Keywords)
-	checkMatch(line, "keywords", pdata.Keywords)
-	checkMatch(line, "meta", pdata.Keywords)
+func (pdata *PageMetadata) ProcessMetadata(line []byte) error {
+	pdata.checkMatch(line, "tag", pdata.Tags)
+	pdata.checkMatch(line, "topic", pdata.Tags)
+	pdata.checkMatch(line, "category", pdata.Tags)
+
+	pdata.checkMatch(line, "keyword", pdata.Keywords)
+	pdata.checkMatch(line, "keywords", pdata.Keywords)
+	pdata.checkMatch(line, "meta", pdata.Keywords)
 }
 
 func (pdata *PageMetadata) LoadPage(pageName string) error {
