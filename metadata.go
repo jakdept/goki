@@ -13,6 +13,7 @@ import (
 type pageMetadata struct {
 	Keywords map[string]bool
 	Tags     map[string]bool
+	Loaded   bool
 	Page     []byte
 }
 
@@ -183,6 +184,10 @@ func (pdata *PageMetadata) LoadPage(pageName string) error {
 		if err != nil {
 			return err
 		}
+
+		// you've successfully loaded the page - so return nothing
+		pdata.Loaded = true
+		return nil
 	}
 
 	// if you're at this point, the first line is metadata
