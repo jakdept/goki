@@ -11,7 +11,7 @@ import (
 
 type pageMetadata struct {
 	Keywords map[string]bool
-	Tags   map[string]bool
+	Tags     map[string]bool
 	Page     []byte
 }
 
@@ -90,7 +90,7 @@ func (pdata *PageMetadata) checkMatch(input []byte, looking []byte, tracker []st
 // runs through all restricted tags, and looks for a match
 // if matched, returns true, otherwise false
 func (pdata *PageMetadata) MatchedTag(checkTags []string) bool {
-	for _, tag := checkTags {
+	for _, tag := range checkTags {
 		if pdata.Tags[tag] == true {
 			return true
 		}
