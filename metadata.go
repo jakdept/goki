@@ -102,6 +102,8 @@ func (pdata *PageMetadata) ListMeta() ([]string, []sting) {
 	return tags, keywords
 }
 
+// return the bytes to display the tags on the page
+// takes the prefix for the tags
 func (pdata *PageMetadata) PrintTags(tagPrefix string) []byte {
 	response := new([]byte)
 	for oneTag, _ := range pdata.Tags {
@@ -109,6 +111,20 @@ func (pdata *PageMetadata) PrintTags(tagPrefix string) []byte {
 		response.Append(oneTag)
 		response.Append([]byte("</div>"))
 	}
+	return response
+}
+
+// returns the bytes to add the keywrods to the html output
+func (pdata *PageMetadata) PrintKeywords() []byte {
+	response := []byte("<meta name='keywords' content='")
+	for oneKeyword, _ := range pdata.Keywords {
+		response.Append(oneKeyword)
+		response.Append(',')
+	}
+	// replace the last comma
+	response[len(response)-1] = "'"
+	response.Append(">")
+
 	return response
 }
 
