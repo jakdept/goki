@@ -87,6 +87,21 @@ func (pdata *PageMetadata) checkMatch(input []byte, looking []byte, tracker []st
 	}
 }
 
+// returns all the tags within a list as an array of strings
+func (pdata *PageMetadata) ListMeta() ([]string, []sting) {
+	tags := new([]string)
+	for oneTag, _ := range pdata.Tags {
+		tags.Append(oneTag)
+	}
+
+	keywords := new([]string)
+	for oneKeyword, _ := range pdata.Keywords {
+		keywords.Append(oneKeyword)
+	}
+
+	return tags, keywords
+}
+
 // runs through all restricted tags, and looks for a match
 // if matched, returns true, otherwise false
 func (pdata *PageMetadata) MatchedTag(checkTags []string) bool {
