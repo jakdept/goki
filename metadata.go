@@ -102,6 +102,16 @@ func (pdata *PageMetadata) ListMeta() ([]string, []sting) {
 	return tags, keywords
 }
 
+func (pdata *PageMetadata) PrintTags(tagPrefix string) []byte {
+	response := new([]byte)
+	for oneTag, _ := range pdata.Tags {
+		response.Append([]byte("<div class='tag'>" + tagPrefix))
+		response.Append(oneTag)
+		response.Append([]byte("</div>"))
+	}
+	return response
+}
+
 // runs through all restricted tags, and looks for a match
 // if matched, returns true, otherwise false
 func (pdata *PageMetadata) MatchedTag(checkTags []string) bool {
