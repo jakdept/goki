@@ -170,9 +170,11 @@ func (pdata *PageMetadata) ListMeta() ([]string, []string) {
 // return the bytes to display the tags on the page
 // takes the prefix for the tags
 func (pdata *PageMetadata) PrintTags(tagPrefix string) template.HTML {
-	response := new([]byte)
+	response := []byte{}
+	openingTag := []byte("<div class='tag'>")
+	closingTag := []byte("</div>")
 	for oneTag, _ := range pdata.Tags {
-		response = bytes.Join([][]byte{"<div class='tag'>", tagPrefix, oneTag, "</div>"}, []byte(""))
+		response = bytes.Join([][]byte{openingTag, []byte(tagPrefix), []byte(oneTag), closingTag}, []byte(""))
 	}
 	return template.HTML(response)
 }
