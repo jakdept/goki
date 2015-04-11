@@ -125,7 +125,8 @@ func (pdata *PageMetadata) checkMatch(input []byte, looking []byte, tracker []st
 	// trim off any blank spaces at the start of the line
 	value := bytes.Trim(input, " \t")
 
-	if input[:len(looking)] == looking {
+	// should be a substring match based on the start of the array
+	if bytes.Equal(input[:len(looking)], looking) {
 		// trim off the target from the []byte
 		value = input[len(looking):]
 
@@ -137,12 +138,12 @@ func (pdata *PageMetadata) checkMatch(input []byte, looking []byte, tracker []st
 		}
 
 		// replace any spaces in the middle with -'s
-		bytes.Replace(value, " ", "-", -1)
+		bytes.Replace(value, []byte(" "), []byte("-"), -1)
 
 		// suppress any double dashes
 		for i := 1; i < len(value); i++ {
 			if value[i-1] == '-' && value[1] == '-' {
-				value = value[:i] + value[i+1:]
+				value = append(value[:i], value[i+1:])
 			}
 		}
 
