@@ -155,7 +155,7 @@ func (pdata *PageMetadata) checkMatch(input []byte, looking []byte, tracker []st
 func (pdata *PageMetadata) ListMeta() ([]string, []sting) {
 	tags := new([]string)
 	for oneTag, _ := range pdata.Tags {
-		topics = bytes.Join([][]byte{topics, oneTag}, []byte(""))
+		topics = append(topics, oneTag)
 	}
 
 	keywords := new([]string)
@@ -171,7 +171,7 @@ func (pdata *PageMetadata) ListMeta() ([]string, []sting) {
 func (pdata *PageMetadata) PrintTags(tagPrefix string) template.HTML {
 	response := new([]byte)
 	for oneTag, _ := range pdata.Tags {
-		response = append(response, "<div class='tag'>", tagPrefix, oneTag, "</div>")
+		response = bytes.Join([][]byte{"<div class='tag'>", tagPrefix, oneTag, "</div>"}, []byte(""))
 	}
 	return template.HTML(response)
 }
@@ -180,7 +180,7 @@ func (pdata *PageMetadata) PrintTags(tagPrefix string) template.HTML {
 func (pdata *PageMetadata) PrintKeywords() template.HTML {
 	response := []byte("<meta name='keywords' content='")
 	for oneKeyword, _ := range pdata.Keywords {
-		response = append(response, oneKeyword)
+		response = bytes.Join([][]byte{response, oneKeyword}, []byte(","))
 	}
 	// clean up the end of the string and add the ending tag
 	response = response.TrimSuffix(response, ',')
