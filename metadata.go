@@ -5,6 +5,7 @@ package gnosis
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"html/template"
 	"os"
 )
@@ -25,9 +26,9 @@ func (pdata *PageMetadata) LoadPage(pageName string) error {
 	if err != nil {
 		return err
 	} else if !fullLine {
-		return err.New("first line I read wasn't a full line")
+		return errors.New("first line I read wasn't a full line")
 	} else if lineIsTitle(upperLine) {
-		return err.New("first line looks an awful lot like the underside of the title o.O")
+		return errors.New("first line looks an awful lot like the underside of the title o.O")
 	}
 
 	lowerLine, fullLine, err := reader.ReadLine()
@@ -36,7 +37,7 @@ func (pdata *PageMetadata) LoadPage(pageName string) error {
 	if err != nil {
 		return err
 	} else if !fullLine {
-		return err.New("second line I read wasn't a full line")
+		return errors.New("second line I read wasn't a full line")
 	} else if lineIsTitle(lowerLine) {
 		// if the second line is a title, read the rest of the page in
 		// you don't have any metadata to work with here, move on
