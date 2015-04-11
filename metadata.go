@@ -27,7 +27,7 @@ func (pdata *PageMetadata) LoadPage(pageName string) error {
 		return err
 	} else if !fullLine {
 		return errors.New("first line I read wasn't a full line")
-	} else if lineIsTitle(upperLine) {
+	} else if pdata.lineIsTitle(upperLine) {
 		return errors.New("first line looks an awful lot like the underside of the title o.O")
 	}
 
@@ -38,7 +38,7 @@ func (pdata *PageMetadata) LoadPage(pageName string) error {
 		return err
 	} else if !fullLine {
 		return errors.New("second line I read wasn't a full line")
-	} else if lineIsTitle(lowerLine) {
+	} else if pdata.lineIsTitle(lowerLine) {
 		// if the second line is a title, read the rest of the page in
 		// you don't have any metadata to work with here, move on
 		upperLine.Append('\n')
@@ -58,7 +58,7 @@ func (pdata *PageMetadata) LoadPage(pageName string) error {
 	// if you're at this point, the first line is metadata
 	// you gotta process it and work with the next line
 	// so let's just read through the file until we hit the title
-	for !lineIsTitle(lowerLine) {
+	for !pdata.lineIsTitle(lowerLine) {
 		// process the line
 		ProcessMetadata(upperLine)
 		// shift the lower line up
