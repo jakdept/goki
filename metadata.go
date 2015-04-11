@@ -121,7 +121,7 @@ func (pdata *PageMetadata) lineIsTitle(line []byte) bool {
 	}
 }
 
-func (pdata *PageMetadata) checkMatch(input []byte, looking []byte, tracker []string) {
+func (pdata *PageMetadata) checkMatch(input []byte, looking []byte, tracker map[string]bool) {
 	// trim off any blank spaces at the start of the line
 	value := bytes.Trim(input, " \t")
 
@@ -141,14 +141,14 @@ func (pdata *PageMetadata) checkMatch(input []byte, looking []byte, tracker []st
 		bytes.Replace(value, []byte(" "), []byte("-"), -1)
 
 		// suppress any double dashes
-		for i := 1; i < len(value); i++ {
-			if value[i-1] == '-' && value[1] == '-' {
-				value = append(value[:i], value[i+1:])
+		for i := 0; i < len(value)-1; i++ {
+			if value[i] == '-' && value[i+1] == '-' {
+				value = append(value[:i], value[i+1:]...)
 			}
 		}
 
 		// now just add the value to the array that you're tracking
-		tracker[value] = true
+		tracker[string(value)] = true
 	}
 }
 
