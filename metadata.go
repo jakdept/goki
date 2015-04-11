@@ -183,11 +183,11 @@ func (pdata *PageMetadata) PrintTags(tagPrefix string) template.HTML {
 func (pdata *PageMetadata) PrintKeywords() template.HTML {
 	response := []byte("<meta name='keywords' content='")
 	for oneKeyword, _ := range pdata.Keywords {
-		response = bytes.Join([][]byte{response, oneKeyword}, []byte(","))
+		response = bytes.Join([][]byte{response, []byte(oneKeyword)}, []byte(","))
 	}
 	// clean up the end of the string and add the ending tag
-	response = response.TrimSuffix(response, ',')
-	response = append(response, "'>")
+	response = bytes.TrimSuffix(response, []byte{','})
+	response = append(response, []byte("'>")...)
 
 	return template.HTML(response)
 }
