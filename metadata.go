@@ -9,45 +9,43 @@ import (
 	"os"
 )
 
-type pageMetadata struct {
+type PageMetadata struct {
 	Keywords map[string]bool
 	Tags     map[string]bool
 	Loaded   bool
 	Page     []byte
 }
 
-var pdata pageMetadata
-
 func (pdata *PageMetadata) lineIsTitle(line []byte) bool {
 	finalLength := len(line)
 	i := 0
 
 	// if the row doesn't start with tabs, spaces, or ='s
-	if (data[i] != ' ' && data[i] != '=') && data[i] != '\t' {
+	if (line[i] != ' ' && line[i] != '=') && line[i] != '\t' {
 		return false
 	}
 
 	// skip any spaces or tabs at the start
-	for data[i] == ' ' || data[i] == '\t' {
+	for line[i] == ' ' || line[i] == '\t' {
 		i++
 	}
 
 	// if the next item's not a =, bail out
-	if data[i] != '=' {
+	if line[i] != '=' {
 		return false
 	}
 
 	// run through all of the ='s
-	for data[i] == '=' {
+	for line[i] == '=' {
 		i++
 	}
 
-	if data[i] != ' ' && data[i] != '\t' && data[i] != '\n' {
+	if line[i] != ' ' && line[i] != '\t' && line[i] != '\n' {
 		return false
 	}
 
 	//ditch all spaces after any ='s
-	for data[i] == ' ' || data[i] == '\t' {
+	for line[i] == ' ' || line[i] == '\t' {
 		i++
 	}
 
@@ -60,7 +58,7 @@ func (pdata *PageMetadata) lineIsTitle(line []byte) bool {
 
 func (pdata *PageMetadata) checkMatch(input []byte, looking []byte, tracker []string) {
 	// trim off any blank spaces at the start of the line
-	value := bytes.Trim(line, " \t")
+	value := bytes.Trim(input, " \t")
 
 	if input[:len(looking)] == looking {
 		// trim off the target from the []byte
