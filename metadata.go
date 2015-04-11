@@ -48,7 +48,7 @@ func (pdata *PageMetadata) LoadPage(pageName string) error {
 		}
 		// if the second line is a title, read the rest of the page in
 		// you don't have any metadata to work with here, move on
-		pdata.Page = bytes.Join([][]byte{upperLine, lowerLine, restOfPage}, []byte(" \n"))
+		pdata.Page = bytes.Join([][]byte{upperLine, lowerLine, restOfPage}, []byte("\n"))
 
 		// you've successfully loaded the page - so return nothing
 		pdata.Loaded = true
@@ -60,7 +60,7 @@ func (pdata *PageMetadata) LoadPage(pageName string) error {
 	// so let's just read through the file until we hit the title
 	for !pdata.lineIsTitle(lowerLine) {
 		// process the line
-		ProcessMetadata(upperLine)
+		pdata.processMetadata(upperLine)
 		// shift the lower line up
 		upperLine = lowerLine
 		// read in a new lower line
@@ -73,11 +73,9 @@ func (pdata *PageMetadata) LoadPage(pageName string) error {
 	}
 
 	// by this point, I should have read everything in - let's read the rest and just return it
-	upperLine = append(upperLine, '\n', lowerLine, '\n')
-
-	_, err = reader.Read(lowerLine)
-
-	pdata.Page = append(upperLine, lowerLine)
+	var restOfPage []byte
+	_, err = reader.Read(restOfPage)
+	pdata.Page = bytes.Join([][]byte{upperLine, lowerLine, restOfPage}, []byte("\n"))
 
 	return err
 }
@@ -157,7 +155,7 @@ func (pdata *PageMetadata) checkMatch(input []byte, looking []byte, tracker []st
 func (pdata *PageMetadata) ListMeta() ([]string, []sting) {
 	tags := new([]string)
 	for oneTag, _ := range pdata.Tags {
-		topics = append(topics, oneTag)
+		topics = bytes.Join([][]byte{topics, oneTag}, []byte(""))
 	}
 
 	keywords := new([]string)
@@ -202,7 +200,7 @@ func (pdata *PageMetadata) MatchedTag(checkTags []string) bool {
 	return false
 }
 
-func (pdata *PageMetadata) ProcessMetadata(line []byte) error {
+func (pdata *PageMetadata) processMetadata(line []byte) error {
 	pdata.checkMatch(line, "tag", pdata.Tags)
 	pdata.checkMatch(line, "topic", pdata.Tags)
 	pdata.checkMatch(line, "category", pdata.Tags)
