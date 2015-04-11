@@ -41,14 +41,14 @@ func (pdata *PageMetadata) LoadPage(pageName string) error {
 	} else if pdata.lineIsTitle(lowerLine) {
 		// if the second line is a title, read the rest of the page in
 		// you don't have any metadata to work with here, move on
-		upperLine.Append('\n')
-		upperLine.Append(lowerLine)
-		upperLine.Append('\n')
+		pdata.Page = append(upperLine, '\n', lowerLine, '\n')
 
 		_, err = reader.Read(lowerLine)
 		if err != nil {
 			return err
 		}
+
+		pdata.Page = append(pdata.Page, lowerLine)
 
 		// you've successfully loaded the page - so return nothing
 		pdata.Loaded = true
@@ -68,16 +68,17 @@ func (pdata *PageMetadata) LoadPage(pageName string) error {
 		if err != nil {
 			return err
 		} else if !fullLine {
-			return err.New("I filled my buffer with a line")
+			return errors.New("I filled my buffer with a line")
 		}
 	}
 
 	// by this point, I should have read everything in - let's read the rest and just return it
-	upperLine.Append('\n')
-	upperLine.Append(lowerLine)
-	upperLine.Append('\n')
+	upperLine = append(upperLine, '\n', lowerLine, '\n')
 
 	_, err = reader.Read(lowerLine)
+
+	pdata.Page = append(upperLine, lowerLine)
+
 	return err
 }
 
