@@ -6,7 +6,6 @@ import (
 	"bufio"
 	"bytes"
 	"html/template"
-	"io"
 	"os"
 )
 
@@ -107,26 +106,26 @@ func (pdata *PageMetadata) ListMeta() ([]string, []sting) {
 // return the bytes to display the tags on the page
 // takes the prefix for the tags
 func (pdata *PageMetadata) PrintTags(tagPrefix string) template.HTML {
-	response := new(string)
+	response := new([]byte)
 	for oneTag, _ := range pdata.Tags {
-		response += "<div class='tag'>"
-		response += tagPrefix
-		response += oneTag
-		response += "</div>"
+		response.Append("<div class='tag'>")
+		response.Append(tagPrefix)
+		response.Append(oneTag)
+		response.Append("</div>")
 	}
 	return template.HTML(response)
 }
 
 // returns the bytes to add the keywrods to the html output
 func (pdata *PageMetadata) PrintKeywords() template.HTML {
-	response := string("<meta name='keywords' content='")
+	response := []byte("<meta name='keywords' content='")
 	for oneKeyword, _ := range pdata.Keywords {
-		response += oneKeyword
-		response += ','
+		response.Append(oneKeyword)
+		response.Append(',')
 	}
 	// clean up the end of the string and add the ending tag
 	response = response.TrimSuffix(response, ',')
-	response += "'>"
+	response.Append("'>")
 
 	return template.HTML(response)
 }
