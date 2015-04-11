@@ -153,18 +153,18 @@ func (pdata *PageMetadata) checkMatch(input []byte, looking []byte, tracker map[
 }
 
 // returns all the tags within a list as an array of strings
-func (pdata *PageMetadata) ListMeta() ([]string, []sting) {
-	tags := new([]string)
+func (pdata *PageMetadata) ListMeta() ([]string, []string) {
+	topics := []string{}
 	for oneTag, _ := range pdata.Tags {
-		topics = append(topics, oneTag)
+		topics = append(topics[:], oneTag)
 	}
 
-	keywords := new([]string)
+	keywords := []string{}
 	for oneKeyword, _ := range pdata.Keywords {
-		keywords = append(keywords, oneKeyword)
+		keywords = append(keywords[:], oneKeyword)
 	}
 
-	return tags, keywords
+	return topics, keywords
 }
 
 // return the bytes to display the tags on the page
