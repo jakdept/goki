@@ -31,13 +31,13 @@ func TestLineIsTitle(t *testing.T) {
 	titleLine = []byte("   ======")
 	assert.True(t, pdata.lineIsTitle(titleLine), "any spaces before the heading portion should not cause failure")
 
-	titleLine = []byte("			======")
+	titleLine = []byte("\t\t\t======")
 	assert.True(t, pdata.lineIsTitle(titleLine), "tabs before the heading portion should not cause failure")
 
 	titleLine = []byte("=======     ")
 	assert.True(t, pdata.lineIsTitle(titleLine), "spaces after the heading portion should not cause failure")
 
-	titleLine = []byte("=======			")
+	titleLine = []byte("=======\t\t\t")
 	assert.True(t, pdata.lineIsTitle(titleLine), "tabs after the heading portion should not cause failure")
 
 	titleLine = []byte("=======\n")
@@ -94,4 +94,27 @@ func TestProcessMetadata(t *testing.T) {
 	metaDataLine = []byte("keyword=b")
 	pdata.processMetadata(metaDataLine)
 	assert.True(t, pdata.Keywords["b"], "keyword b should have been added")
+}
+
+func TestLoadPageNoMetadata(t *testing.T) {
+	simplePage := `Test Page
+		=========
+		some test content`
+
+	filepath := path.Join(os.TempDir(), "simpleini.txt")
+	f, err := os.Create(filepath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(filepath)
+	if _, err := f.WriteString(simplePage); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	pdata := new(PageMetadata)
+	pdata.LoadPage(filepath)
+	assert.Equal(t, pdata.Page, []byte(simplePage), "I should be able to load a page that has no metadata")
 }
