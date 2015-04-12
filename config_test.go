@@ -95,14 +95,14 @@ func TestSimpleJsonConfig(t *testing.T) {
 
 	success := LoadConfig(filepath)
 
-	assert.Equal(t, success, "Default configuration should load without error.")
+	assert.True(t, success, "Default configuration should load without error.")
 
 	config := GetConfig()
 
 	//assert.Nil(t, config, "Config file could not be accessed")
 
 	assert.Equal(t, config.Global.Port, "8080", "read Port value incorrectly")
-	assert.Equal(t, config.Global.Hostname, "localhost", "read Hostname value incorrectly")
+	assert.Equal(t, config.Global.Hostname, "wiki.hostbaitor.com", "read Hostname value incorrectly")
 
 	assert.Equal(t, config.Mainserver.Path, "/var/www/wiki/", "read Path value incorrectly")
 	assert.Equal(t, config.Mainserver.Prefix, "/", "read Prefix value incorrectly")
@@ -110,7 +110,7 @@ func TestSimpleJsonConfig(t *testing.T) {
 	assert.Equal(t, config.Mainserver.ServerType, "markdown", "read ServerType value incorrectly")
 
 	assert.Equal(t, config.Mainserver.Restricted[0], "internal", "read first Restricted value incorrectly")
-	assert.Equal(t, config.Mainserver.Restricted[1], "internal", "read first Restricted value incorrectly")
+	assert.Equal(t, config.Mainserver.Restricted[1], "handbook", "read first Restricted value incorrectly")
 
 	assert.Equal(t, len(config.Mainserver.Restricted), 2, "incorrect number of restricted elements") // putting this comment here so sublime stops freaking out about a line with one character
 }
