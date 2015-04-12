@@ -12,7 +12,7 @@ import (
 
 type PageMetadata struct {
 	Keywords map[string]bool
-	Tags     map[string]bool
+	Topics   map[string]bool
 	Loaded   bool
 	Page     []byte
 }
@@ -155,7 +155,7 @@ func (pdata *PageMetadata) checkMatch(input []byte, looking []byte, tracker map[
 // returns all the tags within a list as an array of strings
 func (pdata *PageMetadata) ListMeta() ([]string, []string) {
 	topics := []string{}
-	for oneTag, _ := range pdata.Tags {
+	for oneTag, _ := range pdata.Topics {
 		topics = append(topics[:], oneTag)
 	}
 
@@ -169,11 +169,11 @@ func (pdata *PageMetadata) ListMeta() ([]string, []string) {
 
 // return the bytes to display the tags on the page
 // takes the prefix for the tags
-func (pdata *PageMetadata) PrintTags(tagPrefix string) template.HTML {
+func (pdata *PageMetadata) PrintTopics(tagPrefix string) template.HTML {
 	response := []byte{}
 	openingTag := []byte("<div class='tag'>")
 	closingTag := []byte("</div>")
-	for oneTag, _ := range pdata.Tags {
+	for oneTag, _ := range pdata.Topics {
 		response = bytes.Join([][]byte{openingTag, []byte(tagPrefix), []byte(oneTag), closingTag}, []byte(""))
 	}
 	return template.HTML(response)
@@ -196,7 +196,7 @@ func (pdata *PageMetadata) PrintKeywords() template.HTML {
 // if matched, returns true, otherwise false
 func (pdata *PageMetadata) MatchedTag(checkTags []string) bool {
 	for _, tag := range checkTags {
-		if pdata.Tags[tag] == true {
+		if pdata.Topics[tag] == true {
 			return true
 		}
 	}
@@ -204,11 +204,14 @@ func (pdata *PageMetadata) MatchedTag(checkTags []string) bool {
 }
 
 func (pdata *PageMetadata) processMetadata(line []byte) error {
-	pdata.checkMatch(line, "tag", pdata.Tags)
-	pdata.checkMatch(line, "topic", pdata.Tags)
-	pdata.checkMatch(line, "category", pdata.Tags)
+	pdata.checkMatch(line, []byte("tag"), pdata.Topics)
+	pdata.checkMatch(line, []byte("topic"), pdata.Topics)
+	pdata.checkMatch(line, []byte("category"), pdata.Topics)
 
-	pdata.checkMatch(line, "keyword", pdata.Keywords)
-	pdata.checkMatch(line, "keywords", pdata.Keywords)
-	pdata.checkMatch(line, "meta", pdata.Keywords)
+	pdata.checkMatch(line, []byte("keyword"), pdata.Keywords)
+	pdata.checkMatch(line, []byte("keywords"), pdata.Keywords)
+	pdata.checkMatch(line, []byte("meta"), pdata.Keywords)
+
+	// need a better return value than error?
+	return nil
 }
