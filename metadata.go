@@ -34,7 +34,7 @@ func (pdata *PageMetadata) lineIsTitle(line []byte) bool {
 }
 
 // take a given line, and check it against every possible type of tag
-func (pdata *PageMetadata) processMetadata(line []byte) error {
+func (pdata *PageMetadata) processMetadata(line []byte) {
 	pdata.checkMatch(line, []byte("tag"), pdata.Topics)
 	pdata.checkMatch(line, []byte("topic"), pdata.Topics)
 	pdata.checkMatch(line, []byte("category"), pdata.Topics)
@@ -42,9 +42,6 @@ func (pdata *PageMetadata) processMetadata(line []byte) error {
 	pdata.checkMatch(line, []byte("keyword"), pdata.Keywords)
 	pdata.checkMatch(line, []byte("keywords"), pdata.Keywords)
 	pdata.checkMatch(line, []byte("meta"), pdata.Keywords)
-
-	// need a better return value than error?
-	return nil
 }
 
 func (pdata *PageMetadata) LoadPage(pageName string) error {
