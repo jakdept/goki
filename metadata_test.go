@@ -84,20 +84,14 @@ func TestCheckMatch(t *testing.T) {
 	assert.True(t, pdata.Topics["i"], "should have been able to add element i to the thingy")
 }
 
-/*
 func TestProcessMetadata(t *testing.T) {
 	pdata := new(PageMetadata)
 
 	metaDataLine := []byte("topic = a")
 	pdata.processMetadata(metaDataLine)
-	assert.True(t, stringKeyExistsInMap(pdata.Topics, "a"), "the element I just tried to add should have been added")
-	assert.True(t, pdata.Topics["a"], "the element I just tried to add should be true")
-	assert.False(t, pdata.Topics["b"], "this is a trap")
+	assert.True(t, pdata.Topics["a"], "topic a should have been added")
 
-	/*
-		metaDataLine = []byte("topic=a")
-		pdata.processMetadata(metaDataLine)
-		assert.True(t, stringKeyExistsInMap(pdata.Topics, "a"), "the element I just tried to add should have been added")
-		assert.True(t, pdata.Topics["a"], "the element I just tried to add should have been added")
-*/
-//}
+	metaDataLine = []byte("keyword=b")
+	pdata.processMetadata(metaDataLine)
+	assert.True(t, pdata.Keywords["b"], "keyword b should have been added")
+}
