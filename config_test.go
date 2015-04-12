@@ -42,7 +42,7 @@ func TestDefaultJsonConfig(t *testing.T) {
 
 	success := LoadConfig(filepath)
 
-	assert.Equal(t, success, "Default configuration should load without error.")
+	assert.True(t, success, "Default configuration should load without error.")
 
 	config := GetConfig()
 
