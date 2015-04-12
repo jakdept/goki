@@ -82,43 +82,18 @@ func (pdata *PageMetadata) LoadPage(pageName string) error {
 
 // takes a single line of input and determines if it's a top level markdown header
 func (pdata *PageMetadata) lineIsTitle(line []byte) bool {
-	finalLength := len(line)
-	i := 0
+	// trim any whitespace from the start and the end of the line
+	line = bytes.TrimSpace(line)
 
-	// if the row doesn't start with tabs, spaces, or ='s
-	if (line[i] != ' ' && line[i] != '=') && line[i] != '\t' {
-		return false
+	// run through all of the ='s - make sure they're all correct
+	for i := 0; i < len(line); i++ {
+		if line[i] != '=' {
+			return false
+		}
 	}
 
-	// skip any spaces or tabs at the start
-	for line[i] == ' ' || line[i] == '\t' {
-		i++
-	}
-
-	// if the next item's not a =, bail out
-	if line[i] != '=' {
-		return false
-	}
-
-	// run through all of the ='s
-	for line[i] == '=' {
-		i++
-	}
-
-	if line[i] != ' ' && line[i] != '\t' && line[i] != '\n' {
-		return false
-	}
-
-	//ditch all spaces after any ='s
-	for line[i] == ' ' || line[i] == '\t' {
-		i++
-	}
-
-	if finalLength == i+1 {
-		return true
-	} else {
-		return false
-	}
+	// if you got here, it should all be legit
+	return true
 }
 
 func (pdata *PageMetadata) checkMatch(input []byte, looking []byte, tracker map[string]bool) {
