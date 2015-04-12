@@ -125,7 +125,7 @@ func (pdata *PageMetadata) checkMatch(input []byte, looking []byte, tracker *map
 		}
 
 		// replace any spaces in the middle with -'s
-		bytes.Replace(value, []byte(" "), []byte("-"), -1)
+		value = bytes.Replace(value, []byte(" "), []byte("-"), -1)
 
 		// suppress any double dashes
 		for i := 0; i < len(value)-1; i++ {
