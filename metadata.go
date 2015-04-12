@@ -17,6 +17,36 @@ type PageMetadata struct {
 	Page     []byte
 }
 
+// takes a single line of input and determines if it's a top level markdown header
+func (pdata *PageMetadata) lineIsTitle(line []byte) bool {
+	// trim any whitespace from the start and the end of the line
+	line = bytes.TrimSpace(line)
+
+	// run through all of the ='s - make sure they're all correct
+	for i := 0; i < len(line); i++ {
+		if line[i] != '=' {
+			return false
+		}
+	}
+
+	// if you got here, it should all be legit
+	return true
+}
+
+// take a given line, and check it against every possible type of tag
+func (pdata *PageMetadata) processMetadata(line []byte) error {
+	pdata.checkMatch(line, []byte("tag"), pdata.Topics)
+	pdata.checkMatch(line, []byte("topic"), pdata.Topics)
+	pdata.checkMatch(line, []byte("category"), pdata.Topics)
+
+	pdata.checkMatch(line, []byte("keyword"), pdata.Keywords)
+	pdata.checkMatch(line, []byte("keywords"), pdata.Keywords)
+	pdata.checkMatch(line, []byte("meta"), pdata.Keywords)
+
+	// need a better return value than error?
+	return nil
+}
+
 func (pdata *PageMetadata) LoadPage(pageName string) error {
 	f, err := os.Open(pageName)
 	reader := bufio.NewReader(f)
@@ -78,22 +108,6 @@ func (pdata *PageMetadata) LoadPage(pageName string) error {
 	pdata.Page = bytes.Join([][]byte{upperLine, lowerLine, restOfPage}, []byte("\n"))
 
 	return err
-}
-
-// takes a single line of input and determines if it's a top level markdown header
-func (pdata *PageMetadata) lineIsTitle(line []byte) bool {
-	// trim any whitespace from the start and the end of the line
-	line = bytes.TrimSpace(line)
-
-	// run through all of the ='s - make sure they're all correct
-	for i := 0; i < len(line); i++ {
-		if line[i] != '=' {
-			return false
-		}
-	}
-
-	// if you got here, it should all be legit
-	return true
 }
 
 func (pdata *PageMetadata) checkMatch(input []byte, looking []byte, tracker map[string]bool) {
@@ -176,17 +190,4 @@ func (pdata *PageMetadata) MatchedTag(checkTags []string) bool {
 		}
 	}
 	return false
-}
-
-func (pdata *PageMetadata) processMetadata(line []byte) error {
-	pdata.checkMatch(line, []byte("tag"), pdata.Topics)
-	pdata.checkMatch(line, []byte("topic"), pdata.Topics)
-	pdata.checkMatch(line, []byte("category"), pdata.Topics)
-
-	pdata.checkMatch(line, []byte("keyword"), pdata.Keywords)
-	pdata.checkMatch(line, []byte("keywords"), pdata.Keywords)
-	pdata.checkMatch(line, []byte("meta"), pdata.Keywords)
-
-	// need a better return value than error?
-	return nil
 }
