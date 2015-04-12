@@ -9,8 +9,17 @@ import (
 	"testing"
 )
 
+func existsInMap(itemMap map[string]bool, key string) bool {
+	defer func() bool {
+		r := recover()
+		return r == nil
+	}()
+	junk := itemMap[key]
+	return junk == junk
+}
+
 func TestLineIsTitle(t *testing.T) {
-	pd := new(PageMetadata)
+	pdata := new(PageMetadata)
 
 	// test the most normal topic line I'd expect
 	titleLine := []byte("=======")
