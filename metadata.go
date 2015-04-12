@@ -35,13 +35,13 @@ func (pdata *PageMetadata) lineIsTitle(line []byte) bool {
 
 // take a given line, and check it against every possible type of tag
 func (pdata *PageMetadata) processMetadata(line []byte) {
-	pdata.checkMatch(line, []byte("tag"), pdata.Topics)
-	pdata.checkMatch(line, []byte("topic"), pdata.Topics)
-	pdata.checkMatch(line, []byte("category"), pdata.Topics)
+	pdata.checkMatch(line, []byte("tag"), &pdata.Topics)
+	pdata.checkMatch(line, []byte("topic"), &pdata.Topics)
+	pdata.checkMatch(line, []byte("category"), &pdata.Topics)
 
-	pdata.checkMatch(line, []byte("keyword"), pdata.Keywords)
-	pdata.checkMatch(line, []byte("keywords"), pdata.Keywords)
-	pdata.checkMatch(line, []byte("meta"), pdata.Keywords)
+	pdata.checkMatch(line, []byte("keyword"), &pdata.Keywords)
+	pdata.checkMatch(line, []byte("keywords"), &pdata.Keywords)
+	pdata.checkMatch(line, []byte("meta"), &pdata.Keywords)
 }
 
 func (pdata *PageMetadata) LoadPage(pageName string) error {
@@ -107,17 +107,18 @@ func (pdata *PageMetadata) LoadPage(pageName string) error {
 	return err
 }
 
-func (pdata *PageMetadata) checkMatch(input []byte, looking []byte, tracker map[string]bool) {
+func (pdata *PageMetadata) checkMatch(input []byte, looking []byte, tracker *map[string]bool) {
 	// trim off any blank spaces at the start of the line
-	value := bytes.Trim(input, " \t")
+	value := bytes.TrimSpace(input)
 
 	// should be a substring match based on the start of the array
 	if bytes.Equal(input[:len(looking)], looking) {
+
 		// trim off the target from the []byte
 		value = input[len(looking):]
 
 		// trim spaces at the start and at the end
-		value = bytes.Trim(value, " \t\n")
+		value = bytes.TrimSpace(value)
 
 		if value[0] == ':' || value[0] == '=' {
 			value = bytes.Trim(value, " \t\n=:")
@@ -134,10 +135,10 @@ func (pdata *PageMetadata) checkMatch(input []byte, looking []byte, tracker map[
 		}
 
 		// now just add the value to the array that you're tracking
-		if tracker != nil {
-			tracker[string(value)] = true
+		if *tracker != nil {
+			(*tracker)[string(value)] = true
 		} else {
-			tracker = map[string]bool{string(value): true}
+			*tracker = map[string]bool{string(value): true}
 		}
 	}
 }
