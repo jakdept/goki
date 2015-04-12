@@ -64,7 +64,7 @@ func (pdata *PageMetadata) LoadPage(pageName string) error {
 		// shift the lower line up
 		upperLine = lowerLine
 		// read in a new lower line
-		lowerLine, fullLine, err := reader.ReadLine()
+		lowerLine, fullLine, err = reader.ReadLine()
 		if err != nil {
 			return err
 		} else if !fullLine {
