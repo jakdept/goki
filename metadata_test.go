@@ -23,29 +23,37 @@ func TestLineIsTitle(t *testing.T) {
 
 	// test the most normal topic line I'd expect
 	titleLine := []byte("=======")
-	assert.True(t, pd.lineIsTitle(titleLine), "the most basic topic line just failed")
+	assert.True(t, pdata.lineIsTitle(titleLine), "the most basic topic line just failed")
 
 	titleLine = []byte("=")
-	assert.True(t, pd.lineIsTitle(titleLine), "one = should be enough")
+	assert.True(t, pdata.lineIsTitle(titleLine), "one = should be enough")
 
 	titleLine = []byte("   ======")
-	assert.True(t, pd.lineIsTitle(titleLine), "any spaces before the heading portion should not cause failure")
+	assert.True(t, pdata.lineIsTitle(titleLine), "any spaces before the heading portion should not cause failure")
 
 	titleLine = []byte("			======")
-	assert.True(t, pd.lineIsTitle(titleLine), "tabs before the heading portion should not cause failure")
+	assert.True(t, pdata.lineIsTitle(titleLine), "tabs before the heading portion should not cause failure")
 
 	titleLine = []byte("=======     ")
-	assert.True(t, pd.lineIsTitle(titleLine), "spaces after the heading portion should not cause failure")
+	assert.True(t, pdata.lineIsTitle(titleLine), "spaces after the heading portion should not cause failure")
 
 	titleLine = []byte("=======			")
-	assert.True(t, pd.lineIsTitle(titleLine), "tabs after the heading portion should not cause failure")
+	assert.True(t, pdata.lineIsTitle(titleLine), "tabs after the heading portion should not cause failure")
 
 	titleLine = []byte("=======\n")
-	assert.True(t, pd.lineIsTitle(titleLine), "a newline after the heading portion should not cause failure")
+	assert.True(t, pdata.lineIsTitle(titleLine), "a newline after the heading portion should not cause failure")
 
 	titleLine = []byte("===== ===")
-	assert.False(t, pd.lineIsTitle(titleLine), "the underlining has to be continous - no spaces - so this should have failed")
+	assert.False(t, pdata.lineIsTitle(titleLine), "the underlining has to be continous - no spaces - so this should have failed")
 
 	titleLine = []byte("====	=====")
-	assert.False(t, pd.lineIsTitle(titleLine), "the underlining has to be continous - no tabs - so this should have failed")
+	assert.False(t, pdata.lineIsTitle(titleLine), "the underlining has to be continous - no tabs - so this should have failed")
+}
+
+func TestProcessMetadata(t *testing.T) {
+	pdata := new(PageMetadata)
+
+	metaDataLine := []byte("topic=a")
+	pdata.processMetadata(metaDataLine)
+	assert.True(t, existsInMap(pdata.Topics, "a"), "the element I just tried to add should have been added")
 }
