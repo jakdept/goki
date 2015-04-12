@@ -134,7 +134,11 @@ func (pdata *PageMetadata) checkMatch(input []byte, looking []byte, tracker map[
 		}
 
 		// now just add the value to the array that you're tracking
-		tracker[string(value)] = true
+		if tracker != nil {
+			tracker[string(value)] = true
+		} else {
+			tracker = map[string]bool{string(value): true}
+		}
 	}
 }
 
