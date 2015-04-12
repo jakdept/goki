@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-func existsInMap(itemMap map[string]bool, key string) bool {
+func stringKeyExistsInMap(itemMap map[string]bool, key string) bool {
 	defer func() bool {
 		r := recover()
 		return r == nil
@@ -55,5 +55,6 @@ func TestProcessMetadata(t *testing.T) {
 
 	metaDataLine := []byte("topic=a")
 	pdata.processMetadata(metaDataLine)
-	assert.True(t, existsInMap(pdata.Topics, "a"), "the element I just tried to add should have been added")
+	assert.True(t, stringKeyExistsInMap(pdata.Topics, "a"), "the element I just tried to add should have been added")
+	assert.True(t, pdata.Topics["a"], , "the element I just tried to add should have been added")
 }
