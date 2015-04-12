@@ -44,6 +44,42 @@ func (pdata *PageMetadata) processMetadata(line []byte) {
 	pdata.checkMatch(line, []byte("meta"), &pdata.Keywords)
 }
 
+func (pdata *PageMetadata) checkMatch(input []byte, looking []byte, tracker *map[string]bool) {
+	// trim off any blank spaces at the start of the line
+	value := bytes.TrimSpace(input)
+
+	// should be a substring match based on the start of the array
+	if bytes.Equal(input[:len(looking)], looking) {
+
+		// trim off the target from the []byte
+		value = input[len(looking):]
+
+		// trim spaces at the start and at the end
+		value = bytes.TrimSpace(value)
+
+		if value[0] == ':' || value[0] == '=' {
+			value = bytes.Trim(value, " \t\n=:")
+		}
+
+		// replace any spaces in the middle with -'s
+		value = bytes.Replace(value, []byte(" "), []byte("-"), -1)
+
+		// suppress any double dashes
+		for i := 0; i < len(value)-1; i++ {
+			if value[i] == '-' && value[i+1] == '-' {
+				value = append(value[:i], value[i+1:]...)
+			}
+		}
+
+		// now just add the value to the array that you're tracking
+		if *tracker != nil {
+			(*tracker)[string(value)] = true
+		} else {
+			*tracker = map[string]bool{string(value): true}
+		}
+	}
+}
+
 func (pdata *PageMetadata) LoadPage(pageName string) error {
 	f, err := os.Open(pageName)
 	reader := bufio.NewReader(f)
@@ -105,42 +141,6 @@ func (pdata *PageMetadata) LoadPage(pageName string) error {
 	pdata.Page = bytes.Join([][]byte{upperLine, lowerLine, restOfPage}, []byte("\n"))
 
 	return err
-}
-
-func (pdata *PageMetadata) checkMatch(input []byte, looking []byte, tracker *map[string]bool) {
-	// trim off any blank spaces at the start of the line
-	value := bytes.TrimSpace(input)
-
-	// should be a substring match based on the start of the array
-	if bytes.Equal(input[:len(looking)], looking) {
-
-		// trim off the target from the []byte
-		value = input[len(looking):]
-
-		// trim spaces at the start and at the end
-		value = bytes.TrimSpace(value)
-
-		if value[0] == ':' || value[0] == '=' {
-			value = bytes.Trim(value, " \t\n=:")
-		}
-
-		// replace any spaces in the middle with -'s
-		value = bytes.Replace(value, []byte(" "), []byte("-"), -1)
-
-		// suppress any double dashes
-		for i := 0; i < len(value)-1; i++ {
-			if value[i] == '-' && value[i+1] == '-' {
-				value = append(value[:i], value[i+1:]...)
-			}
-		}
-
-		// now just add the value to the array that you're tracking
-		if *tracker != nil {
-			(*tracker)[string(value)] = true
-		} else {
-			*tracker = map[string]bool{string(value): true}
-		}
-	}
 }
 
 // returns all the tags within a list as an array of strings
