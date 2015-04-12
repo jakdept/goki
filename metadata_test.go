@@ -4,8 +4,8 @@ package gnosis
 
 import (
 	"github.com/stretchr/testify/assert"
-	//"os"
-	//"path"
+	"os"
+	"path"
 	"testing"
 )
 
@@ -96,12 +96,11 @@ func TestProcessMetadata(t *testing.T) {
 	assert.True(t, pdata.Keywords["b"], "keyword b should have been added")
 }
 
-func TestLoadPageNoMetadata(t *testing.T) {
-	simplePage := `Test Page
-		=========
-		some test content`
+func TestLoadPage(t *testing.T) {
+	// lets test this without any metadata
+	simplePage := "Test Page\n=========\nsome test content"
 
-	filepath := path.Join(os.TempDir(), "simpleini.txt")
+	filepath := path.Join(os.TempDir(), "simplePage.md")
 	f, err := os.Create(filepath)
 	if err != nil {
 		t.Fatal(err)
@@ -117,4 +116,26 @@ func TestLoadPageNoMetadata(t *testing.T) {
 	pdata := new(PageMetadata)
 	pdata.LoadPage(filepath)
 	assert.Equal(t, pdata.Page, []byte(simplePage), "I should be able to load a page that has no metadata")
+
+	// test a page with a keyword
+	keywordPage := "keyword : junk\nsome other Page\n=========\nsome test content\nthere should be keywords"
+
+	filepath = path.Join(os.TempDir(), "simpleKeywordPage.md")
+	f, err = os.Create(filepath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(filepath)
+	if _, err := f.WriteString(keywordPage); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	// reinitalize the PageMetadata
+	pdata = new(PageMetadata)
+	pdata.LoadPage(filepath)
+	assert.Equal(t, pdata.Page, []byte(keywordPage), "I should be able to load a page that has no metadata")
+
 }
