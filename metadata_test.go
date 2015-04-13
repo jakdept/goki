@@ -18,6 +18,22 @@ func stringKeyExistsInMap(itemMap map[string]bool, key string) bool {
 	return junk == junk
 }
 
+func writeFileForTest(t *testing.T, s string) string {
+	filepath := path.Join(os.TempDir(), "testPage.md")
+	f, err := os.Create(filepath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(filepath)
+	if _, err := f.WriteString(s); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.Close(); err != nil {
+		t.Fatal(err)
+	}
+	return filepath
+}
+
 func TestLineIsTitle(t *testing.T) {
 	pdata := new(PageMetadata)
 
