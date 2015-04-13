@@ -97,10 +97,8 @@ func (pdata *PageMetadata) readRestOfPage(topLine []byte, bottomLine []byte, r *
 
 	if err == io.EOF {
 		return nil
-	} else if err != nil {
-		return err
 	} else {
-		return errors.New("I should have an error - why don't i have an error?")
+		return err
 	}
 }
 
@@ -153,6 +151,17 @@ func (pdata *PageMetadata) LoadPage(pageName string) error {
 	return pdata.readRestOfPage(upperLine, lowerLine, reader)
 }
 
+// runs through all restricted tags, and looks for a match
+// if matched, returns true, otherwise false
+func (pdata *PageMetadata) MatchedTag(checkTags []string) bool {
+	for _, tag := range checkTags {
+		if pdata.Topics[tag] == true {
+			return true
+		}
+	}
+	return false
+}
+
 // returns all the tags within a list as an array of strings
 func (pdata *PageMetadata) ListMeta() ([]string, []string) {
 	topics := []string{}
@@ -191,15 +200,4 @@ func (pdata *PageMetadata) PrintKeywords() template.HTML {
 	response = append(response, []byte("'>")...)
 
 	return template.HTML(response)
-}
-
-// runs through all restricted tags, and looks for a match
-// if matched, returns true, otherwise false
-func (pdata *PageMetadata) MatchedTag(checkTags []string) bool {
-	for _, tag := range checkTags {
-		if pdata.Topics[tag] == true {
-			return true
-		}
-	}
-	return false
 }
