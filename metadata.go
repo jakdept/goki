@@ -41,7 +41,6 @@ func (pdata *PageMetadata) processMetadata(line []byte) {
 	pdata.checkMatch(line, []byte("category"), &pdata.Topics)
 
 	pdata.checkMatch(line, []byte("keyword"), &pdata.Keywords)
-	pdata.checkMatch(line, []byte("keywords"), &pdata.Keywords)
 	pdata.checkMatch(line, []byte("meta"), &pdata.Keywords)
 }
 
@@ -191,13 +190,17 @@ func (pdata *PageMetadata) PrintTopics(tagPrefix string) template.HTML {
 
 // returns the bytes to add the keywrods to the html output
 func (pdata *PageMetadata) PrintKeywords() template.HTML {
-	response := []byte("<meta name='keywords' content='")
-	for oneKeyword, _ := range pdata.Keywords {
-		response = bytes.Join([][]byte{response, []byte(oneKeyword)}, []byte(","))
-	}
-	// clean up the end of the string and add the ending tag
-	response = bytes.TrimSuffix(response, []byte{','})
-	response = append(response, []byte("'>")...)
+	if len(pdata.Keywords) > 0 {
+		var response []byte
+		for oneKeyword, _ := range pdata.Keywords {
+			response = bytes.Join([][]byte{response, []byte(oneKeyword)}, []byte(","))
+		}
+		// clean up the end of the string and add the ending tag
+		response = bytes.Trim(response, ",")
+		response = bytes.Join([][]byte{[]byte("<meta name='keywords' content='"), response, []byte("'>")}, []byte(""))
 
-	return template.HTML(response)
+		return template.HTML(response)
+	} else {
+		return template.HTML("")
+	}
 }
