@@ -24,7 +24,6 @@ func writeFileForTest(t *testing.T, s string) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.Remove(filepath)
 	if _, err := f.WriteString(s); err != nil {
 		t.Fatal(err)
 	}
@@ -103,55 +102,104 @@ func TestCheckMatch(t *testing.T) {
 func TestProcessMetadata(t *testing.T) {
 	pdata := new(PageMetadata)
 
-	metaDataLine := []byte("topic = a")
-	pdata.processMetadata(metaDataLine)
+	pdata.processMetadata([]byte("not really a topic"))
+	assert.Equal(t, 0, len(pdata.Topics), "there shouldn't be a topic in there")
+
+	pdata.processMetadata([]byte("topic = a"))
 	assert.True(t, pdata.Topics["a"], "topic a should have been added")
 
-	metaDataLine = []byte("keyword=b")
-	pdata.processMetadata(metaDataLine)
+	pdata.processMetadata([]byte("keyword=b"))
 	assert.True(t, pdata.Keywords["b"], "keyword b should have been added")
 }
 
 func TestLoadPage(t *testing.T) {
 	// lets test this without any metadata
-	simplePage := "Test Page\n=========\nsome test content"
-
-	filepath := path.Join(os.TempDir(), "simplePage.md")
-	f, err := os.Create(filepath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Remove(filepath)
-	if _, err := f.WriteString(simplePage); err != nil {
-		t.Fatal(err)
-	}
-	if err := f.Close(); err != nil {
-		t.Fatal(err)
-	}
-
+	filepath := writeFileForTest(t, "Test Page\n=========\nsome test content\nand some more")
 	pdata := new(PageMetadata)
-	pdata.LoadPage(filepath)
-	assert.Equal(t, pdata.Page, []byte(simplePage), "I should be able to load a page that has no metadata")
+	err := pdata.LoadPage(filepath)
+	defer os.Remove(filepath)
+
+	assert.NoError(t, err)
+	assert.Equal(t, string(pdata.Page),
+		"Test Page\n=========\nsome test content\nand some more",
+		"I should be able to load a page that has no metadata")
 
 	// test a page with a keyword
-	keywordPage := "keyword : junk\nsome other Page\n=========\nsome test content\nthere should be keywords"
-
-	filepath = path.Join(os.TempDir(), "simpleKeywordPage.md")
-	f, err = os.Create(filepath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Remove(filepath)
-	if _, err := f.WriteString(keywordPage); err != nil {
-		t.Fatal(err)
-	}
-	if err := f.Close(); err != nil {
-		t.Fatal(err)
-	}
-
-	// reinitalize the PageMetadata
+	filepath = writeFileForTest(t, "keyword : junk\nsome other Page\n=========\nsome test content\nthere should be keywords")
 	pdata = new(PageMetadata)
-	pdata.LoadPage(filepath)
-	assert.Equal(t, pdata.Page, []byte(keywordPage), "I should be able to load a page that has no metadata")
+	err = pdata.LoadPage(filepath)
+	assert.NoError(t, err)
+	assert.Equal(t, string(pdata.Page),
+		"some other Page\n=========\nsome test content\nthere should be keywords",
+		"I should be able to load a page that has a keyword")
+	assert.True(t, pdata.Keywords["junk"],
+		"i couldn't find the expected keyword")
 
+	// test a page with two keywords
+	filepath = writeFileForTest(t, "keyword : junk\nkeyword = other junk\nsome other Page\n=========\nsome test content\nthere should be keywords")
+	pdata = new(PageMetadata)
+	err = pdata.LoadPage(filepath)
+	assert.NoError(t, err)
+	assert.Equal(t, string(pdata.Page),
+		"some other Page\n=========\nsome test content\nthere should be keywords",
+		"I should be able to load a page that has a keyword")
+	assert.True(t, pdata.Keywords["junk"],
+		"i couldn't find the expected keyword")
+	assert.True(t, pdata.Keywords["other-junk"],
+		"i couldn't find the expected keyword")
+	assert.False(t, pdata.Keywords["not-added"],
+		"i couldn't find the expected keyword")
+
+	filepath = writeFileForTest(t, "keyword : junk\nkeyword = other junk\ntopic : very important\ncategory=internal\nsome other Page\n=========\nsome test content\nthere should be keywords")
+	pdata = new(PageMetadata)
+	err = pdata.LoadPage(filepath)
+	assert.NoError(t, err)
+	assert.Equal(t, string(pdata.Page),
+		"some other Page\n=========\nsome test content\nthere should be keywords",
+		"I should be able to load a page that has a keyword")
+	assert.True(t, pdata.Keywords["junk"],
+		"i couldn't find the expected keyword")
+	assert.True(t, pdata.Keywords["other-junk"],
+		"i couldn't find the expected keyword")
+	assert.True(t, pdata.Topics["very-important"],
+		"i couldn't find the expected keyword")
+	assert.True(t, pdata.Topics["internal"],
+		"i couldn't find the expected keyword")
+	assert.False(t, pdata.Keywords["not-added"],
+		"i couldn't find the expected keyword")
+	assert.False(t, pdata.Topics["not-added"],
+		"i couldn't find the expected keyword")
+
+	filepath = writeFileForTest(t, "========")
+	pdata = new(PageMetadata)
+	err = pdata.LoadPage(filepath)
+	assert.EqualError(t, err, "I only read in... one line?")
+	assert.Empty(t, string(pdata.Page),
+		"how did this page gontent get here?")
+	assert.False(t, pdata.Keywords["not-added"],
+		"i couldn't find the expected keyword")
+	assert.False(t, pdata.Topics["not-added"],
+		"i couldn't find the expected keyword")
+
+	filepath = writeFileForTest(t, "junk page")
+	pdata = new(PageMetadata)
+	err = pdata.LoadPage(filepath)
+	assert.EqualError(t, err, "I only read in... one line?")
+	assert.Empty(t, string(pdata.Page),
+		"how did this page gontent get here?")
+	assert.False(t, pdata.Keywords["not-added"],
+		"i found something I should not have")
+	assert.False(t, pdata.Topics["not-added"],
+		"i found something I should not have")
+
+	filepath = writeFileForTest(t, "junk page\nthat\nhas\nno\ntitle")
+	pdata = new(PageMetadata)
+	err = pdata.LoadPage(filepath)
+	assert.EqualError(t, err, "I only read in... one line?")
+	assert.Empty(t, string(pdata.Page),
+		"how did this page gontent get here?")
+	assert.False(t, pdata.Keywords["not-added"],
+		"i found something I should not have")
+	assert.False(t, pdata.Topics["not-added"],
+		"i found something I should not have")
 }
