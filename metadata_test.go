@@ -209,3 +209,17 @@ func TestLoadPage(t *testing.T) {
 	err = pdata.LoadPage(filepath)
 	assert.EqualError(t, err, "Is this page just a title?")
 }
+
+func TestMatchedTag(t *testing.T) {
+	// test a page with two keywords
+	filepath := writeFileForTest(t, "topic : junk\ncategory = other junk\nsome other Page\n=========\nsome test content\nthere should be keywords")
+	pdata := new(PageMetadata)
+	err := pdata.LoadPage(filepath)
+	assert.NoError(t, err)
+	assert.True(t, pdata.MatchedTag([]string{"junk", "not-gonna-hit"}),
+		"i couldn't find the expected tag")
+	assert.True(t, pdata.MatchedTag([]string{"other-junk", "not-gonna-hit"}),
+		"i couldn't find the expected keyword")
+	assert.False(t, pdata.MatchedTag([]string{"not-added"}),
+		"i couldn't find the expected keyword")
+}
