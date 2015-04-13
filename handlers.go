@@ -54,7 +54,7 @@ type WikiPage struct {
 	Body  template.HTML
 }
 
-var wikiFilter = regexp.MustCompile("^(/([a-zA-Z0-9_ /]+/)?)([a-zA-Z0-9_ ]+)$")
+var wikiFilter = regexp.MustCompile("^(/([a-zA-Z0-9_ /]+/)?)([a-zA-Z0-9_ ]+)(\.md)?$")
 
 func bodyParseMarkdown(input []byte) []byte {
 	// set up the HTML renderer
@@ -86,18 +86,24 @@ func MarkdownHandler(responsePipe http.ResponseWriter, request *http.Request, se
 			http.Error(responsePipe, err.Error(), 500)
 		}
 
+		pdata := new(PateMetadata)
+		err = pdata.LoadPage(serverConfig.Path + filteredRequest[3] +".md")
 		contents, err := ioutil.ReadFile(serverConfig.Path + filteredRequest[3] + ".md")
+		// ## TODO ## need to add better error reporting for pages
 		if err != nil {
 			log.Printf("request [ %s ] points to an bad file target [ %s ]sent to server %s", request.URL.Path, filteredRequest[3], serverConfig.Prefix)
 			http.Error(responsePipe, err.Error(), 404)
 		}
-		// parse any markdown in the input
-		body := template.HTML(bodyParseMarkdown(contents))
 
-		toc := template.HTML(tocParseMarkdown(contents))
+		// parse any markdown in the input
+		body := template.HTML(bodyParseMarkdown(pdata.Page))
+		toc := template.HTML(tocParseMarkdown(pdata.Page))
+		keywords := pdata.PrintKeywords()
+		// ##TODO## need to move the topic URL to the config
+		topics := pdata.PrintTopics("/topic/")
 
 		// ##TODO## before you can use a template, you have to get the template lock to make sure you don't mess with someone else reading it
-		response := WikiPage{Title: filteredRequest[3], ToC: toc, Body: body}
+		response := WikiPage{Title: filteredRequest[3], ToC: toc, Body: body, Keywords: keywords, Topics: topics}
 		err = allTemplates.ExecuteTemplate(responsePipe, serverConfig.Template, response)
 		if err != nil {
 			http.Error(responsePipe, err.Error(), 500)
