@@ -50,7 +50,7 @@ func (pdata *PageMetadata) checkMatch(input []byte, looking []byte, tracker *map
 	value := bytes.TrimSpace(input)
 
 	// should be a substring match based on the start of the array
-	if bytes.Equal(input[:len(looking)], looking) {
+	if len(input) > len(looking) && bytes.Equal(input[:len(looking)], looking) {
 
 		// trim off the target from the []byte
 		value = input[len(looking):]
@@ -120,15 +120,13 @@ func (pdata *PageMetadata) LoadPage(pageName string) error {
 		return errors.New("I only read in... one line?")
 	} else if err != nil {
 		return errors.New("first line error - " + err.Error())
-	} else if pdata.lineIsTitle(upperLine) {
-		return errors.New("first line looks an awful lot like the underside of the title o.O")
 	}
 
 	// read a second line - this might actually be a real line
 	lowerLine, err := reader.ReadBytes('\n')
 	// inspect the lower line
 	if err == io.EOF {
-		return errors.New("Second line is the underline of the title... is this page just a title?")
+		return errors.New("Is this page just a title?")
 	} else if err != nil {
 		return errors.New("secont line error - " + err.Error())
 	} else if pdata.lineIsTitle(lowerLine) {
