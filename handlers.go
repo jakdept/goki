@@ -49,12 +49,14 @@ const (
 )
 
 type WikiPage struct {
-	Title string
-	ToC   template.HTML
-	Body  template.HTML
+	Title    string
+	ToC      template.HTML
+	Body     template.HTML
+	Topics   template.HTML
+	Keywords template.HTML
 }
 
-var wikiFilter = regexp.MustCompile("^(/([a-zA-Z0-9_ /]+/)?)([a-zA-Z0-9_ ]+)(\.md)?$")
+var wikiFilter = regexp.MustCompile("^(/([a-zA-Z0-9_ /]+/)?)([a-zA-Z0-9_ ]+)(.md)?$")
 
 func bodyParseMarkdown(input []byte) []byte {
 	// set up the HTML renderer
@@ -86,9 +88,8 @@ func MarkdownHandler(responsePipe http.ResponseWriter, request *http.Request, se
 			http.Error(responsePipe, err.Error(), 500)
 		}
 
-		pdata := new(PateMetadata)
-		err = pdata.LoadPage(serverConfig.Path + filteredRequest[3] +".md")
-		contents, err := ioutil.ReadFile(serverConfig.Path + filteredRequest[3] + ".md")
+		pdata := new(PageMetadata)
+		err = pdata.LoadPage(serverConfig.Path + filteredRequest[3] + ".md")
 		// ## TODO ## need to add better error reporting for pages
 		if err != nil {
 			log.Printf("request [ %s ] points to an bad file target [ %s ]sent to server %s", request.URL.Path, filteredRequest[3], serverConfig.Prefix)
