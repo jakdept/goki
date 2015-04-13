@@ -211,7 +211,7 @@ func TestLoadPage(t *testing.T) {
 }
 
 func TestMatchedTag(t *testing.T) {
-	// test a page with two keywords
+	// test a page with two topics
 	filepath := writeFileForTest(t, "topic : junk\ncategory = other junk\nsome other Page\n=========\nsome test content\nthere should be keywords")
 	pdata := new(PageMetadata)
 	err := pdata.LoadPage(filepath)
@@ -222,4 +222,42 @@ func TestMatchedTag(t *testing.T) {
 		"i couldn't find the expected keyword")
 	assert.False(t, pdata.MatchedTag([]string{"not-added"}),
 		"i couldn't find the expected keyword")
+}
+
+func TestListMeta(t *testing.T) {
+	// test a page with two keywords and a topic
+	filepath := writeFileForTest(t, "keyword : junk\ncategory = other junk\nmeta:really junk\nsome other Page\n=========\nsome test content\nthere should be keywords")
+	pdata := new(PageMetadata)
+	err := pdata.LoadPage(filepath)
+	allTopics, allKeywords := pdata.ListMeta()
+	assert.NoError(t, err)
+	assert.Equal(t, allTopics, []string{"other-junk"}, "I didn't get the right topic list")
+	assert.Equal(t, allKeywords, []string{"junk", "really-junk"}, "I didn't get the right keyword list")
+
+	// test a page with nothing
+	filepath = writeFileForTest(t, "some other Page\n=========\nsome test content\nthere should be keywords")
+	pdata = new(PageMetadata)
+	err = pdata.LoadPage(filepath)
+	allTopics, allKeywords = pdata.ListMeta()
+	assert.NoError(t, err)
+	assert.Equal(t, allTopics, []string{}, "I didn't get the empty topic list")
+	assert.Equal(t, allKeywords, []string{}, "I didn't get the empty keyword list")
+}
+
+func TestPrintTopics(t *testing.T) {
+	// test a page with two topics
+	filepath := writeFileForTest(t, "keyword : junk\ncategory = other junk\ntopics:really junk\nsome other Page\n=========\nsome test content\nthere should be keywords")
+	pdata := new(PageMetadata)
+	err := pdata.LoadPage(filepath)
+	printedTopics := pdata.PrintTopics("/category/")
+	assert.NoError(t, err)
+	assert.Equal(t, printedTopics, "<div class='tag'>/category/s:really-junk</div>", "I didn't get the right topic list")
+
+	// test a page with nothing
+	filepath = writeFileForTest(t, "some other Page\n=========\nsome test content\nthere should be keywords")
+	pdata = new(PageMetadata)
+	err = pdata.LoadPage(filepath)
+	printedTopics = pdata.PrintTopics("/")
+	assert.NoError(t, err)
+	assert.Equal(t, printedTopics, "", "I didn't get the empty topic list")
 }
