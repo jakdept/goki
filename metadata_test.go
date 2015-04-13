@@ -246,12 +246,12 @@ func TestListMeta(t *testing.T) {
 
 func TestPrintTopics(t *testing.T) {
 	// test a page with two topics
-	filepath := writeFileForTest(t, "keyword : junk\ncategory = other junk\ntopics:really junk\nsome other Page\n=========\nsome test content\nthere should be keywords")
+	filepath := writeFileForTest(t, "keyword : junk\ncategory = other junk\ntopic:really junk\nsome other Page\n=========\nsome test content\nthere should be keywords")
 	pdata := new(PageMetadata)
 	err := pdata.LoadPage(filepath)
 	printedTopics := pdata.PrintTopics("/category/")
 	assert.NoError(t, err)
-	assert.Equal(t, printedTopics, "<div class='tag'>/category/s:really-junk</div>", "I didn't get the right topic list")
+	assert.Equal(t, "<div class='tag'>/category/really-junk</div>", printedTopics, "I didn't get the right topic list")
 
 	// test a page with nothing
 	filepath = writeFileForTest(t, "some other Page\n=========\nsome test content\nthere should be keywords")
@@ -259,5 +259,23 @@ func TestPrintTopics(t *testing.T) {
 	err = pdata.LoadPage(filepath)
 	printedTopics = pdata.PrintTopics("/")
 	assert.NoError(t, err)
-	assert.Equal(t, printedTopics, "", "I didn't get the empty topic list")
+	assert.Equal(t, "", printedTopics, "I didn't get the empty topic list")
+}
+
+func TestPrintKeywords(t *testing.T) {
+	// test a page with two topics
+	filepath := writeFileForTest(t, "keyword : junk\ncategory = other junk\ntopic:really junk\nsome other Page\n=========\nsome test content\nthere should be keywords")
+	pdata := new(PageMetadata)
+	err := pdata.LoadPage(filepath)
+	printedKeywords := pdata.PrintKeywords()
+	assert.NoError(t, err)
+	assert.Equal(t, "<meta name='keywords' content='junk'>", printedKeywords, "I didn't get the right topic list")
+
+	// test a page with nothing
+	filepath = writeFileForTest(t, "some other Page\n=========\nsome test content\nthere should be keywords")
+	pdata = new(PageMetadata)
+	err = pdata.LoadPage(filepath)
+	printedKeywords = pdata.PrintKeywords()
+	assert.NoError(t, err)
+	assert.Equal(t, "", printedKeywords, "I didn't get the empty topic list")
 }
