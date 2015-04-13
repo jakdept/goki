@@ -95,6 +95,11 @@ func MarkdownHandler(responsePipe http.ResponseWriter, request *http.Request, se
 			http.Error(responsePipe, err.Error(), 404)
 		}
 
+		if pdata.MatchedTag(serverConfig.Restricted) {
+			log.Printf("request [ %s ] was against a page with a restricted tag", request.URL.Path)
+			http.Error(responsePipe, err.Error(), 403)
+		}
+
 		// parse any markdown in the input
 		body := template.HTML(bodyParseMarkdown(pdata.Page))
 		toc := template.HTML(tocParseMarkdown(pdata.Page))
