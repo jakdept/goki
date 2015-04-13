@@ -195,11 +195,17 @@ func TestLoadPage(t *testing.T) {
 	filepath = writeFileForTest(t, "junk page\nthat\nhas\nno\ntitle")
 	pdata = new(PageMetadata)
 	err = pdata.LoadPage(filepath)
-	assert.EqualError(t, err, "I only read in... one line?")
+	assert.EqualError(t, err, "never hit a title")
 	assert.Empty(t, string(pdata.Page),
 		"how did this page gontent get here?")
 	assert.False(t, pdata.Keywords["not-added"],
 		"i found something I should not have")
 	assert.False(t, pdata.Topics["not-added"],
 		"i found something I should not have")
+
+	// test for failure with just a file
+	filepath = writeFileForTest(t, "just a title\n=========")
+	pdata = new(PageMetadata)
+	err = pdata.LoadPage(filepath)
+	assert.EqualError(t, err, "Is this page just a title?")
 }
