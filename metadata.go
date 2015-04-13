@@ -7,13 +7,14 @@ import (
 	"bytes"
 	"errors"
 	"html/template"
+	"io"
+	//"log"
 	"os"
 )
 
 type PageMetadata struct {
 	Keywords map[string]bool
 	Topics   map[string]bool
-	Loaded   bool
 	Page     []byte
 }
 
@@ -80,67 +81,78 @@ func (pdata *PageMetadata) checkMatch(input []byte, looking []byte, tracker *map
 	}
 }
 
+func (pdata *PageMetadata) readRestOfPage(topLine []byte, bottomLine []byte, r *bufio.Reader) error {
+	// read the rest of the page
+	var restOfPage []byte
+	var err error
+
+	// put the start of stuff into the final destination
+	pdata.Page = bytes.Join([][]byte{topLine, bottomLine, []byte("")}, []byte(""))
+
+	for err == nil {
+		// read a line, and then add it to pdata
+		restOfPage, err = r.ReadBytes('\n')
+		pdata.Page = append(pdata.Page, restOfPage...)
+	}
+
+	if err == io.EOF {
+		return nil
+	} else if err != nil {
+		return err
+	} else {
+		return errors.New("I should have an error - why don't i have an error?")
+	}
+}
+
 func (pdata *PageMetadata) LoadPage(pageName string) error {
+	// open the file
 	f, err := os.Open(pageName)
 	reader := bufio.NewReader(f)
-	upperLine, fullLine, err := reader.ReadLine()
-
-	// inspect the first line you read
 	if err != nil {
 		return err
-	} else if !fullLine {
-		return errors.New("first line I read wasn't a full line")
+	}
+
+	// read a line
+	upperLine, err := reader.ReadBytes(byte('\n'))
+
+	// check the first line you read
+	if err == io.EOF {
+		return errors.New("I only read in... one line?")
+	} else if err != nil {
+		return errors.New("first line error - " + err.Error())
 	} else if pdata.lineIsTitle(upperLine) {
 		return errors.New("first line looks an awful lot like the underside of the title o.O")
 	}
 
-	lowerLine, fullLine, err := reader.ReadLine()
-
+	// read a second line - this might actually be a real line
+	lowerLine, err := reader.ReadBytes('\n')
 	// inspect the lower line
-	if err != nil {
-		return err
-	} else if !fullLine {
-		return errors.New("second line I read wasn't a full line")
+	if err == io.EOF {
+		return errors.New("Second line is the underline of the title... is this page just a title?")
+	} else if err != nil {
+		return errors.New("secont line error - " + err.Error())
 	} else if pdata.lineIsTitle(lowerLine) {
-
-		// read the rest of the page
-		var restOfPage []byte
-		_, err = reader.Read(restOfPage)
-		if err != nil {
-			return err
-		}
-		// if the second line is a title, read the rest of the page in
-		// you don't have any metadata to work with here, move on
-		pdata.Page = bytes.Join([][]byte{upperLine, lowerLine, restOfPage}, []byte("\n"))
-
-		// you've successfully loaded the page - so return nothing
-		pdata.Loaded = true
-		return nil
+		return pdata.readRestOfPage(upperLine, lowerLine, reader)
 	}
 
 	// if you're at this point, the first line is metadata
 	// you gotta process it and work with the next line
-	// so let's just read through the file until we hit the title
-	for !pdata.lineIsTitle(lowerLine) {
+	for !pdata.lineIsTitle(lowerLine) && err != io.EOF {
 		// process the line
 		pdata.processMetadata(upperLine)
 		// shift the lower line up
 		upperLine = lowerLine
 		// read in a new lower line
-		lowerLine, fullLine, err = reader.ReadLine()
-		if err != nil {
+		lowerLine, err = reader.ReadBytes('\n')
+		if err == io.EOF {
+			return errors.New("never hit a title")
+		} else if err != nil {
 			return err
-		} else if !fullLine {
-			return errors.New("I filled my buffer with a line")
 		}
 	}
 
 	// by this point, I should have read everything in - let's read the rest and just return it
-	var restOfPage []byte
-	_, err = reader.Read(restOfPage)
-	pdata.Page = bytes.Join([][]byte{upperLine, lowerLine, restOfPage}, []byte("\n"))
-
-	return err
+	return pdata.readRestOfPage(upperLine, lowerLine, reader)
 }
 
 // returns all the tags within a list as an array of strings
