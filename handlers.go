@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"regexp"
+	"strings"
 
 	"github.com/JackKnifed/blackfriday"
 )
@@ -132,8 +133,15 @@ func RawHandler(responsePipe http.ResponseWriter, request *http.Request, serverC
 		http.Error(responsePipe, "Request not allowed", 403)
 	} else {
 		if filteredRequest[1] != serverConfig.Prefix {
-			log.Printf("request %s was improperly routed to wiki handler %s", request.URL.Path, serverConfig.Prefix)
+			log.Printf("request %s was improperly routed to file handler %s", request.URL.Path, serverConfig.Prefix)
 			http.Error(responsePipe, err.Error(), 500)
+		}
+
+		for _, restricted := serverConfig.Restricted {
+			if restricted == filteredRequest[4] {
+				log.Printf("request %s was improperly routed to the file handler with an disallowed extension %s", request.URL.Path, filteredRequest[4])
+				http.Error(responsePipe, "Request not allowed", 403)
+			}
 		}
 
 		contents, err := ioutil.ReadFile(serverConfig.Path + filteredRequest[3] + ".md")
