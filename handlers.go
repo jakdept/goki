@@ -137,7 +137,7 @@ func RawHandler(responsePipe http.ResponseWriter, request *http.Request, serverC
 			http.Error(responsePipe, err.Error(), 500)
 		}
 
-		for _, restricted := serverConfig.Restricted {
+		for _, restricted := range serverConfig.Restricted {
 			if restricted == filteredRequest[4] {
 				log.Printf("request %s was improperly routed to the file handler with an disallowed extension %s", request.URL.Path, filteredRequest[4])
 				http.Error(responsePipe, "Request not allowed", 403)
