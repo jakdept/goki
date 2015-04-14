@@ -226,13 +226,13 @@ func TestMatchedTag(t *testing.T) {
 
 func TestListMeta(t *testing.T) {
 	// test a page with two keywords and a topic
-	filepath := writeFileForTest(t, "keyword : junk\ncategory = other junk\nmeta:really junk\nsome other Page\n=========\nsome test content\nthere should be keywords")
+	filepath := writeFileForTest(t, "keyword : junk\ncategory = other junk\nsome other Page\n=========\nsome test content\nthere should be keywords")
 	pdata := new(PageMetadata)
 	err := pdata.LoadPage(filepath)
 	allTopics, allKeywords := pdata.ListMeta()
 	assert.NoError(t, err)
 	assert.Equal(t, allTopics, []string{"other-junk"}, "I didn't get the right topic list")
-	assert.Equal(t, allKeywords, []string{"junk", "really-junk"}, "I didn't get the right keyword list")
+	assert.Equal(t, allKeywords, []string{"junk"}, "I didn't get the right keyword list")
 
 	// test a page with nothing
 	filepath = writeFileForTest(t, "some other Page\n=========\nsome test content\nthere should be keywords")
@@ -240,18 +240,19 @@ func TestListMeta(t *testing.T) {
 	err = pdata.LoadPage(filepath)
 	allTopics, allKeywords = pdata.ListMeta()
 	assert.NoError(t, err)
-	assert.Equal(t, allTopics, []string{}, "I didn't get the empty topic list")
-	assert.Equal(t, allKeywords, []string{}, "I didn't get the empty keyword list")
+	assert.Equal(t, []string(nil), allTopics, "I didn't get the empty topic list")
+	assert.Equal(t, []string(nil), allKeywords, "I didn't get the empty keyword list")
 }
 
 func TestPrintTopics(t *testing.T) {
-	// test a page with two topics
-	filepath := writeFileForTest(t, "keyword : junk\ncategory = other junk\ntopic:really junk\nsome other Page\n=========\nsome test content\nthere should be keywords")
+	// test a page with one topics
+	filepath := writeFileForTest(t, "keyword : junk\ncategory : other junk\nsome other Page\n=========\nsome test content\nthere should be keywords")
 	pdata := new(PageMetadata)
 	err := pdata.LoadPage(filepath)
 	printedTopics := pdata.PrintTopics("/category/")
 	assert.NoError(t, err)
-	assert.Equal(t, "<div class='tag'>/category/really-junk</div>", printedTopics, "I didn't get the right topic list")
+	assert.True(t, pdata.Topics["other-junk"], "The topic isn't directly assigned")
+	assert.Equal(t, "<div class='tag'>/category/other-junk</div>", printedTopics, "I didn't get the right topic list")
 
 	// test a page with nothing
 	filepath = writeFileForTest(t, "some other Page\n=========\nsome test content\nthere should be keywords")
