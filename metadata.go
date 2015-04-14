@@ -8,6 +8,7 @@ import (
 	"errors"
 	"html/template"
 	"io"
+	"sort"
 	//"log"
 	"os"
 )
@@ -172,6 +173,7 @@ func (pdata *PageMetadata) ListMeta() (topics []string, keywords []string) {
 		keywords = append(keywords[:], oneKeyword)
 	}
 	sort.Strings(keywords)
+	return
 }
 
 // return the bytes to display the tags on the page
