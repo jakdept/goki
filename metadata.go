@@ -162,18 +162,16 @@ func (pdata *PageMetadata) MatchedTag(checkTags []string) bool {
 }
 
 // returns all the tags within a list as an array of strings
-func (pdata *PageMetadata) ListMeta() ([]string, []string) {
-	topics := []string{}
+func (pdata *PageMetadata) ListMeta() (topics []string, keywords []string) {
 	for oneTag, _ := range pdata.Topics {
 		topics = append(topics[:], oneTag)
 	}
+	sort.Strings(topics)
 
-	keywords := []string{}
 	for oneKeyword, _ := range pdata.Keywords {
 		keywords = append(keywords[:], oneKeyword)
 	}
-
-	return topics, keywords
+	sort.Strings(keywords)
 }
 
 // return the bytes to display the tags on the page
@@ -182,8 +180,9 @@ func (pdata *PageMetadata) PrintTopics(tagPrefix string) template.HTML {
 	response := []byte{}
 	openingTag := []byte("<div class='tag'>")
 	closingTag := []byte("</div>")
-	for oneTag, _ := range pdata.Topics {
-		response = bytes.Join([][]byte{openingTag, []byte(tagPrefix), []byte(oneTag), closingTag}, []byte(""))
+	allTopics, _ := pdata.ListMeta()
+	for _, oneTopic := range allTopics {
+		response = bytes.Join([][]byte{openingTag, []byte(tagPrefix), []byte(oneTopic), closingTag}, []byte(""))
 	}
 	return template.HTML(response)
 }
@@ -192,7 +191,8 @@ func (pdata *PageMetadata) PrintTopics(tagPrefix string) template.HTML {
 func (pdata *PageMetadata) PrintKeywords() template.HTML {
 	if len(pdata.Keywords) > 0 {
 		var response []byte
-		for oneKeyword, _ := range pdata.Keywords {
+		_, allKeywords := pdata.ListMeta()
+		for _, oneKeyword := range allKeywords {
 			response = bytes.Join([][]byte{response, []byte(oneKeyword)}, []byte(","))
 		}
 		// clean up the end of the string and add the ending tag
