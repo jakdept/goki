@@ -88,6 +88,10 @@ func MarkdownHandler(responsePipe http.ResponseWriter, request *http.Request, se
 			http.Error(responsePipe, err.Error(), 500)
 		}
 
+		if filteredRequest[2] == "" && filteredRequest[3] == "" {
+			filteredRequest[2] = serverConfig.DefaultPage
+		}
+
 		pdata := new(PageMetadata)
 		err = pdata.LoadPage(serverConfig.Path + filteredRequest[3] + ".md")
 		// ## TODO ## need to add better error reporting for pages
@@ -134,6 +138,10 @@ func RawHandler(responsePipe http.ResponseWriter, request *http.Request, serverC
 		if filteredRequest[1] != serverConfig.Prefix {
 			log.Printf("request %s was improperly routed to file handler %s", request.URL.Path, serverConfig.Prefix)
 			http.Error(responsePipe, err.Error(), 500)
+		}
+
+		if filteredRequest[2] == "" && filteredRequest[3] == "" {
+			filteredRequest[2] = serverConfig.DefaultPage
 		}
 
 		for _, restricted := range serverConfig.Restricted {
