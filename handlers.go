@@ -58,20 +58,21 @@ type WikiPage struct {
 }
 
 func stripRequestRouting(stripPath string, request *http.Request) (string, error) {
-	if stripPath[len(stripPath)-1] != "/" {
-		return _, errors.New("passed a request path that does not end in a /")
+	lastChar := len(stripPath) - 1
+	if string(stripPath[lastChar:]) != "/" {
+		return "", errors.New("passed a request route that does not end in a /")
 	}
-	if stripPath[0] != "/" {
-		return _, errors.New("passed a request path that does not start in a /")
+	if string(stripPath[0]) != "/" {
+		return "", errors.New("passed a request route that does not start in a /")
 	}
 	if len(stripPath) > len(request.URL.Path) {
-		return _, errors.New("request routing path longer than request path")
+		return "", errors.New("request routing path longer than request path")
 	}
 	if stripPath != request.URL.Path[:len(stripPath)] {
-		return _, errors.New("request does not match up to the routed path")
+		return "", errors.New("request does not match up to the routed path")
 	}
 
-	return request.URL.Path[len(stripPath)-2:], _
+	return request.URL.Path[len(stripPath)-1:], nil
 }
 
 var wikiFilter = regexp.MustCompile("^(/([a-zA-Z0-9_ /]+/)?)([a-zA-Z0-9_ ]+)(.md)?$")
