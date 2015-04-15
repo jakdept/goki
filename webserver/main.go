@@ -29,6 +29,9 @@ func main() {
 
 	gnosis.ParseTemplates(config.Global)
 
+	for _, redirect := range config.Redirects {
+		http.Handle(redirect.Requested, http.RedirectHandler(redirect.Target, redirect.Code))
+	}
 	for _, individualServer := range config.Server {
 		http.HandleFunc(individualServer.Prefix, gnosis.MakeHandler(individualServer))
 	}

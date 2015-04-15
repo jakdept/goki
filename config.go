@@ -33,8 +33,15 @@ type ServerSection struct {
 	Restricted  []string
 }
 
+type RedirectSection struct {
+	Requested string
+	Target    string
+	Code      int
+}
+
 type Config struct {
 	Global     GlobalSection
+	Redirects  []RedirectSection
 	Mainserver ServerSection
 	Server     []ServerSection
 }

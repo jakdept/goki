@@ -4,6 +4,18 @@
     "Hostname": "wiki.hostbaitor.com",
     "TemplateDir": "/var/wiki-backend/templates/"
   },
+  "Redirects": [
+    {
+      "Requested": "/favicon.ico",
+      "Target": "/site/favicon.ico",
+      "Code": 301
+    },
+    {
+      "Requested": "/rawindex",
+      "Target": "/raw/index.md",
+      "Code": 307
+    }
+  ],
   "MainServer": {
     "Path": "/var/www/wiki/",
     "Prefix": "/",
