@@ -4,6 +4,7 @@ package gnosis
 // Whole thing needs to be written
 
 import (
+	"errors"
 	"html/template"
 	"io/ioutil"
 	"log"
@@ -54,6 +55,23 @@ type WikiPage struct {
 	Body     template.HTML
 	Topics   template.HTML
 	Keywords template.HTML
+}
+
+func stripRequestRouting(stripPath string, request *http.Request) (string, error) {
+	if stripPath[len(stripPath)-1] != "/" {
+		return _, errors.New("passed a request path that does not end in a /")
+	}
+	if stripPath[0] != "/" {
+		return _, errors.New("passed a request path that does not start in a /")
+	}
+	if len(stripPath) > len(request.URL.Path) {
+		return _, errors.New("request routing path longer than request path")
+	}
+	if stripPath != request.URL.Path[:len(stripPath)] {
+		return _, errors.New("request does not match up to the routed path")
+	}
+
+	return request.URL.Path[len(stripPath)-2:], _
 }
 
 var wikiFilter = regexp.MustCompile("^(/([a-zA-Z0-9_ /]+/)?)([a-zA-Z0-9_ ]+)(.md)?$")
