@@ -30,6 +30,7 @@ type ServerSection struct {
 	DefaultPage string
 	Template    string
 	ServerType  string
+	TopicURL    string
 	Restricted  []string
 }
 
