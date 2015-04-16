@@ -146,7 +146,7 @@ func MarkdownHandler(responsePipe http.ResponseWriter, rawRequest *http.Request,
 	topics := pdata.PrintTopics(serverConfig.TopicURL)
 
 	// ##TODO## before you can use a template, you have to get the template lock to make sure you don't mess with someone else reading it
-	response := WikiPage{Title: "",filteredRequest[3] ToC: toc, Body: body, Keywords: keywords, Topics: topics}
+	response := WikiPage{Title: "", ToC: toc, Body: body, Keywords: keywords, Topics: topics}
 	err = allTemplates.ExecuteTemplate(responsePipe, serverConfig.Template, response)
 	if err != nil {
 		http.Error(responsePipe, err.Error(), 500)
