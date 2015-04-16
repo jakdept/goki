@@ -9,7 +9,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"regexp"
 
 	"github.com/JackKnifed/blackfriday"
 )
@@ -85,8 +84,6 @@ func stripRequestRouting(stripPath string, request *http.Request) (*http.Request
 	return returnRequest, nil
 }
 
-var wikiFilter = regexp.MustCompile("^(/([a-zA-Z0-9_ /]+/)?)([a-zA-Z0-9_ ]+)(.md)?$")
-
 func bodyParseMarkdown(input []byte) []byte {
 	// set up the HTML renderer
 	renderer := blackfriday.HtmlRenderer(bodyHtmlFlags, "", "")
@@ -153,47 +150,56 @@ func MarkdownHandler(responsePipe http.ResponseWriter, rawRequest *http.Request,
 	}
 }
 
-var fileFilter = regexp.MustCompile("^(/([a-zA-Z0-9_ /]+/)?)([a-zA-Z0-9_ ]+)?(\\.)?([a-zA-Z0-9_ ]+)?")
+func FindExtension(s string) (string, error) {
+	for i := len(s); i > 0; i-- {
+		if string(s[i]) == "." {
+			return s[i:], nil
+		}
+	}
+	return "", errors.New("found no extension")
+}
 
-func RawHandler(responsePipe http.ResponseWriter, request *http.Request, serverConfig ServerSection) {
+func RawHandler(responsePipe http.ResponseWriter, rawRequest *http.Request, serverConfig ServerSection) {
 
 	var err error
 
-	// break up the request parameters - for reference, regex is listed below
-	filteredRequest := fileFilter.FindStringSubmatch(request.URL.Path)
-
-	// if there are no matches, the regex ovbiously didn't match up
-	if filteredRequest == nil {
-		log.Printf("null request [ %s ] improperly routed to file handler [ %s ]", request.URL.Path, serverConfig.Prefix)
+	request, err := stripRequestRouting(serverConfig.Prefix, rawRequest)
+	if err != nil {
+		log.Printf("request [ %s ] was passed to the wrong handler - got %v", request.URL.Path, err)
 		http.Error(responsePipe, "Request not allowed", 403)
-	} else {
-		if filteredRequest[1] != serverConfig.Prefix {
-			log.Printf("request %s was improperly routed to file handler %s", request.URL.Path, serverConfig.Prefix)
-			http.Error(responsePipe, err.Error(), 500)
-		}
+		return
+	}
 
-		if filteredRequest[2] == "" && filteredRequest[3] == "" {
-			filteredRequest[2] = serverConfig.DefaultPage
-		}
+	// If the request is empty, set it to the default.
+	if request.URL.Path == "" || request.URL.Path == "/" {
+		request.URL.Path = serverConfig.DefaultPage
+	}
 
+	// If the request is a blocked restriction, shut it down.
+	extension, err := FindExtension(request.URL.Path)
+	if err == nil {
 		for _, restricted := range serverConfig.Restricted {
-			if restricted == filteredRequest[4] {
-				log.Printf("request %s was improperly routed to the file handler with an disallowed extension %s", request.URL.Path, filteredRequest[4])
+			if restricted == extension {
+				log.Printf("request %s was improperly routed to the file handler with an disallowed extension %s", request.URL.Path, extension)
 				http.Error(responsePipe, "Request not allowed", 403)
+				return
 			}
 		}
-
-		contents, err := ioutil.ReadFile(serverConfig.Path + filteredRequest[3] + ".md")
-		if err != nil {
-			log.Printf("request [ %s ] points to an bad file target [ %s ]sent to server %s", request.URL.Path, filteredRequest[3], serverConfig.Prefix)
-			http.Error(responsePipe, err.Error(), 404)
-		}
-
-		_, err = responsePipe.Write([]byte(contents))
-		if err != nil {
-			http.Error(responsePipe, err.Error(), 500)
-		}
 	}
+
+	// Load the file - 404 on failure.
+	contents, err := ioutil.ReadFile(serverConfig.Path + request.URL.Path)
+	if err != nil {
+		log.Printf("request [ %s ] points to an bad file target sent to server %s - %v", request.URL.Path, serverConfig.Prefix, err)
+		http.Error(responsePipe, err.Error(), 404)
+		return
+	}
+
+	_, err = responsePipe.Write([]byte(contents))
+	if err != nil {
+		http.Error(responsePipe, err.Error(), 500)
+	}
+	return
 }
 
 func MakeHandler(handlerConfig ServerSection) http.HandlerFunc {
