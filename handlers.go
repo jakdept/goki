@@ -107,7 +107,7 @@ func MarkdownHandler(responsePipe http.ResponseWriter, rawRequest *http.Request,
 	// break up the request parameters - for reference, regex is listed below
 	//filteredRequest, err := wikiFilter.FindStringSubmatch(request.URL.Path)
 
-	request = stripRequestRouting(serverConfig.Prefix, rawRequest)
+	request, err := stripRequestRouting(serverConfig.Prefix, rawRequest)
 	if err != nil {
 		log.Printf("request [ %s ] was passed to the wrong handler - got %v", request.URL.Path, err)
 		http.Error(responsePipe, "Request not allowed", 403)
@@ -127,7 +127,7 @@ func MarkdownHandler(responsePipe http.ResponseWriter, rawRequest *http.Request,
 	pdata := new(PageMetadata)
 	err = pdata.LoadPage(serverConfig.Path + request.URL.Path)
 	if err != nil {
-		log.Printf("request [ %s ] points to an bad file target [ %s ]sent to server %s", request.URL.Path, filteredRequest[3], serverConfig.Prefix)
+		log.Printf("request [ %s ] points to an bad file target sent to server %s", request.URL.Path, serverConfig.Prefix)
 		http.Error(responsePipe, err.Error(), 404)
 		return
 	}
@@ -146,7 +146,7 @@ func MarkdownHandler(responsePipe http.ResponseWriter, rawRequest *http.Request,
 	topics := pdata.PrintTopics(serverConfig.TopicURL)
 
 	// ##TODO## before you can use a template, you have to get the template lock to make sure you don't mess with someone else reading it
-	response := WikiPage{Title: filteredRequest[3], ToC: toc, Body: body, Keywords: keywords, Topics: topics}
+	response := WikiPage{Title: "",filteredRequest[3] ToC: toc, Body: body, Keywords: keywords, Topics: topics}
 	err = allTemplates.ExecuteTemplate(responsePipe, serverConfig.Template, response)
 	if err != nil {
 		http.Error(responsePipe, err.Error(), 500)
