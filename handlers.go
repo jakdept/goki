@@ -100,53 +100,56 @@ func tocParseMarkdown(input []byte) []byte {
 }
 
 // Of note - this markdown handler is not a direct handler
-func MarkdownHandler(responsePipe http.ResponseWriter, request *http.Request, serverConfig ServerSection) {
+func MarkdownHandler(responsePipe http.ResponseWriter, rawRequest *http.Request, serverConfig ServerSection) {
 
 	var err error
 
 	// break up the request parameters - for reference, regex is listed below
-	filteredRequest := wikiFilter.FindStringSubmatch(request.URL.Path)
+	//filteredRequest, err := wikiFilter.FindStringSubmatch(request.URL.Path)
 
-	// if there are no matches, the regex ovbiously didn't match up
-	if filteredRequest == nil {
-		log.Printf("null request [ %s ] improperly routed to wiki handler [ %s ]", request.URL.Path, serverConfig.Prefix)
+	request = stripRequestRouting(serverConfig.Prefix, rawRequest)
+	if err != nil {
+		log.Printf("request [ %s ] was passed to the wrong handler - got %v", request.URL.Path, err)
 		http.Error(responsePipe, "Request not allowed", 403)
-	} else {
-		if filteredRequest[1] != serverConfig.Prefix {
-			log.Printf("request %s was improperly routed to wiki handler %s", request.URL.Path, serverConfig.Prefix)
-			http.Error(responsePipe, err.Error(), 500)
-		}
+		return
+	}
 
-		if filteredRequest[2] == "" && filteredRequest[3] == "" {
-			filteredRequest[2] = serverConfig.DefaultPage
-		}
+	// If the request is empty, set it to the default.
+	if request.URL.Path == "" || request.URL.Path == "/" {
+		request.URL.Path = serverConfig.DefaultPage
+	}
 
-		pdata := new(PageMetadata)
-		err = pdata.LoadPage(serverConfig.Path + filteredRequest[3] + ".md")
-		// ## TODO ## need to add better error reporting for pages
-		if err != nil {
-			log.Printf("request [ %s ] points to an bad file target [ %s ]sent to server %s", request.URL.Path, filteredRequest[3], serverConfig.Prefix)
-			http.Error(responsePipe, err.Error(), 404)
-		}
+	// If the request doesn't end in .md, add that
+	if request.URL.Path[len(request.URL.Path):] == ".md" {
+		request.URL.Path = request.URL.Path + ".md"
+	}
 
-		if pdata.MatchedTag(serverConfig.Restricted) {
-			log.Printf("request [ %s ] was against a page with a restricted tag", request.URL.Path)
-			http.Error(responsePipe, err.Error(), 403)
-		}
+	pdata := new(PageMetadata)
+	err = pdata.LoadPage(serverConfig.Path + request.URL.Path)
+	if err != nil {
+		log.Printf("request [ %s ] points to an bad file target [ %s ]sent to server %s", request.URL.Path, filteredRequest[3], serverConfig.Prefix)
+		http.Error(responsePipe, err.Error(), 404)
+		return
+	}
 
-		// parse any markdown in the input
-		body := template.HTML(bodyParseMarkdown(pdata.Page))
-		toc := template.HTML(tocParseMarkdown(pdata.Page))
-		keywords := pdata.PrintKeywords()
-		// ##TODO## need to move the topic URL to the config
-		topics := pdata.PrintTopics("/topic/")
+	if pdata.MatchedTag(serverConfig.Restricted) {
+		log.Printf("request [ %s ] was against a page with a restricted tag", request.URL.Path)
+		http.Error(responsePipe, err.Error(), 403)
+		return
+	}
 
-		// ##TODO## before you can use a template, you have to get the template lock to make sure you don't mess with someone else reading it
-		response := WikiPage{Title: filteredRequest[3], ToC: toc, Body: body, Keywords: keywords, Topics: topics}
-		err = allTemplates.ExecuteTemplate(responsePipe, serverConfig.Template, response)
-		if err != nil {
-			http.Error(responsePipe, err.Error(), 500)
-		}
+	// parse any markdown in the input
+	body := template.HTML(bodyParseMarkdown(pdata.Page))
+	toc := template.HTML(tocParseMarkdown(pdata.Page))
+	keywords := pdata.PrintKeywords()
+	// ##TODO## need to move the topic URL to the config
+	topics := pdata.PrintTopics(serverConfig.TopicURL)
+
+	// ##TODO## before you can use a template, you have to get the template lock to make sure you don't mess with someone else reading it
+	response := WikiPage{Title: filteredRequest[3], ToC: toc, Body: body, Keywords: keywords, Topics: topics}
+	err = allTemplates.ExecuteTemplate(responsePipe, serverConfig.Template, response)
+	if err != nil {
+		http.Error(responsePipe, err.Error(), 500)
 	}
 }
 
