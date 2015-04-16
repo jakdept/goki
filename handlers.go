@@ -57,22 +57,32 @@ type WikiPage struct {
 	Keywords template.HTML
 }
 
-func stripRequestRouting(stripPath string, request *http.Request) (string, error) {
+func stripRequestRouting(stripPath string, request *http.Request) (*http.Request, error) {
+	if string(request.URL.Path[0]) != "/" {
+		err := errors.New("not compatible with relative requests")
+		return nil, err
+	}
 	lastChar := len(stripPath) - 1
 	if string(stripPath[lastChar:]) != "/" {
-		return "", errors.New("passed a request route that does not end in a /")
+		err := errors.New("passed a request route that does not end in a /")
+		return nil, err
 	}
 	if string(stripPath[0]) != "/" {
-		return "", errors.New("passed a request route that does not start in a /")
+		err := errors.New("passed a request route that does not start in a /")
+		return nil, err
 	}
 	if len(stripPath) > len(request.URL.Path) {
-		return "", errors.New("request routing path longer than request path")
+		err := errors.New("request routing path longer than request path")
+		return nil, err
 	}
-	if stripPath != request.URL.Path[:len(stripPath)] {
-		return "", errors.New("request does not match up to the routed path")
+	if stripPath != string(request.URL.Path[:len(stripPath)]) {
+		err := errors.New("request does not match up to the routed path")
+		return nil, err
 	}
 
-	return request.URL.Path[len(stripPath)-1:], nil
+	returnRequest := request
+	returnRequest.URL.Path = string(request.URL.Path[len(stripPath)-1:])
+	return returnRequest, nil
 }
 
 var wikiFilter = regexp.MustCompile("^(/([a-zA-Z0-9_ /]+/)?)([a-zA-Z0-9_ ]+)(.md)?$")
