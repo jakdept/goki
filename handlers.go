@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/JackKnifed/blackfriday"
 )
@@ -117,7 +118,7 @@ func MarkdownHandler(responsePipe http.ResponseWriter, rawRequest *http.Request,
 	}
 
 	// If the request doesn't end in .md, add that
-	if request.URL.Path[len(request.URL.Path):] == ".md" {
+	if !strings.HasSuffix(request.URL.Path, ".md") {
 		request.URL.Path = request.URL.Path + ".md"
 	}
 
@@ -176,14 +177,12 @@ func RawHandler(responsePipe http.ResponseWriter, rawRequest *http.Request, serv
 	}
 
 	// If the request is a blocked restriction, shut it down.
-	extension, err := FindExtension(request.URL.Path)
-	if err == nil {
-		for _, restricted := range serverConfig.Restricted {
-			if restricted == extension {
-				log.Printf("request %s was improperly routed to the file handler with an disallowed extension %s", request.URL.Path, extension)
-				http.Error(responsePipe, "Request not allowed", 403)
-				return
-			}
+	//extension, err := FindExtension(request.URL.Path)
+	for _, restricted := range serverConfig.Restricted {
+		if strings.HasSuffix(request.URL.Path, restricted) {
+			log.Printf("request %s was improperly routed to the file handler with an disallowed extension %s", request.URL.Path, restricted)
+			http.Error(responsePipe, "Request not allowed", 403)
+			return
 		}
 	}
 

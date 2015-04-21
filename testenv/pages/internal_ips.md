@@ -1,3 +1,5 @@
+category = internal
+keyword = whitelist
 Internal IP Ranges
 ==================
 
