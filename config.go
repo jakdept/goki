@@ -40,6 +40,7 @@ type IndexSection struct {
 	StaticEtag string // not sure what this will be used for
 	StaticPath string //directory to the static content
 	IndexPath string //location to store the index
+	IndexType string // type of index - likely "en"
 }
 
 type RedirectSection struct {
@@ -51,7 +52,6 @@ type RedirectSection struct {
 type Config struct {
 	Global     GlobalSection
 	Redirects  []RedirectSection
-	Mainserver ServerSection
 	Server     []ServerSection
 }
 
@@ -60,7 +60,8 @@ var defaultConfig = []byte(`{
     "Port": "8080",
     "Hostname": "localhost"
   },
-  "Mainserver": {
+  "Server": [
+  	{}
       "Path": "/var/www/wiki/",
       "Prefix": "/",
       "DefaultPage": "index",
@@ -70,8 +71,7 @@ var defaultConfig = []byte(`{
         "internal",
         "handbook"
       ]
-    },
-  "Server": [
+    }
   ]
 }`)
 

@@ -49,7 +49,7 @@ const (
 		blackfriday.EXTENSION_TITLEBLOCK
 )
 
-type WikiPage struct {
+type Page struct {
 	Title    string
 	ToC      template.HTML
 	Body     template.HTML
@@ -122,7 +122,7 @@ func MarkdownHandler(responsePipe http.ResponseWriter, rawRequest *http.Request,
 		request.URL.Path = request.URL.Path + ".md"
 	}
 
-	pdata := new(PageMetadata)
+	pdata := new(Page)
 	err = pdata.LoadPage(serverConfig.Path + request.URL.Path)
 	if err != nil {
 		log.Printf("request [ %s ] points to an bad file target sent to server %s", request.URL.Path, serverConfig.Prefix)
@@ -144,7 +144,7 @@ func MarkdownHandler(responsePipe http.ResponseWriter, rawRequest *http.Request,
 	topics := pdata.PrintTopics(serverConfig.TopicURL)
 
 	// ##TODO## before you can use a template, you have to get the template lock to make sure you don't mess with someone else reading it
-	response := WikiPage{Title: "", ToC: toc, Body: body, Keywords: keywords, Topics: topics}
+	response := Page{Title: "", ToC: toc, Body: body, Keywords: keywords, Topics: topics}
 	err = allTemplates.ExecuteTemplate(responsePipe, serverConfig.Template, response)
 	if err != nil {
 		http.Error(responsePipe, err.Error(), 500)

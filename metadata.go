@@ -13,14 +13,18 @@ import (
 	"os"
 )
 
-type PageMetadata struct {
+type Page struct {
 	Keywords map[string]bool
 	Topics   map[string]bool
-	Page     []byte
+	Title string
+	Filename string
+	PageUnparsed     []byte
+	ToC template.HTML
+	Body template.HTML
 }
 
 // takes a single line of input and determines if it's a top level markdown header
-func (pdata *PageMetadata) lineIsTitle(line []byte) bool {
+func (pdata *Page) lineIsTitle(line []byte) bool {
 	// trim any whitespace from the start and the end of the line
 	line = bytes.TrimSpace(line)
 
@@ -36,7 +40,7 @@ func (pdata *PageMetadata) lineIsTitle(line []byte) bool {
 }
 
 // take a given line, and check it against every possible type of tag
-func (pdata *PageMetadata) processMetadata(line []byte) {
+func (pdata *Page) processMetadata(line []byte) {
 	pdata.checkMatch(line, []byte("tag"), &pdata.Topics)
 	pdata.checkMatch(line, []byte("topic"), &pdata.Topics)
 	pdata.checkMatch(line, []byte("category"), &pdata.Topics)
@@ -45,7 +49,7 @@ func (pdata *PageMetadata) processMetadata(line []byte) {
 	pdata.checkMatch(line, []byte("meta"), &pdata.Keywords)
 }
 
-func (pdata *PageMetadata) checkMatch(input []byte, looking []byte, tracker *map[string]bool) {
+func (pdata *Page) checkMatch(input []byte, looking []byte, tracker *map[string]bool) {
 	// trim off any blank spaces at the start of the line
 	value := bytes.TrimSpace(input)
 
@@ -81,7 +85,7 @@ func (pdata *PageMetadata) checkMatch(input []byte, looking []byte, tracker *map
 	}
 }
 
-func (pdata *PageMetadata) readRestOfPage(topLine []byte, bottomLine []byte, r *bufio.Reader) error {
+func (pdata *Page) readRestOfPage(topLine []byte, bottomLine []byte, r *bufio.Reader) error {
 	// read the rest of the page
 	var restOfPage []byte
 	var err error
@@ -102,7 +106,7 @@ func (pdata *PageMetadata) readRestOfPage(topLine []byte, bottomLine []byte, r *
 	}
 }
 
-func (pdata *PageMetadata) LoadPage(pageName string) error {
+func (pdata *Page) LoadPage(pageName string) error {
 	// open the file
 	f, err := os.Open(pageName)
 	reader := bufio.NewReader(f)
@@ -153,7 +157,7 @@ func (pdata *PageMetadata) LoadPage(pageName string) error {
 
 // runs through all restricted tags, and looks for a match
 // if matched, returns true, otherwise false
-func (pdata *PageMetadata) MatchedTag(checkTags []string) bool {
+func (pdata *Page) MatchedTag(checkTags []string) bool {
 	for _, tag := range checkTags {
 		if pdata.Topics[tag] == true {
 			return true
@@ -163,7 +167,7 @@ func (pdata *PageMetadata) MatchedTag(checkTags []string) bool {
 }
 
 // returns all the tags within a list as an array of strings
-func (pdata *PageMetadata) ListMeta() (topics []string, keywords []string) {
+func (pdata *Page) ListMeta() (topics []string, keywords []string) {
 	for oneTag, _ := range pdata.Topics {
 		topics = append(topics[:], oneTag)
 	}
@@ -178,7 +182,7 @@ func (pdata *PageMetadata) ListMeta() (topics []string, keywords []string) {
 
 // return the bytes to display the tags on the page
 // takes the prefix for the tags
-func (pdata *PageMetadata) PrintTopics(tagPrefix string) template.HTML {
+func (pdata *Page) PrintTopics(tagPrefix string) template.HTML {
 	response := []byte{}
 	openingTag := []byte("<div class='tag'>")
 	closingTag := []byte("</div>")
@@ -190,7 +194,7 @@ func (pdata *PageMetadata) PrintTopics(tagPrefix string) template.HTML {
 }
 
 // returns the bytes to add the keywrods to the html output
-func (pdata *PageMetadata) PrintKeywords() template.HTML {
+func (pdata *Page) PrintKeywords() template.HTML {
 	if len(pdata.Keywords) > 0 {
 		var response []byte
 		_, allKeywords := pdata.ListMeta()
