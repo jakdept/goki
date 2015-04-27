@@ -26,7 +26,7 @@ type GlobalSection struct {
 
 type ServerSection struct {
 	Path        string // filesystem path to serve out
-	Prefix      string // Web URL Prefix
+	Prefix      string // Web URL Prefix - alternatively the prefix for a search handler
 	DefaultPage string // Default page to serve if empty URI
 	Template    string // Template file to build the web URL from
 	ServerType  string // markdown, raw, or search to denote the type of Server handle
@@ -35,10 +35,8 @@ type ServerSection struct {
 }
 
 type IndexSection struct {
-	WatchDir string
-	WatchExtension string
-	StaticEtag string // not sure what this will be used for
-	StaticPath string //directory to the static content
+	WatchDir string // Location that we will be watching for updates
+	WatchExtension string // file extensions that we will watch for within that dir
 	IndexPath string //location to store the index
 	IndexType string // type of index - likely "en"
 }
