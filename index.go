@@ -15,42 +15,13 @@ import (
 	"gopkg.in/fsnotify.v1"
 )
 
-func buildIndexMapping() *bleve.IndexMapping {
-
-	enTextFieldMapping := bleve.NewTextFieldMapping()
-	enTextFieldMapping.Analyzer = "en"
-
-	storeFieldOnlyMapping := bleve.NewTextFieldMapping()
-	storeFieldOnlyMapping.Index = false
-	storeFieldOnlyMapping.IncludeTermVectors = false
-	storeFieldOnlyMapping.IncludeInAll = false
-
-	dateTimeMapping := bleve.NewDateTimeFieldMapping()
-
-	wikiMapping := bleve.NewDocumentMapping()
-	wikiMapping.AddFieldMappingsAt("name", enTextFieldMapping)
-	wikiMapping.AddFieldMappingsAt("body", enTextFieldMapping)
-	wikiMapping.AddFieldMappingsAt("modified_by", enTextFieldMapping)
-	wikiMapping.AddFieldMappingsAt("modified_by_name", enTextFieldMapping)
-	wikiMapping.AddFieldMappingsAt("modified_by_email", enTextFieldMapping)
-	wikiMapping.AddFieldMappingsAt("modified_by_avatar", storeFieldOnlyMapping)
-	wikiMapping.AddFieldMappingsAt("modified", dateTimeMapping)
-
-	indexMapping := bleve.NewIndexMapping()
-	indexMapping.AddDocumentMapping("wiki", wikiMapping)
-
-	indexMapping.DefaultAnalyzer = "en"
-
-	return indexMapping
-}
-
-func openIndex(path string) bleve.Index {
-	index, err := bleve.Open(path)
+func openIndex(config IndexSection) bleve.Index {
+	index, err := bleve.Open(filepath.Clean(config.IndexPath))
 	if err == bleve.ErrorIndexPathDoesNotExist {
 		log.Printf("Creating new index...")
 		// create a mapping
-		indexMapping := buildIndexMapping()
-		index, err = bleve.New(path, indexMapping)
+		indexMapping := buildIndexMapping(config)
+		index, err = bleve.New(filepath.Clean(config.IndexPath), indexMapping)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -60,6 +31,31 @@ func openIndex(path string) bleve.Index {
 		log.Fatal(err)
 	}
 	return index
+}
+
+func buildIndexMapping(config IndexSection) *bleve.IndexMapping {
+
+	// create a text field type
+	enTextFieldMapping := bleve.NewTextFieldMapping()
+	enTextFieldMapping.Analyzer = config.IndexType
+
+	// create a date field type
+	dateTimeMapping := bleve.NewDateTimeFieldMapping()
+
+	// map out the wiki page
+	wikiMapping := bleve.NewDocumentMapping()
+	wikiMapping.AddFieldMappingsAt("path", enTextFieldMapping)
+	wikiMapping.AddFieldMappingsAt("body", enTextFieldMapping)
+	wikiMapping.AddFieldMappingsAt("topic", enTextFieldMapping)
+	wikiMapping.AddFieldMappingsAt("keyword", enTextFieldMapping)
+	wikiMapping.AddFieldMappingsAt("modified", dateTimeMapping)
+
+	// add the wiki page mapping to a new index
+	indexMapping := bleve.NewIndexMapping()
+	indexMapping.AddDocumentMapping("wiki", wikiMapping)
+	indexMapping.DefaultAnalyzer = config.IndexType
+
+	return indexMapping
 }
 
 func processUpdate(index bleve.Index, repo *git.Repository, path string) {
@@ -106,9 +102,6 @@ func walkForIndexing(path string, index bleve.Index, repo *git.Repository) {
 	}
 }
 
-func (w *WikiPage) Type() string {
-	return "wiki"
-}
 
 func NewWikiFromFile(path string) (*WikiPage, error) {
 	fileBytes, err := ioutil.ReadFile(path)
@@ -285,7 +278,15 @@ func recursiveDiffLookingForFile(repo *git.Repository, commit *git.Commit, path 
 	}
 }
 
+/*
 func gravatarHashFromEmail(email string) string {
 	input := strings.ToLower(strings.TrimSpace(email))
 	return fmt.Sprintf("%x", md5.Sum([]byte(input)))
 }
+*/
+
+/*
+func (w *WikiPage) Type() string {
+	return "wiki"
+}
+*/
