@@ -25,13 +25,21 @@ type GlobalSection struct {
 }
 
 type ServerSection struct {
-	Path        string
-	Prefix      string
-	DefaultPage string
-	Template    string
-	ServerType  string
-	TopicURL    string
-	Restricted  []string
+	Path        string // filesystem path to serve out
+	Prefix      string // Web URL Prefix
+	DefaultPage string // Default page to serve if empty URI
+	Template    string // Template file to build the web URL from
+	ServerType  string // markdown, raw, or search to denote the type of Server handle
+	TopicURL    string // URI prefix to redirect to topic pages
+	Restricted  []string // list of restricts - extensions for raw, topics for markdown
+}
+
+type IndexSection struct {
+	WatchDir string
+	WatchExtension string
+	StaticEtag string // not sure what this will be used for
+	StaticPath string //directory to the static content
+	IndexPath string //location to store the index
 }
 
 type RedirectSection struct {
