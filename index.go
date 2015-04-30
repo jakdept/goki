@@ -6,20 +6,28 @@ import (
 	"io/ioutil"
 	"os"
 	"time"
-	"crypto/md5"
-	"fmt"
+	//"crypto/md5"
+	"path"
+	//"fmt"
 
 "github.com/mschoch/blackfriday-text"
 	"github.com/blevesearch/bleve"
 	"gopkg.in/fsnotify.v1"
 )
 
+type gnosisIndex struct {
+	Index bleve.Index
+	Config IndexSection
+	Repo *git.Repository
+}
+
 func openIndex(config IndexSection) bleve.Index {
 	index, err := bleve.Open(filepath.Clean(config.IndexPath))
+	index.Config = config
 	if err == bleve.ErrorIndexPathDoesNotExist {
 		log.Printf("Creating new index...")
 		// create a mapping
-		indexMapping := buildIndexMapping(config)
+		indexMapping := index.buildIndexMapping(config)
 		index, err = bleve.New(filepath.Clean(config.IndexPath), indexMapping)
 		if err != nil {
 			log.Fatal(err)
@@ -32,11 +40,11 @@ func openIndex(config IndexSection) bleve.Index {
 	return index
 }
 
-func buildIndexMapping(config IndexSection) *bleve.IndexMapping {
+func (index *bleve.Index) buildIndexMapping() *bleve.IndexMapping {
 
 	// create a text field type
 	enTextFieldMapping := bleve.NewTextFieldMapping()
-	enTextFieldMapping.Analyzer = config.IndexType
+	enTextFieldMapping.Analyzer = index.Config.IndexType
 
 	// create a date field type
 	dateTimeMapping := bleve.NewDateTimeFieldMapping()
@@ -52,40 +60,39 @@ func buildIndexMapping(config IndexSection) *bleve.IndexMapping {
 	// add the wiki page mapping to a new index
 	indexMapping := bleve.NewIndexMapping()
 	indexMapping.AddDocumentMapping("wiki", wikiMapping)
-	indexMapping.DefaultAnalyzer = config.IndexType
+	indexMapping.DefaultAnalyzer = index.Config.IndexType
 
 	return indexMapping
 }
 
-func processUpdate(index bleve.Index, repo *git.Repository, path string) {
+func (index *gnosisIndex) processUpdate(path string) {
 	log.Printf("updated: %s", path)
-	rp := relativePath(path)
-	wiki, err := NewWikiFromFile(path)
+	rp := index.relativePath(path)
+	wiki, err := index.generateWikiFromFile(path)
 	if err != nil {
 		log.Print(err)
 	} else {
-		doGitStuff(repo, rp, wiki)
+		doGitStuff(index.Repo, rp, wiki)
 		index.Index(rp, wiki)
 	}
 }
 
-func processDelete(index bleve.Index, repo *git.Repository, path string) {
+func (index *gnosisIndex) processDelete(path string) {
 	log.Printf("delete: %s", path)
-	rp := relativePath(path)
+	rp := index.relativePath(path)
 	err := index.Delete(rp)
 	if err != nil {
 		log.Print(err)
 	}
 }
 
-func relativePath(path string) string {
-	if strings.HasPrefix(path, *dir) {
-		path = path[len(*dir)+1:]
-	}
+func (index gnosisIndex) relativePath(filePath string) string {
+	filePath = strings.TrimPrefix(path, config.WatchDir)
+	filePath = path.Clean(path)
 	return path
 }
 
-func walkForIndexing(path string, index bleve.Index, repo *git.Repository) {
+func (index *gnosisIndex) walkForIndexing(path string) {
 
 	dirEntries, err := ioutil.ReadDir(path)
 	if err != nil {
@@ -94,30 +101,24 @@ func walkForIndexing(path string, index bleve.Index, repo *git.Repository) {
 	for _, dirEntry := range dirEntries {
 		dirEntryPath := path + string(os.PathSeparator) + dirEntry.Name()
 		if dirEntry.IsDir() {
-			walkForIndexing(dirEntryPath, index, repo)
-		} else if pathMatch(dirEntry.Name()) {
-			processUpdate(index, repo, dirEntryPath)
+			index.walkForIndexing(dirEntryPath)
+		} else if strings.HasSuffix(dirEntry.Name(), ".md") {
+			index.processUpdate(dirEntryPath)
 		}
 	}
 }
 
 
-func NewWikiFromFile(path string) (*WikiPage, error) {
-	fileBytes, err := ioutil.ReadFile(path)
+func (index *gnosisIndex) generateWikiFromFile(filePath string) (*WikiPage, error) {
+	fileBytes, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		return nil, err
 	}
 
-	cleanedUpBytes := cleanupMarkdown(fileBytes)
-
-	name := path
-	lastSlash := strings.LastIndex(path, string(os.PathSeparator))
-	if lastSlash > 0 {
-		name = name[lastSlash+1:]
-	}
-	if strings.HasSuffix(name, ".md") {
-		name = name[0 : len(name)-len(".md")]
-	}
+	// ##TODO## I need to look up the actual index that I'm building and hit all of the fields here
+	cleanedUpBytes := index.cleanupMarkdown(fileBytes)
+	name := path.Base(filePath)
+	name = strings.TrimSuffix(name, ".md")
 	rv := WikiPage{
 		Name: name,
 		Body: string(cleanedUpBytes),
@@ -125,18 +126,20 @@ func NewWikiFromFile(path string) (*WikiPage, error) {
 	return &rv, nil
 }
 
-func cleanupMarkdown(input []byte) []byte {
+func (index *gnosisIndex) cleanupMarkdown(input []byte) []byte {
 	extensions := 0
 	renderer := blackfridaytext.TextRenderer()
 	output := blackfriday.Markdown(input, renderer, extensions)
 	return output
 }
 
-func startWatching(path string, index bleve.Index, repo *git.Repository) *fsnotify.Watcher {
+func (index *gnosisIndex) startWatching(filePath string) *fsnotify.Watcher {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	// maybe rework the index so the Watcher is inside the index? idk
 
 	// start a go routine to process events
 	go func() {
@@ -151,14 +154,14 @@ func startWatching(path string, index bleve.Index, repo *git.Repository) *fsnoti
 				log.Fatal(err)
 			case <-idleTimer.C:
 				for _, ev := range queuedEvents {
-					if pathMatch(ev.Name) {
+					if strings.HasSuffix(ev.Name, ".md") {
 						switch ev.Op {
 						case fsnotify.Remove, fsnotify.Rename:
-							// delete the path
-							processDelete(index, repo, ev.Name)
+							// delete the filePath
+							index.processDelete(index.Index, repo, ev.Name)
 						case fsnotify.Create, fsnotify.Write:
-							// update the path
-							processUpdate(index, repo, ev.Name)
+							// update the filePath
+							index.processUpdate(index.Index, repo, ev.Name)
 						default:
 							// ignore
 						}
@@ -170,12 +173,12 @@ func startWatching(path string, index bleve.Index, repo *git.Repository) *fsnoti
 		}
 	}()
 
-	// now actually watch the path requested
-	err = watcher.Add(path)
+	// now actually watch the filePath requested
+	err = watcher.Add(filePath)
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Printf("watching '%s' for changes...", path)
+	log.Printf("watching '%s' for changes...", filePath)
 
 	return watcher
 }
