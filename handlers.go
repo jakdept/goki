@@ -123,7 +123,7 @@ func MarkdownHandler(responsePipe http.ResponseWriter, rawRequest *http.Request,
 		request.URL.Path = request.URL.Path + ".md"
 	}
 
-	pdata := new(Page)
+	pdata := new(PageMetadata)
 	err = pdata.LoadPage(serverConfig.Path + request.URL.Path)
 	if err != nil {
 		log.Printf("request [ %s ] points to an bad file target sent to server %s", request.URL.Path, serverConfig.Prefix)
