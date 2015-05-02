@@ -25,20 +25,20 @@ type GlobalSection struct {
 }
 
 type ServerSection struct {
-	Path        string // filesystem path to serve out
-	Prefix      string // Web URL Prefix - alternatively the prefix for a search handler
-	DefaultPage string // Default page to serve if empty URI
-	Template    string // Template file to build the web URL from
-	ServerType  string // markdown, raw, or search to denote the type of Server handle
-	TopicURL    string // URI prefix to redirect to topic pages
+	Path        string   // filesystem path to serve out
+	Prefix      string   // Web URL Prefix - alternatively the prefix for a search handler
+	DefaultPage string   // Default page to serve if empty URI
+	Template    string   // Template file to build the web URL from
+	ServerType  string   // markdown, raw, or search to denote the type of Server handle
+	TopicURL    string   // URI prefix to redirect to topic pages
 	Restricted  []string // list of restricts - extensions for raw, topics for markdown
 }
 
 type IndexSection struct {
-	WatchDir string // Location that we will be watching for updates
+	WatchDir       string // Location that we will be watching for updates
 	WatchExtension string // file extensions that we will watch for within that dir
-	IndexPath string //location to store the index
-	IndexType string // type of index - likely "en"
+	IndexPath      string //location to store the index
+	IndexType      string // type of index - likely "en"
 }
 
 type RedirectSection struct {
@@ -48,9 +48,9 @@ type RedirectSection struct {
 }
 
 type Config struct {
-	Global     GlobalSection
-	Redirects  []RedirectSection
-	Server     []ServerSection
+	Global    GlobalSection
+	Redirects []RedirectSection
+	Server    []ServerSection
 }
 
 var defaultConfig = []byte(`{
