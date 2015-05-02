@@ -10,37 +10,50 @@ import (
 	"path"
 	//"fmt"
 
+	"github.com/JackKnifed/blackfriday"
 "github.com/mschoch/blackfriday-text"
 	"github.com/blevesearch/bleve"
 	"gopkg.in/fsnotify.v1"
 )
 
 type gnosisIndex struct {
-	Index bleve.Index
+	TrueIndex bleve.Index
 	Config IndexSection
-	Repo *git.Repository
 }
 
-func openIndex(config IndexSection) bleve.Index {
-	index, err := bleve.Open(filepath.Clean(config.IndexPath))
+type indexedPage struct {
+	Name               string    `json:"name"`
+	Filepath string `json:"path"`
+	Body               string    `json:"body"`
+	Topics string `json:"topic"`
+	Keywords string `json:"keyword"`
+	Modified           time.Time `json:"modified"`
+}
+
+func openIndex(config IndexSection) *gnosisIndex {
+	index := new(gnosisIndex)
 	index.Config = config
-	if err == bleve.ErrorIndexPathDoesNotExist {
+	newIndex, err := bleve.Open(path.Clean(index.Config.IndexPath))
+	if err == nil {
+		log.Printf("Opening existing index...")
+		index.TrueIndex = newIndex
+	} else if err == bleve.ErrorIndexPathDoesNotExist {
 		log.Printf("Creating new index...")
 		// create a mapping
-		indexMapping := index.buildIndexMapping(config)
-		index, err = bleve.New(filepath.Clean(config.IndexPath), indexMapping)
+		indexMapping := index.buildIndexMapping()
+		newIndex, err := bleve.New(path.Clean(index.Config.IndexPath), indexMapping)
 		if err != nil {
 			log.Fatal(err)
+		} else {
+			index.TrueIndex = newIndex
 		}
-	} else if err == nil {
-		log.Printf("Opening existing index...")
 	} else {
 		log.Fatal(err)
 	}
 	return index
 }
 
-func (index *bleve.Index) buildIndexMapping() *bleve.IndexMapping {
+func (index *gnosisIndex) buildIndexMapping() *bleve.IndexMapping {
 
 	// create a text field type
 	enTextFieldMapping := bleve.NewTextFieldMapping()
@@ -58,11 +71,42 @@ func (index *bleve.Index) buildIndexMapping() *bleve.IndexMapping {
 	wikiMapping.AddFieldMappingsAt("modified", dateTimeMapping)
 
 	// add the wiki page mapping to a new index
+	// ##TODO## revisit? move out to config?
 	indexMapping := bleve.NewIndexMapping()
 	indexMapping.AddDocumentMapping("wiki", wikiMapping)
 	indexMapping.DefaultAnalyzer = index.Config.IndexType
 
 	return indexMapping
+}
+
+func (index *gnosisIndex) cleanupMarkdown(input []byte) []byte {
+	extensions := 0
+	renderer := blackfridaytext.TextRenderer()
+	output := blackfriday.Markdown(input, renderer, extensions)
+	return output
+}
+
+func (index *gnosisIndex) relativePath(filePath string) string {
+	filePath = strings.TrimPrefix(filePath, index.Config.WatchDir)
+	filePath = path.Clean(filePath)
+	return filePath
+}
+
+func (index *gnosisIndex) generateWikiFromFile(filePath string) (*indexedPage, error) {
+	fileBytes, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		return nil, err
+	}
+
+	// ##TODO## I need to look up the actual index that I'm building and hit all of the fields here
+	cleanedUpBytes := index.cleanupMarkdown(fileBytes)
+	name := path.Base(filePath)
+	name = strings.TrimSuffix(name, ".md")
+	rv := indexedPage{
+		Name: name,
+		Body: string(cleanedUpBytes),
+	}
+	return &rv, nil
 }
 
 func (index *gnosisIndex) processUpdate(path string) {
@@ -72,28 +116,21 @@ func (index *gnosisIndex) processUpdate(path string) {
 	if err != nil {
 		log.Print(err)
 	} else {
-		doGitStuff(index.Repo, rp, wiki)
-		index.Index(rp, wiki)
+		index.TrueIndex.Index(rp, wiki)
 	}
 }
 
 func (index *gnosisIndex) processDelete(path string) {
 	log.Printf("delete: %s", path)
 	rp := index.relativePath(path)
-	err := index.Delete(rp)
+	err := index.TrueIndex.Delete(rp)
 	if err != nil {
 		log.Print(err)
 	}
 }
 
-func (index gnosisIndex) relativePath(filePath string) string {
-	filePath = strings.TrimPrefix(path, config.WatchDir)
-	filePath = path.Clean(path)
-	return path
-}
-
 func (index *gnosisIndex) walkForIndexing(path string) {
-
+	// ##TODO## reevaulate by finding all files within a path?
 	dirEntries, err := ioutil.ReadDir(path)
 	if err != nil {
 		log.Fatal(err)
@@ -106,31 +143,6 @@ func (index *gnosisIndex) walkForIndexing(path string) {
 			index.processUpdate(dirEntryPath)
 		}
 	}
-}
-
-
-func (index *gnosisIndex) generateWikiFromFile(filePath string) (*WikiPage, error) {
-	fileBytes, err := ioutil.ReadFile(filePath)
-	if err != nil {
-		return nil, err
-	}
-
-	// ##TODO## I need to look up the actual index that I'm building and hit all of the fields here
-	cleanedUpBytes := index.cleanupMarkdown(fileBytes)
-	name := path.Base(filePath)
-	name = strings.TrimSuffix(name, ".md")
-	rv := WikiPage{
-		Name: name,
-		Body: string(cleanedUpBytes),
-	}
-	return &rv, nil
-}
-
-func (index *gnosisIndex) cleanupMarkdown(input []byte) []byte {
-	extensions := 0
-	renderer := blackfridaytext.TextRenderer()
-	output := blackfriday.Markdown(input, renderer, extensions)
-	return output
 }
 
 func (index *gnosisIndex) startWatching(filePath string) *fsnotify.Watcher {
@@ -158,10 +170,10 @@ func (index *gnosisIndex) startWatching(filePath string) *fsnotify.Watcher {
 						switch ev.Op {
 						case fsnotify.Remove, fsnotify.Rename:
 							// delete the filePath
-							index.processDelete(index.Index, repo, ev.Name)
+							index.processDelete(ev.Name)
 						case fsnotify.Create, fsnotify.Write:
 							// update the filePath
-							index.processUpdate(index.Index, repo, ev.Name)
+							index.processUpdate(ev.Name)
 						default:
 							// ignore
 						}
@@ -182,16 +194,3 @@ func (index *gnosisIndex) startWatching(filePath string) *fsnotify.Watcher {
 
 	return watcher
 }
-
-/*
-func gravatarHashFromEmail(email string) string {
-	input := strings.ToLower(strings.TrimSpace(email))
-	return fmt.Sprintf("%x", md5.Sum([]byte(input)))
-}
-*/
-
-/*
-func (w *WikiPage) Type() string {
-	return "wiki"
-}
-*/
