@@ -1,29 +1,31 @@
 package gnosis
 
 import (
-	"io/ioutil"
 	"log"
-	"os"
-	"path"
 	"strings"
+	"io/ioutil"
+	"os"
 	"time"
+	"path"
 
 	"github.com/JackKnifed/blackfriday"
+	"github.com/mschoch/blackfriday-text"
 	"github.com/blevesearch/bleve"
+	"gopkg.in/fsnotify.v1"
 )
 
 type gnosisIndex struct {
 	TrueIndex bleve.Index
-	Config    IndexSection
+	Config IndexSection
 }
 
 type indexedPage struct {
-	Name     string    `json:"name"`
-	Filepath string    `json:"path"`
-	Body     string    `json:"body"`
-	Topics   string    `json:"topic"`
-	Keywords string    `json:"keyword"`
-	Modified time.Time `json:"modified"`
+	Name               string    `json:"name"`
+	Filepath string `json:"path"`
+	Body               string    `json:"body"`
+	Topics string `json:"topic"`
+	Keywords string `json:"keyword"`
+	Modified           time.Time `json:"modified"`
 }
 
 func openIndex(config IndexSection) *gnosisIndex {
