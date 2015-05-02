@@ -91,18 +91,23 @@ func (index *gnosisIndex) relativePath(filePath string) string {
 }
 
 func (index *gnosisIndex) generateWikiFromFile(filePath string) (*indexedPage, error) {
-	fileBytes, err := ioutil.ReadFile(filePath)
+	pdata := new(PageMetadata)
+	err := pdata.LoadPage(filePath)
+	//fileBytes, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		return nil, err
 	}
 
 	// ##TODO## I need to look up the actual index that I'm building and hit all of the fields here
-	cleanedUpBytes := index.cleanupMarkdown(fileBytes)
-	name := path.Base(filePath)
-	name = strings.TrimSuffix(name, ".md")
+	cleanedUpPage := index.cleanupMarkdown(pdata.Page)
+	topics, keywords := pdata.ListMeta()
 	rv := indexedPage{
-		Name: name,
-		Body: string(cleanedUpBytes),
+		Name: pdata.Title,
+		Body: string(cleanedUpPage),
+		Filepath: filePath,
+		Topics: strings.Join(topics, " "),
+		Keywords: strings.Join(keywords, " "),
+		Modified: pdata.FileStats.ModTime(),
 	}
 	return &rv, nil
 }

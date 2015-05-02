@@ -6,6 +6,7 @@ import (
 	"bufio"
 	"bytes"
 	"errors"
+	"strings"
 	"html/template"
 	"io"
 	"sort"
@@ -17,6 +18,8 @@ type PageMetadata struct {
 	Keywords map[string]bool
 	Topics   map[string]bool
 	Page     []byte
+	Title string
+	FileStats os.FileInfo
 }
 
 // takes a single line of input and determines if it's a top level markdown header
@@ -109,6 +112,7 @@ func (pdata *PageMetadata) LoadPage(pageName string) error {
 	if err != nil {
 		return err
 	}
+	pdata.FileStats, err = os.Stat(pageName)
 
 	// read a line
 	upperLine, err := reader.ReadBytes(byte('\n'))
@@ -128,6 +132,7 @@ func (pdata *PageMetadata) LoadPage(pageName string) error {
 	} else if err != nil {
 		return errors.New("secont line error - " + err.Error())
 	} else if pdata.lineIsTitle(lowerLine) {
+		pdata.Title = strings.TrimSpace(string(upperLine))
 		return pdata.readRestOfPage(upperLine, lowerLine, reader)
 	}
 
@@ -148,6 +153,7 @@ func (pdata *PageMetadata) LoadPage(pageName string) error {
 	}
 
 	// by this point, I should have read everything in - let's read the rest and just return it
+		pdata.Title = strings.TrimSpace(string(upperLine))
 	return pdata.readRestOfPage(upperLine, lowerLine, reader)
 }
 
