@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/JackKnifed/blackfriday"
+	bleveHttp "github.com/blevesearch/bleve/http"
 )
 
 const (
@@ -201,6 +202,33 @@ func RawHandler(responsePipe http.ResponseWriter, rawRequest *http.Request, serv
 	return
 }
 
+/* func SearchHandler(responsePipe http.ResponseWriter, rawRequest *http.Request, serverConfig ServerSection) {
+
+	var err error
+
+	request.URL.Path = strings.TrimPrefix(request.URL.Path, serverConfig.Prefix)
+
+	if err = request.ParseForm(); err != nil {
+		log.Printf("error parsing search request, %v", err)
+		http.Error(responsePipe, err.Error(), err)
+		return
+	}
+
+	for _, restricted := range serverConfig.Restricted {
+		for _, formValue := range request.Form {
+			if strings.Contains(formValue, restricted) {
+				log.Printf("found a non-allowed search term - %s", restricted)
+				http.error(responsePipe, "Request not allowed", 403)
+				return
+			}
+		}
+	}
+
+	request, err := stripRequestRouting(ServerConfig.Prefix, rawRequest)
+
+}
+*/
+
 func MakeHandler(handlerConfig ServerSection) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		switch handlerConfig.ServerType {
@@ -208,6 +236,9 @@ func MakeHandler(handlerConfig ServerSection) http.HandlerFunc {
 			MarkdownHandler(w, r, handlerConfig)
 		case "raw":
 			RawHandler(w, r, handlerConfig)
+		case "search":
+			requestHandler := bleveHttp.NewSearchHandler(handlerConfig.Prefix)
+			requestHandler.ServeHTTP(w, r)
 		default:
 			log.Printf("Bad server type [%s]", handlerConfig.ServerType)
 		}
