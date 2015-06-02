@@ -202,7 +202,7 @@ func RawHandler(responsePipe http.ResponseWriter, rawRequest *http.Request, serv
 	return
 }
 
-/* func SearchHandler(responsePipe http.ResponseWriter, rawRequest *http.Request, serverConfig ServerSection) {
+func SearchHandler(responsePipe http.ResponseWriter, rawRequest *http.Request, serverConfig ServerSection) {
 
 	var err error
 
@@ -210,24 +210,51 @@ func RawHandler(responsePipe http.ResponseWriter, rawRequest *http.Request, serv
 
 	if err = request.ParseForm(); err != nil {
 		log.Printf("error parsing search request, %v", err)
-		http.Error(responsePipe, err.Error(), err)
+		http.Error(responsePipe, err.Error(), 500)
 		return
 	}
 
-	for _, restricted := range serverConfig.Restricted {
-		for _, formValue := range request.Form {
-			if strings.Contains(formValue, restricted) {
-				log.Printf("found a non-allowed search term - %s", restricted)
-				http.error(responsePipe, "Request not allowed", 403)
-				return
-			}
-		}
+	// there is no need to disallow certain search terms - they are not indexed in the first place
+
+index := IndexByName(serverConfig.Default)
+if index == nil {
+		log.Printf("no such index '%s'", indexName)
+		http.Error(responsePipe, err.Error(), 404)
+		return
+}
+
+	// read the request body
+	requestBody, err := ioutil.ReadAll(req.Body)
+	if err != nil {
+		showError(w, req, fmt.Sprintf("error reading request body: %v", err), 400)
+		return
 	}
 
-	request, err := stripRequestRouting(ServerConfig.Prefix, rawRequest)
+	logger.Printf("request body: %s", requestBody)
+
+	// parse the request
+	var searchRequest bleve.SearchRequest
+	err = json.Unmarshal(requestBody, &searchRequest)
+	if err != nil {
+		showError(w, req, fmt.Sprintf("error parsing query: %v", err), 400)
+		return
+	}
+
+	// validate the query
+	err = searchRequest.Query.Validate()
+	if err != nil {
+		showError(w, req, fmt.Sprintf("error validating query: %v", err), 400)
+		return
+	}
+
+	// execute the query
+	searchResponse, err := index.Search(&searchRequest)
+	if err != nil {
+		showError(w, req, fmt.Sprintf("error executing query: %v", err), 500)
+		return
+	}
 
 }
-*/
 
 func MakeHandler(handlerConfig ServerSection) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
