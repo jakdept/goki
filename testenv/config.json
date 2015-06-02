@@ -48,6 +48,13 @@
         "ini",
         "json"
       ]
-    }
+    },
+    {
+      "Prefix": "/search/",
+      "Default": "publicIndex",
+      "ServerType": "search",
+      "Template": "search.html",
+      "TopicURL": "/topic/"
+    },
   ]
 }
