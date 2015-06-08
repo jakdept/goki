@@ -214,31 +214,24 @@ func SearchHandler(responsePipe http.ResponseWriter, rawRequest *http.Request, s
 		return
 	}
 
-	// there is no need to disallow certain search terms - they are not indexed in the first place
-
-index := IndexByName(serverConfig.Default)
-if index == nil {
-		log.Printf("no such index '%s'", indexName)
-		http.Error(responsePipe, err.Error(), 404)
-		return
-}
-
-	// read the request body
-	requestBody, err := ioutil.ReadAll(req.Body)
-	if err != nil {
-		showError(w, req, fmt.Sprintf("error reading request body: %v", err), 400)
-		return
+	index := IndexByName(serverConfig.Default)
+	if index == nil {
+			log.Printf("no such index '%s'", indexName)
+			http.Error(responsePipe, err.Error(), 404)
+			return
 	}
 
-	logger.Printf("request body: %s", requestBody)
+	// debugging information
+    for k, v := range r.Form {
+        log.Println("key:", k)
+        log.Println("val:", strings.Join(v, ""))
+    }
 
+	// this probably is wrong, idk
 	// parse the request
 	var searchRequest bleve.SearchRequest
-	err = json.Unmarshal(requestBody, &searchRequest)
-	if err != nil {
-		showError(w, req, fmt.Sprintf("error parsing query: %v", err), 400)
-		return
-	}
+
+	SearchRequest.Fields = request.Form;
 
 	// validate the query
 	err = searchRequest.Query.Validate()
@@ -254,6 +247,10 @@ if index == nil {
 		return
 	}
 
+	err = allTemplates.ExecuteTemplate(responsePipe, serverConfig.Template, searchResponse)
+	if err != nil {
+		http.Error(responsePipe, err.Error(), 500)
+	}
 }
 
 func MakeHandler(handlerConfig ServerSection) http.HandlerFunc {
@@ -264,8 +261,7 @@ func MakeHandler(handlerConfig ServerSection) http.HandlerFunc {
 		case "raw":
 			RawHandler(w, r, handlerConfig)
 		case "search":
-			requestHandler := bleveHttp.NewSearchHandler(handlerConfig.Prefix)
-			requestHandler.ServeHTTP(w, r)
+			SearchHandler(w, r, handlerConfig)
 		default:
 			log.Printf("Bad server type [%s]", handlerConfig.ServerType)
 		}
