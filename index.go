@@ -17,7 +17,11 @@ import (
 type gnosisIndex struct {
 	TrueIndex bleve.Index
 	Config    IndexSection
-	openWatchers fsnotify.Watcher[]
+	// ##TODO## figure this out
+	// I cannot use append and range on an array of pointers
+	// and yet I do not think I can modify an array of non-pointers
+	// IDK what to do just yet
+	openWatchers *[]fsnotify.Watcher
 }
 
 type indexedPage struct {
@@ -29,7 +33,7 @@ type indexedPage struct {
 	Modified time.Time `json:"modified"`
 }
 
-func openIndex(config IndexSection) (*gnosisIndex, err) {
+func openIndex(config IndexSection) (*gnosisIndex, error) {
 	index := new(gnosisIndex)
 	index.Config = config
 	newIndex, err := bleve.Open(path.Clean(index.Config.IndexPath))
@@ -47,17 +51,17 @@ func openIndex(config IndexSection) (*gnosisIndex, err) {
 			index.TrueIndex = newIndex
 		}
 	} else {
-		log.Error(err)
-		return _, err
+		log.Printf("Got an error opening an index %v", err)
+		return nil, err
 	}
 	// You only got here if you opened an existing index, or a new index
 	for _, dir := range index.Config.WatchDir {
 		log.Printf("Watching and walking dir %s index %s", dir, index.Config.IndexName)
 		watcher := index.startWatching(dir)
 		index.openWatchers = append(index.openWatchers, watcher)
-		index.walkForIndexing(dir)
+		index.walkForIndexing(dir, dir)
 	}
-	return index
+	return index, nil
 }
 
 func (index *gnosisIndex) closeIndex() {
@@ -98,8 +102,8 @@ func (index *gnosisIndex) cleanupMarkdown(input []byte) []byte {
 	return output
 }
 
-func (index *gnosisIndex) relativePath(filePath string) string {
-	filePath = strings.TrimPrefix(filePath, index.Config.WatchDir)
+func (index *gnosisIndex) relativePath(filePath string, dir string) string {
+	filePath = strings.TrimPrefix(filePath, dir)
 	filePath = path.Clean(filePath)
 	return filePath
 }
@@ -112,8 +116,8 @@ func (index *gnosisIndex) generateWikiFromFile(filePath string) (*indexedPage, e
 		return nil, err
 	}
 
-	if MatchedTag(index.Config.Restricted) == true {
-		return nil, sprintf("Hit a restricted page - %s", filePath)
+	if pdata.MatchedTag(index.Config.Restricted) == true {
+		return nil, err.Sprintf("Hit a restricted page - %s", filePath)
 	} else {
 	cleanedUpPage := index.cleanupMarkdown(pdata.Page)
 	topics, keywords := pdata.ListMeta()
@@ -130,9 +134,9 @@ func (index *gnosisIndex) generateWikiFromFile(filePath string) (*indexedPage, e
 }
 
 // Update the entry in the index to the output from a given file
-func (index *gnosisIndex) processUpdate(path string) {
+func (index *gnosisIndex) processUpdate(path string, dir string) {
 	log.Printf("updated: %s", path)
-	rp := index.relativePath(path)
+	rp := index.relativePath(path, dir)
 	wiki, err := index.generateWikiFromFile(path)
 	if err != nil {
 		log.Print(err)
@@ -142,9 +146,9 @@ func (index *gnosisIndex) processUpdate(path string) {
 }
 
 // Deletes a given path from the wiki entry
-func (index *gnosisIndex) processDelete(path string) {
+func (index *gnosisIndex) processDelete(path string, dir string) {
 	log.Printf("delete: %s", path)
-	rp := index.relativePath(path)
+	rp := index.relativePath(path, dir)
 	err := index.TrueIndex.Delete(rp)
 	if err != nil {
 		log.Print(err)
@@ -152,7 +156,7 @@ func (index *gnosisIndex) processDelete(path string) {
 }
 
 // walks a given path, and runs processUpdate on each File
-func (index *gnosisIndex) walkForIndexing(path string) {
+func (index *gnosisIndex) walkForIndexing(path string, origPath string) {
 	dirEntries, err := ioutil.ReadDir(path)
 	if err != nil {
 		log.Fatal(err)
@@ -160,9 +164,9 @@ func (index *gnosisIndex) walkForIndexing(path string) {
 	for _, dirEntry := range dirEntries {
 		dirEntryPath := path + string(os.PathSeparator) + dirEntry.Name()
 		if dirEntry.IsDir() {
-			index.walkForIndexing(dirEntryPath)
+			index.walkForIndexing(dirEntryPath, origPath)
 		} else if strings.HasSuffix(dirEntry.Name(), index.Config.WatchExtension) {
-			index.processUpdate(dirEntryPath)
+			index.processUpdate(dirEntryPath, origPath)
 		}
 	}
 }
@@ -193,10 +197,10 @@ func (index *gnosisIndex) startWatching(filePath string) *fsnotify.Watcher {
 						switch ev.Op {
 						case fsnotify.Remove, fsnotify.Rename:
 							// delete the filePath
-							index.processDelete(ev.Name)
+							index.processDelete(ev.Name, filePath)
 						case fsnotify.Create, fsnotify.Write:
 							// update the filePath
-							index.processUpdate(ev.Name)
+							index.processUpdate(ev.Name, filePath)
 						default:
 							// ignore
 						}
