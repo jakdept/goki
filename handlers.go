@@ -23,7 +23,7 @@ type Page struct {
 	Keywords template.HTML
 }
 
-func MarkdownHandler(responsePipe http.ResponseWriter, rawRequest *http.Request, serverConfig ServerSection) {
+func MarkdownHandler(responsePipe http.ResponseWriter, request *http.Request, serverConfig ServerSection) {
 
 	var err error
 
@@ -80,7 +80,7 @@ func FindExtension(s string) (string, error) {
 	return "", errors.New("found no extension")
 }
 
-func RawHandler(responsePipe http.ResponseWriter, rawRequest *http.Request, serverConfig ServerSection) {
+func RawHandler(responsePipe http.ResponseWriter, request *http.Request, serverConfig ServerSection) {
 
 	var err error
 
