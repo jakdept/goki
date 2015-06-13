@@ -35,10 +35,12 @@ type ServerSection struct {
 }
 
 type IndexSection struct {
-	WatchDir       string // Location that we will be watching for updates
+	WatchDir       []string // Location that we will be watching for updates
 	WatchExtension string // file extensions that we will watch for within that dir
 	IndexPath      string //location to store the index
 	IndexType      string // type of index - likely "en"
+	IndexName   string // name of the index
+	Restricted []string // Tags to restrict indexing on
 }
 
 type RedirectSection struct {
@@ -51,6 +53,7 @@ type Config struct {
 	Global    GlobalSection
 	Redirects []RedirectSection
 	Server    []ServerSection
+	Indexes []IndexSection
 }
 
 var defaultConfig = []byte(`{
