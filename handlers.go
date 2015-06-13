@@ -15,34 +15,6 @@ import (
 	bleveHttp "github.com/blevesearch/bleve/http"
 )
 
-func stripRequestRouting(stripPath string, request *http.Request) (*http.Request, error) {
-	if string(request.URL.Path[0]) != "/" {
-		err := errors.New("not compatible with relative requests")
-		return nil, err
-	}
-	lastChar := len(stripPath) - 1
-	if string(stripPath[lastChar:]) != "/" {
-		err := errors.New("passed a request route that does not end in a /")
-		return nil, err
-	}
-	if string(stripPath[0]) != "/" {
-		err := errors.New("passed a request route that does not start in a /")
-		return nil, err
-	}
-	if len(stripPath) > len(request.URL.Path) {
-		err := errors.New("request routing path longer than request path")
-		return nil, err
-	}
-	if stripPath != string(request.URL.Path[:len(stripPath)]) {
-		err := errors.New("request does not match up to the routed path")
-		return nil, err
-	}
-
-	returnRequest := request
-	returnRequest.URL.Path = string(request.URL.Path[len(stripPath)-1:])
-	return returnRequest, nil
-}
-
 type Page struct {
 	Title    string
 	ToC      template.HTML
@@ -58,12 +30,7 @@ func MarkdownHandler(responsePipe http.ResponseWriter, rawRequest *http.Request,
 	// break up the request parameters - for reference, regex is listed below
 	//filteredRequest, err := wikiFilter.FindStringSubmatch(request.URL.Path)
 
-	request, err := stripRequestRouting(serverConfig.Prefix, rawRequest)
-	if err != nil {
-		log.Printf("request [ %s ] was passed to the wrong handler - got %v", request.URL.Path, err)
-		http.Error(responsePipe, "Request not allowed", 403)
-		return
-	}
+	request.URL.Path = strings.TrimPrefix(request.URL.Path, serverConfig.Prefix)
 
 	// If the request is empty, set it to the default.
 	if request.URL.Path == "" || request.URL.Path == "/" {
@@ -117,12 +84,7 @@ func RawHandler(responsePipe http.ResponseWriter, rawRequest *http.Request, serv
 
 	var err error
 
-	request, err := stripRequestRouting(serverConfig.Prefix, rawRequest)
-	if err != nil {
-		log.Printf("request [ %s ] was passed to the wrong handler - got %v", request.URL.Path, err)
-		http.Error(responsePipe, "Request not allowed", 403)
-		return
-	}
+	request.URL.Path = strings.TrimPrefix(request.URL.Path, serverConfig.Prefix)
 
 	// If the request is empty, set it to the default.
 	if request.URL.Path == "" || request.URL.Path == "/" {
