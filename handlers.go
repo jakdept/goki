@@ -15,49 +15,6 @@ import (
 	bleveHttp "github.com/blevesearch/bleve/http"
 )
 
-const (
-	bodyHtmlFlags = 0 |
-		blackfriday.HTML_USE_XHTML |
-		blackfriday.HTML_USE_SMARTYPANTS |
-		blackfriday.HTML_SMARTYPANTS_FRACTIONS |
-		blackfriday.HTML_SMARTYPANTS_LATEX_DASHES
-
-	bodyExtensions = 0 |
-		blackfriday.EXTENSION_NO_INTRA_EMPHASIS |
-		blackfriday.EXTENSION_TABLES |
-		blackfriday.EXTENSION_FENCED_CODE |
-		blackfriday.EXTENSION_AUTOLINK |
-		blackfriday.EXTENSION_STRIKETHROUGH |
-		blackfriday.EXTENSION_SPACE_HEADERS |
-		blackfriday.EXTENSION_AUTO_HEADER_IDS |
-		blackfriday.EXTENSION_TITLEBLOCK
-
-	tocHtmlFlags = 0 |
-		blackfriday.HTML_USE_XHTML |
-		blackfriday.HTML_SMARTYPANTS_FRACTIONS |
-		blackfriday.HTML_SMARTYPANTS_LATEX_DASHES |
-		blackfriday.HTML_TOC |
-		blackfriday.HTML_OMIT_CONTENTS
-
-	tocExtensions = 0 |
-		blackfriday.EXTENSION_NO_INTRA_EMPHASIS |
-		blackfriday.EXTENSION_TABLES |
-		blackfriday.EXTENSION_FENCED_CODE |
-		blackfriday.EXTENSION_AUTOLINK |
-		blackfriday.EXTENSION_STRIKETHROUGH |
-		blackfriday.EXTENSION_SPACE_HEADERS |
-		blackfriday.EXTENSION_AUTO_HEADER_IDS |
-		blackfriday.EXTENSION_TITLEBLOCK
-)
-
-type Page struct {
-	Title    string
-	ToC      template.HTML
-	Body     template.HTML
-	Topics   template.HTML
-	Keywords template.HTML
-}
-
 func stripRequestRouting(stripPath string, request *http.Request) (*http.Request, error) {
 	if string(request.URL.Path[0]) != "/" {
 		err := errors.New("not compatible with relative requests")
@@ -86,19 +43,14 @@ func stripRequestRouting(stripPath string, request *http.Request) (*http.Request
 	return returnRequest, nil
 }
 
-func bodyParseMarkdown(input []byte) []byte {
-	// set up the HTML renderer
-	renderer := blackfriday.HtmlRenderer(bodyHtmlFlags, "", "")
-	return blackfriday.Markdown(input, renderer, bodyExtensions)
+type Page struct {
+	Title    string
+	ToC      template.HTML
+	Body     template.HTML
+	Topics   template.HTML
+	Keywords template.HTML
 }
 
-func tocParseMarkdown(input []byte) []byte {
-	// set up the HTML renderer
-	renderer := blackfriday.HtmlRenderer(tocHtmlFlags, "", "")
-	return blackfriday.Markdown(input, renderer, tocExtensions)
-}
-
-// Of note - this markdown handler is not a direct handler
 func MarkdownHandler(responsePipe http.ResponseWriter, rawRequest *http.Request, serverConfig ServerSection) {
 
 	var err error
@@ -141,10 +93,10 @@ func MarkdownHandler(responsePipe http.ResponseWriter, rawRequest *http.Request,
 	body := template.HTML(bodyParseMarkdown(pdata.Page))
 	toc := template.HTML(tocParseMarkdown(pdata.Page))
 	keywords := pdata.PrintKeywords()
-	// ##TODO## need to move the topic URL to the config
 	topics := pdata.PrintTopics(serverConfig.TopicURL)
 
-	// ##TODO## before you can use a template, you have to get the template lock to make sure you don't mess with someone else reading it
+	// ##TODO## put this template right in the function call
+	// Then remove the Page Struct above
 	response := Page{Title: "", ToC: toc, Body: body, Keywords: keywords, Topics: topics}
 	err = allTemplates.ExecuteTemplate(responsePipe, serverConfig.Template, response)
 	if err != nil {
