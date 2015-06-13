@@ -22,6 +22,41 @@ type PageMetadata struct {
 	FileStats os.FileInfo
 }
 
+const (
+	bodyHtmlFlags = 0 |
+		blackfriday.HTML_USE_XHTML |
+		blackfriday.HTML_USE_SMARTYPANTS |
+		blackfriday.HTML_SMARTYPANTS_FRACTIONS |
+		blackfriday.HTML_SMARTYPANTS_LATEX_DASHES
+
+	bodyExtensions = 0 |
+		blackfriday.EXTENSION_NO_INTRA_EMPHASIS |
+		blackfriday.EXTENSION_TABLES |
+		blackfriday.EXTENSION_FENCED_CODE |
+		blackfriday.EXTENSION_AUTOLINK |
+		blackfriday.EXTENSION_STRIKETHROUGH |
+		blackfriday.EXTENSION_SPACE_HEADERS |
+		blackfriday.EXTENSION_AUTO_HEADER_IDS |
+		blackfriday.EXTENSION_TITLEBLOCK
+
+	tocHtmlFlags = 0 |
+		blackfriday.HTML_USE_XHTML |
+		blackfriday.HTML_SMARTYPANTS_FRACTIONS |
+		blackfriday.HTML_SMARTYPANTS_LATEX_DASHES |
+		blackfriday.HTML_TOC |
+		blackfriday.HTML_OMIT_CONTENTS
+
+	tocExtensions = 0 |
+		blackfriday.EXTENSION_NO_INTRA_EMPHASIS |
+		blackfriday.EXTENSION_TABLES |
+		blackfriday.EXTENSION_FENCED_CODE |
+		blackfriday.EXTENSION_AUTOLINK |
+		blackfriday.EXTENSION_STRIKETHROUGH |
+		blackfriday.EXTENSION_SPACE_HEADERS |
+		blackfriday.EXTENSION_AUTO_HEADER_IDS |
+		blackfriday.EXTENSION_TITLEBLOCK
+)
+
 // takes a single line of input and determines if it's a top level markdown header
 func (pdata *PageMetadata) lineIsTitle(line []byte) bool {
 	// trim any whitespace from the start and the end of the line
@@ -211,4 +246,16 @@ func (pdata *PageMetadata) PrintKeywords() template.HTML {
 	} else {
 		return template.HTML("")
 	}
+}
+
+func bodyParseMarkdown(input []byte) []byte {
+	// set up the HTML renderer
+	renderer := blackfriday.HtmlRenderer(bodyHtmlFlags, "", "")
+	return blackfriday.Markdown(input, renderer, bodyExtensions)
+}
+
+func tocParseMarkdown(input []byte) []byte {
+	// set up the HTML renderer
+	renderer := blackfriday.HtmlRenderer(tocHtmlFlags, "", "")
+	return blackfriday.Markdown(input, renderer, tocExtensions)
 }
