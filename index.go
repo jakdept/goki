@@ -17,6 +17,7 @@ import (
 type gnosisIndex struct {
 	TrueIndex bleve.Index
 	Config    IndexSection
+	openWatchers fsnotify.Watcher[]
 }
 
 type indexedPage struct {
@@ -28,15 +29,15 @@ type indexedPage struct {
 	Modified time.Time `json:"modified"`
 }
 
-func openIndex(config IndexSection) *gnosisIndex {
+func openIndex(config IndexSection) (*gnosisIndex, err) {
 	index := new(gnosisIndex)
 	index.Config = config
 	newIndex, err := bleve.Open(path.Clean(index.Config.IndexPath))
 	if err == nil {
-		log.Printf("Opening existing index...")
+		log.Printf("Opening existing index %s", index.Config.IndexName)
 		index.TrueIndex = newIndex
 	} else if err == bleve.ErrorIndexPathDoesNotExist {
-		log.Printf("Creating new index...")
+		log.Printf("Creating new index %s", index.Config.IndexName)
 		// create a mapping
 		indexMapping := index.buildIndexMapping()
 		newIndex, err := bleve.New(path.Clean(index.Config.IndexPath), indexMapping)
@@ -46,9 +47,23 @@ func openIndex(config IndexSection) *gnosisIndex {
 			index.TrueIndex = newIndex
 		}
 	} else {
-		log.Fatal(err)
+		log.Error(err)
+		return _, err
+	}
+	// You only got here if you opened an existing index, or a new index
+	for _, dir := range index.Config.WatchDir {
+		log.Printf("Watching and walking dir %s index %s", dir, index.Config.IndexName)
+		watcher := index.startWatching(dir)
+		index.openWatchers = append(index.openWatchers, watcher)
+		index.walkForIndexing(dir)
 	}
 	return index
+}
+
+func (index *gnosisIndex) closeIndex() {
+	for _, watcher := range index.openWatchers {
+		watcher.Close()
+	}
 }
 
 func (index *gnosisIndex) buildIndexMapping() *bleve.IndexMapping {
@@ -69,9 +84,8 @@ func (index *gnosisIndex) buildIndexMapping() *bleve.IndexMapping {
 	wikiMapping.AddFieldMappingsAt("modified", dateTimeMapping)
 
 	// add the wiki page mapping to a new index
-	// ##TODO## revisit? move out to config?
 	indexMapping := bleve.NewIndexMapping()
-	indexMapping.AddDocumentMapping("wiki", wikiMapping)
+	indexMapping.AddDocumentMapping(index.Config.IndexName, wikiMapping)
 	indexMapping.DefaultAnalyzer = index.Config.IndexType
 
 	return indexMapping
@@ -98,7 +112,9 @@ func (index *gnosisIndex) generateWikiFromFile(filePath string) (*indexedPage, e
 		return nil, err
 	}
 
-	// ##TODO## I need to look up the actual index that I'm building and hit all of the fields here
+	if MatchedTag(index.Config.Restricted) == true {
+		return nil, sprintf("Hit a restricted page - %s", filePath)
+	} else {
 	cleanedUpPage := index.cleanupMarkdown(pdata.Page)
 	topics, keywords := pdata.ListMeta()
 	rv := indexedPage{
@@ -110,8 +126,10 @@ func (index *gnosisIndex) generateWikiFromFile(filePath string) (*indexedPage, e
 		Modified: pdata.FileStats.ModTime(),
 	}
 	return &rv, nil
+	}
 }
 
+// Update the entry in the index to the output from a given file
 func (index *gnosisIndex) processUpdate(path string) {
 	log.Printf("updated: %s", path)
 	rp := index.relativePath(path)
@@ -123,6 +141,7 @@ func (index *gnosisIndex) processUpdate(path string) {
 	}
 }
 
+// Deletes a given path from the wiki entry
 func (index *gnosisIndex) processDelete(path string) {
 	log.Printf("delete: %s", path)
 	rp := index.relativePath(path)
@@ -132,8 +151,8 @@ func (index *gnosisIndex) processDelete(path string) {
 	}
 }
 
+// walks a given path, and runs processUpdate on each File
 func (index *gnosisIndex) walkForIndexing(path string) {
-	// ##TODO## reevaulate by finding all files within a path?
 	dirEntries, err := ioutil.ReadDir(path)
 	if err != nil {
 		log.Fatal(err)
@@ -142,12 +161,13 @@ func (index *gnosisIndex) walkForIndexing(path string) {
 		dirEntryPath := path + string(os.PathSeparator) + dirEntry.Name()
 		if dirEntry.IsDir() {
 			index.walkForIndexing(dirEntryPath)
-		} else if strings.HasSuffix(dirEntry.Name(), ".md") {
+		} else if strings.HasSuffix(dirEntry.Name(), index.Config.WatchExtension) {
 			index.processUpdate(dirEntryPath)
 		}
 	}
 }
 
+// watches a given filepath for an index for changes
 func (index *gnosisIndex) startWatching(filePath string) *fsnotify.Watcher {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
@@ -169,7 +189,7 @@ func (index *gnosisIndex) startWatching(filePath string) *fsnotify.Watcher {
 				log.Fatal(err)
 			case <-idleTimer.C:
 				for _, ev := range queuedEvents {
-					if strings.HasSuffix(ev.Name, ".md") {
+					if strings.HasSuffix(ev.Name, index.Config.WatchExtension) {
 						switch ev.Op {
 						case fsnotify.Remove, fsnotify.Rename:
 							// delete the filePath
