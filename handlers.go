@@ -11,7 +11,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/JackKnifed/blackfriday"
+	"github.com/blevesearch/bleve"
 	bleveHttp "github.com/blevesearch/bleve/http"
 )
 
@@ -154,7 +154,7 @@ func RawHandler(responsePipe http.ResponseWriter, rawRequest *http.Request, serv
 	return
 }
 
-func SearchHandler(responsePipe http.ResponseWriter, rawRequest *http.Request, serverConfig ServerSection) {
+func SearchHandler(responsePipe http.ResponseWriter, request *http.Request, serverConfig ServerSection) {
 
 	var err error
 
@@ -166,15 +166,15 @@ func SearchHandler(responsePipe http.ResponseWriter, rawRequest *http.Request, s
 		return
 	}
 
-	index := IndexByName(serverConfig.Default)
+	index := bleveHttp.IndexByName(serverConfig.DefaultPage)
 	if index == nil {
-			log.Printf("no such index '%s'", indexName)
+			log.Printf("no such index '%s'", serverConfig.DefaultPage)
 			http.Error(responsePipe, err.Error(), 404)
 			return
 	}
 
 	// debugging information
-    for k, v := range r.Form {
+    for k, v := range request.Form {
         log.Println("key:", k)
         log.Println("val:", strings.Join(v, ""))
     }
@@ -183,19 +183,21 @@ func SearchHandler(responsePipe http.ResponseWriter, rawRequest *http.Request, s
 	// parse the request
 	var searchRequest bleve.SearchRequest
 
-	SearchRequest.Fields = request.Form;
+	searchRequest.Fields = request.Form["queryargs"];
 
 	// validate the query
 	err = searchRequest.Query.Validate()
 	if err != nil {
-		showError(w, req, fmt.Sprintf("error validating query: %v", err), 400)
+		log.Printf("Error validating query: %v", err)
+		http.Error(responsePipe, err.Error(), 400)
 		return
 	}
 
 	// execute the query
 	searchResponse, err := index.Search(&searchRequest)
 	if err != nil {
-		showError(w, req, fmt.Sprintf("error executing query: %v", err), 500)
+		log.Printf("Error executing query: %v", err)
+		http.Error(responsePipe, err.Error(), 400)
 		return
 	}
 
