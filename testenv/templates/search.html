@@ -10,7 +10,12 @@
 				<input type='submit' value='Search' />
 			</form>
 		</div>
-		<div label='results'>
+		<div class='results'>
+			{{range .SearchHits}}
+				Stuff for a search Hit
+			{{else}}
+				Stuff for no hits
+			{{end}}
 		</div>
 	</body>
 </html>
