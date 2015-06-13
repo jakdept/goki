@@ -12,6 +12,7 @@ import (
 	"sort"
 	//"log"
 	"os"
+	"github.com/JackKnifed/blackfriday"
 )
 
 type PageMetadata struct {
