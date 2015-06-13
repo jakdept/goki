@@ -1,15 +1,16 @@
 <html>
-<head>
-<title>{{.Title}}</title>
-{{.Keywords}}
-</head>
-<body>
-
-<div>{{.ToC}}</div>
-
-<div>{{.Body}}</div>
-
-{{.Topics}}
-
-</body>
+	<head>
+		<title>Search the Wiki</title>
+		{{.Keywords}}
+	</head>
+	<body>
+		<div>
+			<form>
+				<input type='textbox' id='search' />
+				<input type='submit' value='Search' />
+			</form>
+		</div>
+		<div label='results'>
+		</div>
+	</body>
 </html>
