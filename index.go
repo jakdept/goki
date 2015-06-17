@@ -7,6 +7,7 @@ import (
 	"path"
 	"strings"
 	"time"
+	"errors"
 
 	"github.com/JackKnifed/blackfriday"
 	"github.com/blevesearch/bleve"
@@ -21,7 +22,7 @@ type gnosisIndex struct {
 	// I cannot use append and range on an array of pointers
 	// and yet I do not think I can modify an array of non-pointers
 	// IDK what to do just yet
-	openWatchers *[]fsnotify.Watcher
+	openWatchers []fsnotify.Watcher
 }
 
 type indexedPage struct {
@@ -117,7 +118,7 @@ func (index *gnosisIndex) generateWikiFromFile(filePath string) (*indexedPage, e
 	}
 
 	if pdata.MatchedTag(index.Config.Restricted) == true {
-		return nil, err.Sprintf("Hit a restricted page - %s", filePath)
+		return nil, errors.New("Hit a restricted page - " + pdata.Title);
 	} else {
 	cleanedUpPage := index.cleanupMarkdown(pdata.Page)
 	topics, keywords := pdata.ListMeta()
@@ -172,7 +173,7 @@ func (index *gnosisIndex) walkForIndexing(path string, origPath string) {
 }
 
 // watches a given filepath for an index for changes
-func (index *gnosisIndex) startWatching(filePath string) *fsnotify.Watcher {
+func (index *gnosisIndex) startWatching(filePath string) fsnotify.Watcher {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		log.Fatal(err)
@@ -219,5 +220,5 @@ func (index *gnosisIndex) startWatching(filePath string) *fsnotify.Watcher {
 	}
 	log.Printf("watching '%s' for changes...", filePath)
 
-	return watcher
+	return *watcher
 }
