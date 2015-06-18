@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html>
 	<head>
 		<title>Search the Wiki</title>
@@ -5,13 +6,13 @@
 	</head>
 	<body>
 		<div>
-			<form>
+			<form action="submit">
 				<input type='textbox' id='search' />
 				<input type='submit' value='Search' />
 			</form>
 		</div>
 		<div class='results'>
-			{{range .SearchHits}}
+			{{range _, individualHit := .SearchHits}}
 				Stuff for a search Hit
 			{{else}}
 				Stuff for no hits
