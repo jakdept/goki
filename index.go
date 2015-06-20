@@ -15,7 +15,7 @@ import (
 	"gopkg.in/fsnotify.v1"
 )
 
-type gnosisIndex struct {
+type GnosisIndex struct {
 	TrueIndex bleve.Index
 	Config    IndexSection
 	// ##TODO## figure this out
@@ -34,8 +34,8 @@ type indexedPage struct {
 	Modified time.Time `json:"modified"`
 }
 
-func openIndex(config IndexSection) (*gnosisIndex, error) {
-	index := new(gnosisIndex)
+func OpenIndex(config IndexSection) (GnosisIndex, error) {
+	index := new(GnosisIndex)
 	index.Config = config
 	newIndex, err := bleve.Open(path.Clean(index.Config.IndexPath))
 	if err == nil {
@@ -53,7 +53,7 @@ func openIndex(config IndexSection) (*gnosisIndex, error) {
 		}
 	} else {
 		log.Printf("Got an error opening an index %v", err)
-		return nil, err
+		return *new(GnosisIndex), err
 	}
 	// You only got here if you opened an existing index, or a new index
 	for _, dir := range index.Config.WatchDir {
@@ -62,16 +62,16 @@ func openIndex(config IndexSection) (*gnosisIndex, error) {
 		index.openWatchers = append(index.openWatchers, watcher)
 		index.walkForIndexing(dir, dir)
 	}
-	return index, nil
+	return *index, nil
 }
 
-func (index *gnosisIndex) closeIndex() {
+func (index *GnosisIndex) CloseIndex() {
 	for _, watcher := range index.openWatchers {
 		watcher.Close()
 	}
 }
 
-func (index *gnosisIndex) buildIndexMapping() *bleve.IndexMapping {
+func (index *GnosisIndex) buildIndexMapping() *bleve.IndexMapping {
 
 	// create a text field type
 	enTextFieldMapping := bleve.NewTextFieldMapping()
@@ -96,20 +96,20 @@ func (index *gnosisIndex) buildIndexMapping() *bleve.IndexMapping {
 	return indexMapping
 }
 
-func (index *gnosisIndex) cleanupMarkdown(input []byte) []byte {
+func (index *GnosisIndex) cleanupMarkdown(input []byte) []byte {
 	extensions := 0
 	renderer := blackfridaytext.TextRenderer()
 	output := blackfriday.Markdown(input, renderer, extensions)
 	return output
 }
 
-func (index *gnosisIndex) relativePath(filePath string, dir string) string {
+func (index *GnosisIndex) relativePath(filePath string, dir string) string {
 	filePath = strings.TrimPrefix(filePath, dir)
 	filePath = path.Clean(filePath)
 	return filePath
 }
 
-func (index *gnosisIndex) generateWikiFromFile(filePath string) (*indexedPage, error) {
+func (index *GnosisIndex) generateWikiFromFile(filePath string) (*indexedPage, error) {
 	pdata := new(PageMetadata)
 	err := pdata.LoadPage(filePath)
 	//fileBytes, err := ioutil.ReadFile(filePath)
@@ -135,7 +135,7 @@ func (index *gnosisIndex) generateWikiFromFile(filePath string) (*indexedPage, e
 }
 
 // Update the entry in the index to the output from a given file
-func (index *gnosisIndex) processUpdate(path string, dir string) {
+func (index *GnosisIndex) processUpdate(path string, dir string) {
 	log.Printf("updated: %s", path)
 	rp := index.relativePath(path, dir)
 	wiki, err := index.generateWikiFromFile(path)
@@ -147,7 +147,7 @@ func (index *gnosisIndex) processUpdate(path string, dir string) {
 }
 
 // Deletes a given path from the wiki entry
-func (index *gnosisIndex) processDelete(path string, dir string) {
+func (index *GnosisIndex) processDelete(path string, dir string) {
 	log.Printf("delete: %s", path)
 	rp := index.relativePath(path, dir)
 	err := index.TrueIndex.Delete(rp)
@@ -157,7 +157,7 @@ func (index *gnosisIndex) processDelete(path string, dir string) {
 }
 
 // walks a given path, and runs processUpdate on each File
-func (index *gnosisIndex) walkForIndexing(path string, origPath string) {
+func (index *GnosisIndex) walkForIndexing(path string, origPath string) {
 	dirEntries, err := ioutil.ReadDir(path)
 	if err != nil {
 		log.Fatal(err)
@@ -173,7 +173,7 @@ func (index *gnosisIndex) walkForIndexing(path string, origPath string) {
 }
 
 // watches a given filepath for an index for changes
-func (index *gnosisIndex) startWatching(filePath string) fsnotify.Watcher {
+func (index *GnosisIndex) startWatching(filePath string) fsnotify.Watcher {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		log.Fatal(err)

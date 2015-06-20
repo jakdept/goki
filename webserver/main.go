@@ -5,7 +5,9 @@ import (
 	//"io/ioutil"
 	"log"
 	//"regexp"
+	"os"
 
+"os/signal"
 	"net/http"
 
 	"flag"
@@ -15,7 +17,7 @@ import (
 	//"github.com/russross/blackfriday"
 )
 
-var indexes gnosisIndex[]
+var indexes []gnosis.GnosisIndex
 
 var configFile = flag.String("config", "config.json", "specify a configuration file")
 
@@ -24,8 +26,8 @@ var quitChan = make(chan os.Signal, 1)
 func cleanup() {
 	for _ = range quitChan {
 		log.Println("Recieved an interrupt, shutting down")
-		for index := indexes {
-			index.closeIndex()
+		for _, index := range indexes {
+			index.CloseIndex()
 		}
 	}
 }
@@ -43,11 +45,11 @@ func main() {
 	go cleanup()
 
 	for _, individualIndex := range config.Indexes {
-		index, err := gnosis.openIndex(individualIndex)
+		index, err := gnosis.OpenIndex(individualIndex)
 		if err != nil {
 			log.Println(err)
 		} else {
-			indexes = append(indexes, index...)
+			indexes = append(indexes, index)
 		}
 	}
 
