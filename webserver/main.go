@@ -19,6 +19,17 @@ var indexes gnosisIndex[]
 
 var configFile = flag.String("config", "config.json", "specify a configuration file")
 
+var quitChan = make(chan os.Signal, 1)
+
+func cleanup() {
+	for _ = range quitChan {
+		log.Println("Recieved an interrupt, shutting down")
+		for index := indexes {
+			index.closeIndex()
+		}
+	}
+}
+
 func main() {
 	flag.Parse()
 
@@ -27,9 +38,9 @@ func main() {
 
 	config := gnosis.GetConfig()
 
-	// ##TODO## add global redirects and set them up in here
-
-	gnosis.ParseTemplates(config.Global)
+	// set up my interrupt channel and go routine
+	signal.Notify(quitChan, os.Interrupt)
+	go cleanup()
 
 	for _, individualIndex := range config.Indexes {
 		index, err := gnosis.openIndex(individualIndex)
@@ -39,6 +50,8 @@ func main() {
 			indexes = append(indexes, index...)
 		}
 	}
+
+	gnosis.ParseTemplates(config.Global)
 
 	for _, redirect := range config.Redirects {
 		http.Handle(redirect.Requested, http.RedirectHandler(redirect.Target, redirect.Code))
