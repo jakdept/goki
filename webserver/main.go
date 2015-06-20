@@ -15,6 +15,8 @@ import (
 	//"github.com/russross/blackfriday"
 )
 
+var indexes gnosisIndex[]
+
 var configFile = flag.String("config", "config.json", "specify a configuration file")
 
 func main() {
@@ -28,6 +30,15 @@ func main() {
 	// ##TODO## add global redirects and set them up in here
 
 	gnosis.ParseTemplates(config.Global)
+
+	for _, individualIndex := range config.Indexes {
+		index, err := gnosis.openIndex(individualIndex)
+		if err != nil {
+			log.Println(err)
+		} else {
+			indexes = append(indexes, index...)
+		}
+	}
 
 	for _, redirect := range config.Redirects {
 		http.Handle(redirect.Requested, http.RedirectHandler(redirect.Target, redirect.Code))
