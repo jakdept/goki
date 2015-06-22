@@ -1,7 +1,7 @@
 {
   "Global": {
     "Port": "8080",
-    "Hostname": "localhost"
+    "Hostname": "localhost",
     "TemplateDir": "templates/"
   },
   "Redirects": [
@@ -48,6 +48,19 @@
         "md",
         "ini",
         "json"
+      ]
+    }
+  ],
+  "Indexes": [
+    {
+      "WatchDir": ".",
+      "WatchExtension": ".md",
+      "IndexPath": "index",
+      "IndexType": "en",
+      "IndexName": "wiki",
+      "Restricted": [
+        "internal",
+        "handbook"
       ]
     }
   ]
