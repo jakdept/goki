@@ -18,7 +18,7 @@
   ],
   "Server": [
     {
-      "Path": ".",
+      "Path": "./wiki/",
       "Prefix": "/",
       "Default": "index",
       "ServerType": "markdown",
@@ -29,7 +29,7 @@
       ]
     },
     {
-      "Path": ".",
+      "Path": "./wiki/",
       "Prefix": "/raw/",
       "Default": {},
       "ServerType": "raw",
@@ -40,7 +40,7 @@
       ]
     },
     {
-      "Path": ".",
+      "Path": "./wiki-backend/",
       "Prefix": "/site/",
       "Default": {},
       "ServerType": "raw",
@@ -53,9 +53,9 @@
   ],
   "Indexes": [
     {
-      "WatchDir": ".",
+      "WatchDir": "./wiki/",
       "WatchExtension": ".md",
-      "IndexPath": "index",
+      "IndexPath": "./junkindex/",
       "IndexType": "en",
       "IndexName": "wiki",
       "Restricted": [
