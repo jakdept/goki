@@ -37,7 +37,9 @@ func main() {
 	flag.Parse()
 
 	// ##TODO## check for false returnear- if null, the config could not be loaded
-	gnosis.LoadConfig(*configFile)
+	if success := gnosis.LoadConfig(*configFile); success == false {
+		log.Fatal("Could not parse the config, abandoning")
+	}
 
 	config := gnosis.GetConfig()
 
