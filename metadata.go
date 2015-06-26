@@ -6,20 +6,20 @@ import (
 	"bufio"
 	"bytes"
 	"errors"
-	"strings"
 	"html/template"
 	"io"
 	"sort"
+	"strings"
 	//"log"
-	"os"
 	"github.com/JackKnifed/blackfriday"
+	"os"
 )
 
 type PageMetadata struct {
-	Keywords map[string]bool
-	Topics   map[string]bool
-	Page     []byte
-	Title string
+	Keywords  map[string]bool
+	Topics    map[string]bool
+	Page      []byte
+	Title     string
 	FileStats os.FileInfo
 }
 
@@ -189,7 +189,7 @@ func (pdata *PageMetadata) LoadPage(pageName string) error {
 	}
 
 	// by this point, I should have read everything in - let's read the rest and just return it
-		pdata.Title = strings.TrimSpace(string(upperLine))
+	pdata.Title = strings.TrimSpace(string(upperLine))
 	return pdata.readRestOfPage(upperLine, lowerLine, reader)
 }
 

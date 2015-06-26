@@ -1,13 +1,13 @@
 package gnosis
 
 import (
+	"errors"
 	"io/ioutil"
 	"log"
 	"os"
 	"path"
 	"strings"
 	"time"
-	"errors"
 
 	"github.com/JackKnifed/blackfriday"
 	"github.com/blevesearch/bleve"
@@ -118,19 +118,19 @@ func (index *GnosisIndex) generateWikiFromFile(filePath string) (*indexedPage, e
 	}
 
 	if pdata.MatchedTag(index.Config.Restricted) == true {
-		return nil, errors.New("Hit a restricted page - " + pdata.Title);
+		return nil, errors.New("Hit a restricted page - " + pdata.Title)
 	} else {
-	cleanedUpPage := index.cleanupMarkdown(pdata.Page)
-	topics, keywords := pdata.ListMeta()
-	rv := indexedPage{
-		Name: pdata.Title,
-		Body: string(cleanedUpPage),
-		Filepath: filePath,
-		Topics: strings.Join(topics, " "),
-		Keywords: strings.Join(keywords, " "),
-		Modified: pdata.FileStats.ModTime(),
-	}
-	return &rv, nil
+		cleanedUpPage := index.cleanupMarkdown(pdata.Page)
+		topics, keywords := pdata.ListMeta()
+		rv := indexedPage{
+			Name:     pdata.Title,
+			Body:     string(cleanedUpPage),
+			Filepath: filePath,
+			Topics:   strings.Join(topics, " "),
+			Keywords: strings.Join(keywords, " "),
+			Modified: pdata.FileStats.ModTime(),
+		}
+		return &rv, nil
 	}
 }
 

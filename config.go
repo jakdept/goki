@@ -12,11 +12,11 @@ var staticConfig *Config
 var configLock = new(sync.RWMutex)
 
 type Config struct {
-	Global    GlobalSection
-	Redirects []RedirectSection
-	Server    []ServerSection
-	Indexes []IndexSection
-	TemplateDir   string
+	Global      GlobalSection
+	Redirects   []RedirectSection
+	Server      []ServerSection
+	Indexes     []IndexSection
+	TemplateDir string
 }
 
 //var templates = template.Must(template.ParseFiles("/var/wiki-backend/wiki.html"))
@@ -37,12 +37,12 @@ type RedirectSection struct {
 }
 
 type IndexSection struct {
-	WatchDirs       []string // Location that we will be watching for updates
-	WatchExtension string // file extensions that we will watch for within that dir
-	IndexPath      string //location to store the index
-	IndexType      string // type of index - likely "en"
-	IndexName   string // name of the index
-	Restricted []string // Tags to restrict indexing on
+	WatchDirs      []string // Location that we will be watching for updates
+	WatchExtension string   // file extensions that we will watch for within that dir
+	IndexPath      string   //location to store the index
+	IndexType      string   // type of index - likely "en"
+	IndexName      string   // name of the index
+	Restricted     []string // Tags to restrict indexing on
 }
 
 type ServerSection struct {

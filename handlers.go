@@ -130,22 +130,22 @@ func SearchHandler(responsePipe http.ResponseWriter, request *http.Request, serv
 
 	index := bleveHttp.IndexByName(serverConfig.DefaultPage)
 	if index == nil {
-			log.Printf("no such index '%s'", serverConfig.DefaultPage)
-			http.Error(responsePipe, err.Error(), 404)
-			return
+		log.Printf("no such index '%s'", serverConfig.DefaultPage)
+		http.Error(responsePipe, err.Error(), 404)
+		return
 	}
 
 	// debugging information
-    for k, v := range request.Form {
-        log.Println("key:", k)
-        log.Println("val:", strings.Join(v, ""))
-    }
+	for k, v := range request.Form {
+		log.Println("key:", k)
+		log.Println("val:", strings.Join(v, ""))
+	}
 
 	// this probably is wrong, idk
 	// parse the request
 	var searchRequest bleve.SearchRequest
 
-	searchRequest.Fields = request.Form["queryargs"];
+	searchRequest.Fields = request.Form["queryargs"]
 
 	// validate the query
 	err = searchRequest.Query.Validate()
