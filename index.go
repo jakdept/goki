@@ -56,7 +56,7 @@ func OpenIndex(config IndexSection) (GnosisIndex, error) {
 		return *new(GnosisIndex), err
 	}
 	// You only got here if you opened an existing index, or a new index
-	for _, dir := range index.Config.WatchDir {
+	for _, dir := range index.Config.WatchDirs {
 		log.Printf("Watching and walking dir %s index %s", dir, index.Config.IndexName)
 		watcher := index.startWatching(dir)
 		index.openWatchers = append(index.openWatchers, watcher)
