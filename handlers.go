@@ -30,28 +30,32 @@ func MarkdownHandler(responsePipe http.ResponseWriter, request *http.Request, se
 	// break up the request parameters - for reference, regex is listed below
 	//filteredRequest, err := wikiFilter.FindStringSubmatch(request.URL.Path)
 
-	request.URL.Path = strings.TrimPrefix(request.URL.Path, serverConfig.Prefix)
+	requestPath := strings.TrimPrefix(request.URL.Path, serverConfig.Prefix)
 
 	// If the request is empty, set it to the default.
-	if request.URL.Path == "" || request.URL.Path == "/" {
-		request.URL.Path = serverConfig.DefaultPage
-	}
+	//if requestPath == "" || requestPath == "/" {
+	if requestPath == "" {
+		requestPath = serverConfig.Default
+	log.Printf("replaced the request path - Request path is [%s] of length [%d], comparing against [%s] of length [%d]", requestPath, len(requestPath), "", len(""))
+	} else {
+	log.Printf("did not replace - Request path is [%s] of length [%d], comparing against [%s] of length [%d]", requestPath, len(requestPath), "", len(""))
+}
 
 	// If the request doesn't end in .md, add that
-	if !strings.HasSuffix(request.URL.Path, ".md") {
-		request.URL.Path = request.URL.Path + ".md"
+	if !strings.HasSuffix(requestPath, ".md") {
+		requestPath = requestPath + ".md"
 	}
 
 	pdata := new(PageMetadata)
-	err = pdata.LoadPage(serverConfig.Path + request.URL.Path)
+	err = pdata.LoadPage(serverConfig.Path + requestPath)
 	if err != nil {
-		log.Printf("request [ %s ] points to an bad file target sent to server %s", request.URL.Path, serverConfig.Prefix)
+		log.Printf("request [ %s ] points to an bad file target [ %s ] sent to server %s", request.URL.Path, requestPath, serverConfig.Prefix)
 		http.Error(responsePipe, err.Error(), 404)
 		return
 	}
 
 	if pdata.MatchedTag(serverConfig.Restricted) {
-		log.Printf("request [ %s ] was against a page with a restricted tag", request.URL.Path)
+		log.Printf("request [ %s ] was against a page [ %s ] with a restricted tag", request.URL.Path, requestPath)
 		http.Error(responsePipe, err.Error(), 403)
 		return
 	}
@@ -88,7 +92,7 @@ func RawHandler(responsePipe http.ResponseWriter, request *http.Request, serverC
 
 	// If the request is empty, set it to the default.
 	if request.URL.Path == "" || request.URL.Path == "/" {
-		request.URL.Path = serverConfig.DefaultPage
+		request.URL.Path = serverConfig.Default
 	}
 
 	// If the request is a blocked restriction, shut it down.
@@ -128,9 +132,9 @@ func SearchHandler(responsePipe http.ResponseWriter, request *http.Request, serv
 		return
 	}
 
-	index := bleveHttp.IndexByName(serverConfig.DefaultPage)
+	index := bleveHttp.IndexByName(serverConfig.Default)
 	if index == nil {
-		log.Printf("no such index '%s'", serverConfig.DefaultPage)
+		log.Printf("no such index '%s'", serverConfig.Default)
 		http.Error(responsePipe, err.Error(), 404)
 		return
 	}
