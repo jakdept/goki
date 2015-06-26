@@ -37,7 +37,7 @@ type RedirectSection struct {
 }
 
 type IndexSection struct {
-	WatchDir       []string // Location that we will be watching for updates
+	WatchDirs       []string // Location that we will be watching for updates
 	WatchExtension string // file extensions that we will watch for within that dir
 	IndexPath      string //location to store the index
 	IndexType      string // type of index - likely "en"
@@ -82,6 +82,7 @@ func LoadConfig(configFile string) bool {
 	//Make sure you were able to read it in
 	if err != nil {
 		log.Printf("parse config error: %s", err.Error())
+		log.Print(temp)
 		return false
 	}
 
