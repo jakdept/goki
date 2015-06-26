@@ -11,6 +11,14 @@ import (
 var staticConfig *Config
 var configLock = new(sync.RWMutex)
 
+type Config struct {
+	Global    GlobalSection
+	Redirects []RedirectSection
+	Server    []ServerSection
+	Indexes []IndexSection
+	Templates   map[string]string
+}
+
 //var templates = template.Must(template.ParseFiles("/var/wiki-backend/wiki.html"))
 //template.New("allTemplates")
 var allTemplates = template.New("allTemplates")
@@ -20,18 +28,12 @@ type GlobalSection struct {
 	Port        string
 	Hostname    string
 	TemplateDir string
-	Templates   []string
-	Redirects   map[string]string
 }
 
-type ServerSection struct {
-	Path        string   // filesystem path to serve out
-	Prefix      string   // Web URL Prefix - alternatively the prefix for a search handler
-	DefaultPage string   // Default page to serve if empty URI
-	Template    string   // Template file to build the web URL from
-	ServerType  string   // markdown, raw, or search to denote the type of Server handle
-	TopicURL    string   // URI prefix to redirect to topic pages
-	Restricted  []string // list of restricts - extensions for raw, topics for markdown
+type RedirectSection struct {
+	Requested string
+	Target    string
+	Code      int
 }
 
 type IndexSection struct {
@@ -43,38 +45,15 @@ type IndexSection struct {
 	Restricted []string // Tags to restrict indexing on
 }
 
-type RedirectSection struct {
-	Requested string
-	Target    string
-	Code      int
+type ServerSection struct {
+	Path        string   // filesystem path to serve out
+	Prefix      string   // Web URL Prefix - alternatively the prefix for a search handler
+	DefaultPage string   // Default page to serve if empty URI
+	Template    string   // Template file to build the web URL from
+	ServerType  string   // markdown, raw, or search to denote the type of Server handle
+	TopicURL    string   // URI prefix to redirect to topic pages
+	Restricted  []string // list of restricts - extensions for raw, topics for markdown
 }
-
-type Config struct {
-	Global    GlobalSection
-	Redirects []RedirectSection
-	Server    []ServerSection
-	Indexes []IndexSection
-}
-
-var defaultConfig = []byte(`{
-  "Global": {
-    "Port": "8080",
-    "Hostname": "localhost"
-  },
-  "Server": [
-  	{}
-      "Path": "/var/www/wiki/",
-      "Prefix": "/",
-      "DefaultPage": "index",
-      "ServerType": "markdown",
-      "Template": "wiki.html",
-      "Restricted": [
-        "internal",
-        "handbook"
-      ]
-    }
-  ]
-}`)
 
 func GetConfig() *Config {
 	configLock.RLock()
@@ -98,13 +77,6 @@ func LoadConfig(configFile string) bool {
 
 	// UnMarshal the config file that was read in
 	temp := new(Config)
-
-	err = json.Unmarshal(defaultConfig, temp)
-
-	if err != nil {
-		log.Println("problem parsing built in default configuration - this should not happen")
-		return false
-	}
 
 	err = json.Unmarshal(fileContents, temp)
 	//Make sure you were able to read it in
