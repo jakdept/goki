@@ -16,7 +16,7 @@ type Config struct {
 	Redirects []RedirectSection
 	Server    []ServerSection
 	Indexes []IndexSection
-	Templates   map[string]string
+	TemplateDir   string
 }
 
 //var templates = template.Must(template.ParseFiles("/var/wiki-backend/wiki.html"))
