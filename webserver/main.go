@@ -7,7 +7,7 @@ import (
 	//"regexp"
 	"os"
 
-	//"os/signal"
+	// "os/signal"
 	"net/http"
 
 	"flag"
@@ -23,13 +23,13 @@ var configFile = flag.String("config", "config.json", "specify a configuration f
 
 var quitChan = make(chan os.Signal, 1)
 
-/* func cleanup() {
-	for _ = range quitChan {
+/*
+ func cleanup() {
+	_ = <- quitChan
 		log.Println("Recieved an interrupt, shutting down")
 		for _, index := range indexes {
 			index.CloseIndex()
 		}
-	}
 }
 */
 
@@ -44,10 +44,9 @@ func main() {
 	config := gnosis.GetConfig()
 
 	// set up my interrupt channel and go routine
-	//signal.Notify(quitChan, os.Interrupt)
-	//go cleanup()
+	// signal.Notify(quitChan, os.Interrupt)
+	// go cleanup()
 
-	/*
 		for _, individualIndex := range config.Indexes {
 			index, err := gnosis.OpenIndex(individualIndex)
 			if err != nil {
@@ -56,7 +55,6 @@ func main() {
 				indexes = append(indexes, index)
 			}
 		}
-	*/
 
 	gnosis.ParseTemplates(config.Global)
 

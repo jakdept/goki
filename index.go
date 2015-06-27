@@ -57,6 +57,7 @@ func OpenIndex(config IndexSection) (GnosisIndex, error) {
 	}
 	// You only got here if you opened an existing index, or a new index
 	for _, dir := range index.Config.WatchDirs {
+		dir = strings.TrimSuffix(dir, "/")
 		log.Printf("Watching and walking dir %s index %s", dir, index.Config.IndexName)
 		watcher := index.startWatching(dir)
 		index.openWatchers = append(index.openWatchers, watcher)
@@ -105,6 +106,7 @@ func (index *GnosisIndex) cleanupMarkdown(input []byte) []byte {
 
 func (index *GnosisIndex) relativePath(filePath string, dir string) string {
 	filePath = strings.TrimPrefix(filePath, dir)
+	filePath = strings.TrimPrefix(filePath, "/")
 	filePath = path.Clean(filePath)
 	return filePath
 }
@@ -136,8 +138,8 @@ func (index *GnosisIndex) generateWikiFromFile(filePath string) (*indexedPage, e
 
 // Update the entry in the index to the output from a given file
 func (index *GnosisIndex) processUpdate(path string, dir string) {
-	log.Printf("updated: %s", path)
 	rp := index.relativePath(path, dir)
+	log.Printf("updated: %s as %s", path, rp)
 	wiki, err := index.generateWikiFromFile(path)
 	if err != nil {
 		log.Print(err)

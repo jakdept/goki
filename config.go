@@ -107,19 +107,6 @@ func ParseTemplates(globalConfig GlobalSection) {
 		log.Printf("Loaded template %s ", individualTemplate.Name())
 	}
 
-	/*
-		for _, templateFile := range globalConfig.Templates {
-			nextTemplate, err = newTemplate.ParseFiles(globalConfig.TemplateDir + templateFile)
-			if nextTemplate != nil {
-				newTemplate = nextTemplate
-			} else {
-				log.Println("Found an invalid template, abandoning updating templates")
-			}
-		}
-	*/
-
-	// log.Printf("loaded templates - %s", newTemplate.Name())
-
 	if err == nil {
 		templateLock.Lock()
 		defer templateLock.Unlock()
