@@ -126,30 +126,22 @@ func SearchHandler(responsePipe http.ResponseWriter, request *http.Request, serv
 
 	request.URL.Path = strings.TrimPrefix(request.URL.Path, serverConfig.Prefix)
 
-	if err = request.ParseForm(); err != nil {
-		log.Printf("error parsing search request, %v", err)
-		http.Error(responsePipe, err.Error(), 500)
-		return
-	}
+	// if err = request.ParseForm(); err != nil {
+	// 	log.Printf("error parsing search request, %v", err)
+	// 	http.Error(responsePipe, err.Error(), 500)
+	// 	return
+	// }
 
-	index := bleveHttp.IndexByName(serverConfig.Default)
-	if index == nil {
-		log.Printf("no such index '%s'", serverConfig.Default)
-		http.Error(responsePipe, err.Error(), 404)
-		return
-	}
+	queryArgs := request.URL.Query()
 
 	// debugging information
-	for k, v := range request.Form {
+	for k, v := range queryArgs {
 		log.Println("key:", k)
 		log.Println("val:", strings.Join(v, ""))
 	}
 
-	// this probably is wrong, idk
-	// parse the request
-	var searchRequest bleve.SearchRequest
-
-	searchRequest.Fields = request.Form["queryargs"]
+	query := bleve.NewQueryStringQuery(queryArgs["s"][0])
+	searchRequest := bleve.NewSearchRequest(query)
 
 	// validate the query
 	err = searchRequest.Query.Validate()
@@ -159,18 +151,45 @@ func SearchHandler(responsePipe http.ResponseWriter, request *http.Request, serv
 		return
 	}
 
+	log.Println("validated query")
+
+	log.Println(bleveHttp.IndexNames())
+
+	return
+
+	index := bleveHttp.IndexByName(serverConfig.Default)
+	// index, err := bleve.Open(serverConfig.Path)
+	// defer index.Close()
+	if index == nil {
+		log.Printf("no such index '%s'", serverConfig.Default)
+		http.Error(responsePipe, err.Error(), 404)
+		return
+	// } else if err != nil {
+	//	log.Printf("no such index '%s'", serverConfig.Path)
+	// 	http.Error(responsePipe, err.Error(), 404)
+	// 	log.Printf("problem opening index '%s' - %v", serverConfig.Path, err)
+	// 	return
+	}
+
+	log.Println("opened index")
+
 	// execute the query
-	searchResponse, err := index.Search(&searchRequest)
+	searchResponse, err := index.Search(searchRequest)
 	if err != nil {
 		log.Printf("Error executing query: %v", err)
 		http.Error(responsePipe, err.Error(), 400)
 		return
 	}
 
+	log.Println("ran query")
+
 	err = allTemplates.ExecuteTemplate(responsePipe, serverConfig.Template, searchResponse)
+	// err = RenderTemplate(responsePipe, serverConfig.Template, searchResponse)
 	if err != nil {
 		http.Error(responsePipe, err.Error(), 500)
 	}
+
+	log.Println("Responded")
 }
 
 func MakeHandler(handlerConfig ServerSection) http.HandlerFunc {
@@ -180,7 +199,7 @@ func MakeHandler(handlerConfig ServerSection) http.HandlerFunc {
 			MarkdownHandler(w, r, handlerConfig)
 		case "raw":
 			RawHandler(w, r, handlerConfig)
-		case "search":
+		case "simpleSearch":
 			SearchHandler(w, r, handlerConfig)
 		default:
 			log.Printf("Bad server type [%s]", handlerConfig.ServerType)

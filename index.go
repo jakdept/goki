@@ -25,6 +25,15 @@ type GnosisIndex struct {
 	openWatchers []fsnotify.Watcher
 }
 
+type WatcherMeta struct {
+	watcher fsnotify.Watcher
+	realPath string
+	requestPath string
+	indexPath string
+}
+
+var openWatchers []WatcherMeta
+
 type indexedPage struct {
 	Name     string    `json:"name"`
 	Filepath string    `json:"path"`
@@ -34,49 +43,48 @@ type indexedPage struct {
 	Modified time.Time `json:"modified"`
 }
 
-func OpenIndex(config IndexSection) (GnosisIndex, error) {
-	index := new(GnosisIndex)
-	index.Config = config
-	newIndex, err := bleve.Open(path.Clean(index.Config.IndexPath))
+func CreateIndex(config IndexSection) error {
+	newIndex, err := bleve.Open(path.Clean(IndexSection.IndexPath))
 	if err == nil {
-		log.Printf("Opening existing index %s", index.Config.IndexName)
-		index.TrueIndex = newIndex
+		log.Printf("Index already exists %s", IndexSection.IndexPath)
+		defer newIndex.Close()
 	} else if err == bleve.ErrorIndexPathDoesNotExist {
-		log.Printf("Creating new index %s", index.Config.IndexName)
+		log.Printf("Creating new index %s", IndexSection.IndexName)
 		// create a mapping
-		indexMapping := index.buildIndexMapping()
-		newIndex, err := bleve.New(path.Clean(index.Config.IndexPath), indexMapping)
+		indexMapping := buildIndexMapping(IndexSection)
+		newIndex, err := bleve.New(path.Clean(IndexSection.IndexPath), indexMapping)
 		if err != nil {
-			log.Fatal(err)
+			log.Printf("Failed to create the new index %s - %v", IndexSection.IndexPath, err)
 		} else {
-			index.TrueIndex = newIndex
+		defer newIndex.Close()
 		}
 	} else {
-		log.Printf("Got an error opening an index %v", err)
-		return *new(GnosisIndex), err
+		log.Printf("Got an error opening the index %s but it already exists %v", IndexSection.IndexPath, err)
 	}
-	// You only got here if you opened an existing index, or a new index
-	for _, dir := range index.Config.WatchDirs {
-		dir = strings.TrimSuffix(dir, "/")
-		log.Printf("Watching and walking dir %s index %s", dir, index.Config.IndexName)
-		watcher := index.startWatching(dir)
-		index.openWatchers = append(index.openWatchers, watcher)
-		index.walkForIndexing(dir, dir)
-	}
-	return *index, nil
 }
 
-func (index *GnosisIndex) CloseIndex() {
-	for _, watcher := range index.openWatchers {
+func EnableIndex(config IndexSection) {
+	for dir, path := range config.WatchDirs {
+		// dir = strings.TrimSuffix(dir, "/")
+		log.Printf("Watching and walking dir %s index %s", dir, config.IndexPath)
+		watcher := startWatching(dir, path, config)
+		openWatchers = append(openWatchers, watcher)
+		walkForIndexing(dir, dir, path, config.IndexPath)
+	}
+}
+
+func DisableAllIndexes() {
+	log.Println("Stopping all watchers")
+	for _, watcher := range openWatchers {
 		watcher.Close()
 	}
 }
 
-func (index *GnosisIndex) buildIndexMapping() *bleve.IndexMapping {
+func buildIndexMapping(config IndexSection) *bleve.IndexMapping {
 
 	// create a text field type
 	enTextFieldMapping := bleve.NewTextFieldMapping()
-	enTextFieldMapping.Analyzer = index.Config.IndexType
+	enTextFieldMapping.Analyzer = config.IndexType
 
 	// create a date field type
 	dateTimeMapping := bleve.NewDateTimeFieldMapping()
@@ -91,10 +99,79 @@ func (index *GnosisIndex) buildIndexMapping() *bleve.IndexMapping {
 
 	// add the wiki page mapping to a new index
 	indexMapping := bleve.NewIndexMapping()
-	indexMapping.AddDocumentMapping(index.Config.IndexName, wikiMapping)
-	indexMapping.DefaultAnalyzer = index.Config.IndexType
+	indexMapping.AddDocumentMapping(config.IndexName, wikiMapping)
+	indexMapping.DefaultAnalyzer = config.IndexType
 
 	return indexMapping
+}
+
+// walks a given path, and runs processUpdate on each File
+func walkForIndexing(path string, origPath string, requestPath string, config IndexSection) {
+	dirEntries, err := ioutil.ReadDir(path)
+	if err != nil {
+		log.Fatal(err)
+	}
+	for _, dirEntry := range dirEntries {
+		dirEntryPath := path + string(os.PathSeparator) + dirEntry.Name()
+		if dirEntry.IsDir() {
+			index.walkForIndexing(dirEntryPath, origPath, requestPath, config)
+		} else if strings.HasSuffix(dirEntry.Name(), config.WatchExtension) {
+			index.processUpdate(dirEntryPath, requestPath, configIndexSection)
+		}
+	}
+}
+
+// watches a given filepath for an index for changes
+func startWatching(filePath string, requestPath string, config IndexSection) fsnotify.Watcher {
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// maybe rework the index so the Watcher is inside the index? idk
+
+	// #TODO this is where my loop isn't stopping
+	// #TODO keep rewriting this function (and below) to work differently - per path
+	// start a go routine to process events
+	go func() {
+		idleTimer := time.NewTimer(10 * time.Second)
+		queuedEvents := make([]fsnotify.Event, 0)
+		for {
+			select {
+			case ev := <-watcher.Events:
+				queuedEvents = append(queuedEvents, ev)
+				idleTimer.Reset(10 * time.Second)
+			case err := <-watcher.Errors:
+				log.Fatal(err)
+			case <-idleTimer.C:
+				for _, ev := range queuedEvents {
+					if strings.HasSuffix(ev.Name, index.Config.WatchExtension) {
+						switch ev.Op {
+						case fsnotify.Remove, fsnotify.Rename:
+							// delete the filePath
+							index.processDelete(ev.Name, filePath)
+						case fsnotify.Create, fsnotify.Write:
+							// update the filePath
+							index.processUpdate(ev.Name, filePath)
+						default:
+							// ignore
+						}
+					}
+				}
+				queuedEvents = make([]fsnotify.Event, 0)
+				idleTimer.Reset(10 * time.Second)
+			}
+		}
+	}()
+
+	// now actually watch the filePath requested
+	err = watcher.Add(filePath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("watching '%s' for changes...", filePath)
+
+	return *watcher
 }
 
 func (index *GnosisIndex) cleanupMarkdown(input []byte) []byte {
@@ -158,69 +235,3 @@ func (index *GnosisIndex) processDelete(path string, dir string) {
 	}
 }
 
-// walks a given path, and runs processUpdate on each File
-func (index *GnosisIndex) walkForIndexing(path string, origPath string) {
-	dirEntries, err := ioutil.ReadDir(path)
-	if err != nil {
-		log.Fatal(err)
-	}
-	for _, dirEntry := range dirEntries {
-		dirEntryPath := path + string(os.PathSeparator) + dirEntry.Name()
-		if dirEntry.IsDir() {
-			index.walkForIndexing(dirEntryPath, origPath)
-		} else if strings.HasSuffix(dirEntry.Name(), index.Config.WatchExtension) {
-			index.processUpdate(dirEntryPath, origPath)
-		}
-	}
-}
-
-// watches a given filepath for an index for changes
-func (index *GnosisIndex) startWatching(filePath string) fsnotify.Watcher {
-	watcher, err := fsnotify.NewWatcher()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// maybe rework the index so the Watcher is inside the index? idk
-
-	// start a go routine to process events
-	go func() {
-		idleTimer := time.NewTimer(10 * time.Second)
-		queuedEvents := make([]fsnotify.Event, 0)
-		for {
-			select {
-			case ev := <-watcher.Events:
-				queuedEvents = append(queuedEvents, ev)
-				idleTimer.Reset(10 * time.Second)
-			case err := <-watcher.Errors:
-				log.Fatal(err)
-			case <-idleTimer.C:
-				for _, ev := range queuedEvents {
-					if strings.HasSuffix(ev.Name, index.Config.WatchExtension) {
-						switch ev.Op {
-						case fsnotify.Remove, fsnotify.Rename:
-							// delete the filePath
-							index.processDelete(ev.Name, filePath)
-						case fsnotify.Create, fsnotify.Write:
-							// update the filePath
-							index.processUpdate(ev.Name, filePath)
-						default:
-							// ignore
-						}
-					}
-				}
-				queuedEvents = make([]fsnotify.Event, 0)
-				idleTimer.Reset(10 * time.Second)
-			}
-		}
-	}()
-
-	// now actually watch the filePath requested
-	err = watcher.Add(filePath)
-	if err != nil {
-		log.Fatal(err)
-	}
-	log.Printf("watching '%s' for changes...", filePath)
-
-	return *watcher
-}

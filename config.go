@@ -2,6 +2,7 @@ package gnosis
 
 import (
 	"encoding/json"
+	"net/http"
 	"html/template"
 	"io/ioutil"
 	"log"
@@ -91,6 +92,13 @@ func LoadConfig(configFile string) bool {
 	configLock.Unlock()
 
 	return true
+}
+
+func RenderTemplate(responsePipe http.ResponseWriter, templateName string, data interface{}) error {
+		templateLock.RLock()
+		defer templateLock.RUnlock()
+
+		return allTemplates.ExecuteTemplate(responsePipe, templateName, data)
 }
 
 func ParseTemplates(globalConfig GlobalSection) {
