@@ -112,13 +112,13 @@ func SearchHandler(responsePipe http.ResponseWriter, request *http.Request, serv
 
 	queryArgs := request.URL.Query()
 
-	query := bleve.NewQueryStringQuery(queryArgs["s"][0])
-	if query == "" {
-		err = allTemplates.ExecuteTemplate(responsePipe, serverConfig.Template, interface{})
+	if queryArgs["s"][0] == "" {
+		err = allTemplates.ExecuteTemplate(responsePipe, serverConfig.Template, make([]bleve.SearchResult, 0))
 		if err != nil {
 			http.Error(responsePipe, err.Error(), 500)
 		}
 	}
+	query := bleve.NewQueryStringQuery(queryArgs["s"][0])
 	searchRequest := bleve.NewSearchRequest(query)
 
 	// validate the query
