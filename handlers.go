@@ -4,7 +4,7 @@ package gnosis
 // Whole thing needs to be written
 
 import (
-	"errors"
+	// "errors"
 	"html/template"
 	"io/ioutil"
 	"log"

@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"log"
 	"sync"
+	"strings"
 	"os"
 )
 
@@ -88,7 +89,9 @@ func LoadConfig(configFile string) bool {
 		return false
 	}
 
-	validateConfig(&temp)
+	CleanConfig(temp)
+
+	log.Println(temp.Indexes)
 
 	configLock.Lock()
 	staticConfig = temp
@@ -97,12 +100,20 @@ func LoadConfig(configFile string) bool {
 	return true
 }
 
-func ValidateConfig(config *Config) {
-	config.Global.TemplateDir = strings.TrimSufix(config.Global.TemplateDir, os.PathSeparator)
+func CleanConfig(config *Config) {
+	if ! strings.HasSuffix(config.Global.TemplateDir, string(os.PathSeparator)) {
+		config.Global.TemplateDir = config.Global.TemplateDir + string(os.PathSeparator)
+	}
 	for _, indexSection := range config.Indexes {
 		for origDirPath, origWebPath := range indexSection.WatchDirs {
-			newDirPath := strings.TrimSuffix(origDirPath, os.PathSeparator)
-			newWebPath := strings.TrimSuffix(origWebPath, os.PathSeparator)
+			newDirPath := strings.TrimSuffix(origDirPath, string(os.PathSeparator))
+			newWebPath := strings.TrimSuffix(origWebPath, string(os.PathSeparator))
+			if newDirPath == "" {
+				newDirPath = string(os.PathSeparator)
+			}
+			if newWebPath == "" {
+				newWebPath = string(os.PathSeparator)
+			}
 			if (newDirPath != origDirPath || newWebPath != origWebPath) {
 				delete(indexSection.WatchDirs, origDirPath)
 				indexSection.WatchDirs[newDirPath] = newWebPath
@@ -110,11 +121,11 @@ func ValidateConfig(config *Config) {
 		}
 	}
 	for _, serverSection := range config.Server {
-		if serverSection.Path != os.PathSeparator {
-			serverSection.Path = strings.TrimSuffix(serverSection.Path, os.PathSeparator)
+		if serverSection.Path != string(os.PathSeparator) {
+			serverSection.Path = strings.TrimSuffix(serverSection.Path, string(os.PathSeparator))
 		}
-		if serverSection.Prefix != os.PathSeparator {
-			serverSection.Prefix = strings.TrimSuffix(serverSection.Prefix, os.PathSeparator)
+		if serverSection.Prefix != string(os.PathSeparator) {
+			serverSection.Prefix = strings.TrimSuffix(serverSection.Prefix, string(os.PathSeparator))
 		}
 	}
 }
@@ -132,6 +143,7 @@ func ParseTemplates(globalConfig GlobalSection) {
 	newTemplate, err := template.ParseGlob(globalConfig.TemplateDir + "*")
 	if err != nil {
 		log.Println("Found an invalid template, abandoning updating templates")
+		log.Println(err)
 		return
 	}
 
