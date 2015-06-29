@@ -38,7 +38,7 @@ type RedirectSection struct {
 }
 
 type IndexSection struct {
-	WatchDirs      []string // Location that we will be watching for updates
+	WatchDirs      map[string]string // Location that we will be watching for updates
 	WatchExtension string   // file extensions that we will watch for within that dir
 	IndexPath      string   //location to store the index
 	IndexType      string   // type of index - likely "en"

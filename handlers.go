@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	"github.com/blevesearch/bleve"
-	bleveHttp "github.com/blevesearch/bleve/http"
+	// bleveHttp "github.com/blevesearch/bleve/http"
 )
 
 type Page struct {
@@ -153,22 +153,22 @@ func SearchHandler(responsePipe http.ResponseWriter, request *http.Request, serv
 
 	log.Println("validated query")
 
-	log.Println(bleveHttp.IndexNames())
+	// log.Println(bleveHttp.IndexNames())
 
 	return
 
-	index := bleveHttp.IndexByName(serverConfig.Default)
-	// index, err := bleve.Open(serverConfig.Path)
-	// defer index.Close()
+	// index := bleveHttp.IndexByName(serverConfig.Default)
+	index, err := bleve.Open(serverConfig.Path)
+	defer index.Close()
 	if index == nil {
 		log.Printf("no such index '%s'", serverConfig.Default)
 		http.Error(responsePipe, err.Error(), 404)
 		return
-	// } else if err != nil {
-	//	log.Printf("no such index '%s'", serverConfig.Path)
-	// 	http.Error(responsePipe, err.Error(), 404)
-	// 	log.Printf("problem opening index '%s' - %v", serverConfig.Path, err)
-	// 	return
+	} else if err != nil {
+		log.Printf("no such index '%s'", serverConfig.Path)
+		http.Error(responsePipe, err.Error(), 404)
+		log.Printf("problem opening index '%s' - %v", serverConfig.Path, err)
+		return
 	}
 
 	log.Println("opened index")

@@ -17,8 +17,6 @@ import (
 	//"github.com/russross/blackfriday"
 )
 
-var indexes []gnosis.GnosisIndex
-
 var configFile = flag.String("config", "config.json", "specify a configuration file")
 
 var quitChan = make(chan os.Signal, 1)
@@ -48,11 +46,9 @@ func main() {
 	// go cleanup()
 
 		for _, individualIndex := range config.Indexes {
-			index, err := gnosis.OpenIndex(individualIndex)
-			if err != nil {
-				log.Println(err)
-			} else {
-				indexes = append(indexes, index)
+			// #TODO change this?
+			if ! gnosis.EnableIndex(individualIndex) {
+				log.Fatalf("Failed opening index %s, abandoning", individualIndex.IndexPath)
 			}
 		}
 

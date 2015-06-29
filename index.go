@@ -15,16 +15,6 @@ import (
 	"gopkg.in/fsnotify.v1"
 )
 
-type GnosisIndex struct {
-	TrueIndex bleve.Index
-	Config    IndexSection
-	// ##TODO## figure this out
-	// I cannot use append and range on an array of pointers
-	// and yet I do not think I can modify an array of non-pointers
-	// IDK what to do just yet
-	openWatchers []fsnotify.Watcher
-}
-
 type WatcherMeta struct {
 	watcher fsnotify.Watcher
 	filePath string
@@ -43,40 +33,46 @@ type indexedPage struct {
 	Modified time.Time `json:"modified"`
 }
 
-func CreateIndex(config IndexSection) error {
-	newIndex, err := bleve.Open(path.Clean(IndexSection.IndexPath))
+func createIndex(config IndexSection) bool {
+	newIndex, err := bleve.Open(path.Clean(config.IndexPath))
 	if err == nil {
-		log.Printf("Index already exists %s", IndexSection.IndexPath)
-		defer newIndex.Close()
+		log.Printf("Index already exists %s", config.IndexPath)
 	} else if err == bleve.ErrorIndexPathDoesNotExist {
-		log.Printf("Creating new index %s", IndexSection.IndexName)
+		log.Printf("Creating new index %s", config.IndexName)
 		// create a mapping
-		indexMapping := buildIndexMapping(IndexSection)
-		newIndex, err := bleve.New(path.Clean(IndexSection.IndexPath), indexMapping)
+		indexMapping := buildIndexMapping(config)
+		newIndex, err = bleve.New(path.Clean(config.IndexPath), indexMapping)
 		if err != nil {
-			log.Printf("Failed to create the new index %s - %v", IndexSection.IndexPath, err)
+			log.Printf("Failed to create the new index %s - %v", config.IndexPath, err)
+			return false
 		} else {
-		defer newIndex.Close()
 		}
 	} else {
-		log.Printf("Got an error opening the index %s but it already exists %v", IndexSection.IndexPath, err)
+		log.Printf("Got an error opening the index %s but it already exists %v", config.IndexPath, err)
+		return false
 	}
+	newIndex.Close()
+	return true
 }
 
-func EnableIndex(config IndexSection) {
+func EnableIndex(config IndexSection) bool {
+	if ! createIndex(config) {
+		return false
+	}
 	for dir, path := range config.WatchDirs {
 		// dir = strings.TrimSuffix(dir, "/")
 		log.Printf("Watching and walking dir %s index %s", dir, config.IndexPath)
 		watcher := startWatching(dir, path, config)
 		openWatchers = append(openWatchers, watcher)
-		walkForIndexing(dir, dir, path, config.IndexPath)
+		walkForIndexing(dir, dir, path, config)
 	}
+	return true
 }
 
 func DisableAllIndexes() {
 	log.Println("Stopping all watchers")
 	for _, watcher := range openWatchers {
-		watcher.Close()
+		watcher.watcher.Close()
 	}
 }
 
@@ -114,21 +110,22 @@ func walkForIndexing(path string, origPath string, requestPath string, config In
 	for _, dirEntry := range dirEntries {
 		dirEntryPath := path + string(os.PathSeparator) + dirEntry.Name()
 		if dirEntry.IsDir() {
-			index.walkForIndexing(dirEntryPath, origPath, requestPath, config)
+			walkForIndexing(dirEntryPath, origPath, requestPath, config)
 		} else if strings.HasSuffix(dirEntry.Name(), config.WatchExtension) {
-			index.processUpdate(dirEntryPath, requestPath + dirEntry.Name(), config)
+			processUpdate(dirEntryPath, requestPath + dirEntry.Name(), config)
 		}
 	}
 }
 
 // watches a given filepath for an index for changes
 func startWatching(filePath string, requestPath string, config IndexSection) WatcherMeta {
-	activeWatcher := new(WatcherMeta)
-	activeWatcher.watcher, err := fsnotify.NewWatcher()
+	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	activeWatcher := new(WatcherMeta)
+	activeWatcher.watcher = *watcher
 	activeWatcher.filePath = filePath
 	activeWatcher.requestPath = requestPath
 	activeWatcher.indexPath = config.IndexPath
@@ -176,11 +173,11 @@ func startWatching(filePath string, requestPath string, config IndexSection) Wat
 	}
 	log.Printf("watching '%s' for changes...", filePath)
 
-	return *watcher
+	return *activeWatcher
 }
 
 // Update the entry in the index to the output from a given file
-func (index *GnosisIndex) processUpdate(filePath string, relativePath string, config IndexSection) {
+func processUpdate(filePath string, relativePath string, config IndexSection) {
 	log.Printf("updated: %s as %s", filePath, relativePath)
 	wiki, err := generateWikiFromFile(filePath, config)
 	if err != nil {
@@ -193,25 +190,24 @@ func (index *GnosisIndex) processUpdate(filePath string, relativePath string, co
 }
 
 // Deletes a given path from the wiki entry
-func (index *GnosisIndex) processDelete(filePath string, relativePath string, config IndexSection) {
+func processDelete(filePath string, relativePath string, config IndexSection) {
 	log.Printf("delete: %s", filePath)
 	index, _ := bleve.Open(config.IndexPath)
 	defer index.Close()
-	index.Index(relativePath, wiki)
-	err := index.TrueIndex.Delete(relativePath)
+	err := index.Delete(relativePath)
 	if err != nil {
 		log.Print(err)
 	}
 }
 
-func (index *GnosisIndex) cleanupMarkdown(input []byte) []byte {
+func cleanupMarkdown(input []byte) []byte {
 	extensions := 0
 	renderer := blackfridaytext.TextRenderer()
 	output := blackfriday.Markdown(input, renderer, extensions)
 	return output
 }
 
-func (index *GnosisIndex) generateWikiFromFile(filePath string, config IndexSection) (*indexedPage, error) {
+func generateWikiFromFile(filePath string, config IndexSection) (*indexedPage, error) {
 	pdata := new(PageMetadata)
 	err := pdata.LoadPage(filePath)
 	//fileBytes, err := ioutil.ReadFile(filePath)
