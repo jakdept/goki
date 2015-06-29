@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"log"
 	"sync"
+	"os"
 )
 
 var staticConfig *Config
@@ -87,11 +88,35 @@ func LoadConfig(configFile string) bool {
 		return false
 	}
 
+	validateConfig(&temp)
+
 	configLock.Lock()
 	staticConfig = temp
 	configLock.Unlock()
 
 	return true
+}
+
+func ValidateConfig(config *Config) {
+	config.Global.TemplateDir = strings.TrimSufix(config.Global.TemplateDir, os.PathSeparator)
+	for _, indexSection := range config.Indexes {
+		for origDirPath, origWebPath := range indexSection.WatchDirs {
+			newDirPath := strings.TrimSuffix(origDirPath, os.PathSeparator)
+			newWebPath := strings.TrimSuffix(origWebPath, os.PathSeparator)
+			if (newDirPath != origDirPath || newWebPath != origWebPath) {
+				delete(indexSection.WatchDirs, origDirPath)
+				indexSection.WatchDirs[newDirPath] = newWebPath
+			}
+		}
+	}
+	for _, serverSection := range config.Server {
+		if serverSection.Path != os.PathSeparator {
+			serverSection.Path = strings.TrimSuffix(serverSection.Path, os.PathSeparator)
+		}
+		if serverSection.Prefix != os.PathSeparator {
+			serverSection.Prefix = strings.TrimSuffix(serverSection.Prefix, os.PathSeparator)
+		}
+	}
 }
 
 func RenderTemplate(responsePipe http.ResponseWriter, templateName string, data interface{}) error {
