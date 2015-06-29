@@ -210,7 +210,6 @@ func cleanupMarkdown(input []byte) []byte {
 func generateWikiFromFile(filePath string, config IndexSection) (*indexedPage, error) {
 	pdata := new(PageMetadata)
 	err := pdata.LoadPage(filePath)
-	//fileBytes, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		return nil, err
 	}
