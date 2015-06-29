@@ -4,51 +4,18 @@ package gnosis
 // Whole thing needs to be written
 
 import (
-	"errors"
+	// "errors"
 	"html/template"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strings"
 
-	"github.com/JackKnifed/blackfriday"
+	"github.com/blevesearch/bleve"
+	// bleveHttp "github.com/blevesearch/bleve/http"
 )
 
-const (
-	bodyHtmlFlags = 0 |
-		blackfriday.HTML_USE_XHTML |
-		blackfriday.HTML_USE_SMARTYPANTS |
-		blackfriday.HTML_SMARTYPANTS_FRACTIONS |
-		blackfriday.HTML_SMARTYPANTS_LATEX_DASHES
-
-	bodyExtensions = 0 |
-		blackfriday.EXTENSION_NO_INTRA_EMPHASIS |
-		blackfriday.EXTENSION_TABLES |
-		blackfriday.EXTENSION_FENCED_CODE |
-		blackfriday.EXTENSION_AUTOLINK |
-		blackfriday.EXTENSION_STRIKETHROUGH |
-		blackfriday.EXTENSION_SPACE_HEADERS |
-		blackfriday.EXTENSION_AUTO_HEADER_IDS |
-		blackfriday.EXTENSION_TITLEBLOCK
-
-	tocHtmlFlags = 0 |
-		blackfriday.HTML_USE_XHTML |
-		blackfriday.HTML_SMARTYPANTS_FRACTIONS |
-		blackfriday.HTML_SMARTYPANTS_LATEX_DASHES |
-		blackfriday.HTML_TOC |
-		blackfriday.HTML_OMIT_CONTENTS
-
-	tocExtensions = 0 |
-		blackfriday.EXTENSION_NO_INTRA_EMPHASIS |
-		blackfriday.EXTENSION_TABLES |
-		blackfriday.EXTENSION_FENCED_CODE |
-		blackfriday.EXTENSION_AUTOLINK |
-		blackfriday.EXTENSION_STRIKETHROUGH |
-		blackfriday.EXTENSION_SPACE_HEADERS |
-		blackfriday.EXTENSION_AUTO_HEADER_IDS |
-		blackfriday.EXTENSION_TITLEBLOCK
-)
-
-type WikiPage struct {
+type Page struct {
 	Title    string
 	ToC      template.HTML
 	Body     template.HTML
@@ -56,81 +23,33 @@ type WikiPage struct {
 	Keywords template.HTML
 }
 
-func stripRequestRouting(stripPath string, request *http.Request) (*http.Request, error) {
-	if string(request.URL.Path[0]) != "/" {
-		err := errors.New("not compatible with relative requests")
-		return nil, err
-	}
-	lastChar := len(stripPath) - 1
-	if string(stripPath[lastChar:]) != "/" {
-		err := errors.New("passed a request route that does not end in a /")
-		return nil, err
-	}
-	if string(stripPath[0]) != "/" {
-		err := errors.New("passed a request route that does not start in a /")
-		return nil, err
-	}
-	if len(stripPath) > len(request.URL.Path) {
-		err := errors.New("request routing path longer than request path")
-		return nil, err
-	}
-	if stripPath != string(request.URL.Path[:len(stripPath)]) {
-		err := errors.New("request does not match up to the routed path")
-		return nil, err
-	}
-
-	returnRequest := request
-	returnRequest.URL.Path = string(request.URL.Path[len(stripPath)-1:])
-	return returnRequest, nil
-}
-
-func bodyParseMarkdown(input []byte) []byte {
-	// set up the HTML renderer
-	renderer := blackfriday.HtmlRenderer(bodyHtmlFlags, "", "")
-	return blackfriday.Markdown(input, renderer, bodyExtensions)
-}
-
-func tocParseMarkdown(input []byte) []byte {
-	// set up the HTML renderer
-	renderer := blackfriday.HtmlRenderer(tocHtmlFlags, "", "")
-	return blackfriday.Markdown(input, renderer, tocExtensions)
-}
-
-// Of note - this markdown handler is not a direct handler
-func MarkdownHandler(responsePipe http.ResponseWriter, rawRequest *http.Request, serverConfig ServerSection) {
+func MarkdownHandler(responsePipe http.ResponseWriter, request *http.Request, serverConfig ServerSection) {
 
 	var err error
 
-	// break up the request parameters - for reference, regex is listed below
-	//filteredRequest, err := wikiFilter.FindStringSubmatch(request.URL.Path)
-
-	request, err := stripRequestRouting(serverConfig.Prefix, rawRequest)
-	if err != nil {
-		log.Printf("request [ %s ] was passed to the wrong handler - got %v", request.URL.Path, err)
-		http.Error(responsePipe, "Request not allowed", 403)
-		return
-	}
+	requestPath := strings.TrimPrefix(request.URL.Path, serverConfig.Prefix)
 
 	// If the request is empty, set it to the default.
-	if request.URL.Path == "" || request.URL.Path == "/" {
-		request.URL.Path = serverConfig.DefaultPage
-	}
+	if requestPath == "" {
+		requestPath = serverConfig.Default
+	log.Printf("replaced the request path - Request path is [%s] of length [%d], comparing against [%s] of length [%d]", requestPath, len(requestPath), "", len(""))
+	} 
 
 	// If the request doesn't end in .md, add that
-	if request.URL.Path[len(request.URL.Path):] == ".md" {
-		request.URL.Path = request.URL.Path + ".md"
+	if !strings.HasSuffix(requestPath, ".md") {
+		requestPath = requestPath + ".md"
 	}
 
 	pdata := new(PageMetadata)
-	err = pdata.LoadPage(serverConfig.Path + request.URL.Path)
+	err = pdata.LoadPage(serverConfig.Path + requestPath)
 	if err != nil {
-		log.Printf("request [ %s ] points to an bad file target sent to server %s", request.URL.Path, serverConfig.Prefix)
+		log.Printf("request [ %s ] points to an bad file target [ %s ] sent to server %s", request.URL.Path, requestPath, serverConfig.Prefix)
 		http.Error(responsePipe, err.Error(), 404)
 		return
 	}
 
 	if pdata.MatchedTag(serverConfig.Restricted) {
-		log.Printf("request [ %s ] was against a page with a restricted tag", request.URL.Path)
+		log.Printf("request [ %s ] was against a page [ %s ] with a restricted tag", request.URL.Path, requestPath)
 		http.Error(responsePipe, err.Error(), 403)
 		return
 	}
@@ -139,51 +58,34 @@ func MarkdownHandler(responsePipe http.ResponseWriter, rawRequest *http.Request,
 	body := template.HTML(bodyParseMarkdown(pdata.Page))
 	toc := template.HTML(tocParseMarkdown(pdata.Page))
 	keywords := pdata.PrintKeywords()
-	// ##TODO## need to move the topic URL to the config
 	topics := pdata.PrintTopics(serverConfig.TopicURL)
 
-	// ##TODO## before you can use a template, you have to get the template lock to make sure you don't mess with someone else reading it
-	response := WikiPage{Title: "", ToC: toc, Body: body, Keywords: keywords, Topics: topics}
+	// ##TODO## put this template right in the function call
+	// Then remove the Page Struct above
+	response := Page{Title: "", ToC: toc, Body: body, Keywords: keywords, Topics: topics}
 	err = allTemplates.ExecuteTemplate(responsePipe, serverConfig.Template, response)
 	if err != nil {
 		http.Error(responsePipe, err.Error(), 500)
 	}
 }
 
-func FindExtension(s string) (string, error) {
-	for i := len(s); i > 0; i-- {
-		if string(s[i]) == "." {
-			return s[i:], nil
-		}
-	}
-	return "", errors.New("found no extension")
-}
-
-func RawHandler(responsePipe http.ResponseWriter, rawRequest *http.Request, serverConfig ServerSection) {
+func RawHandler(responsePipe http.ResponseWriter, request *http.Request, serverConfig ServerSection) {
 
 	var err error
 
-	request, err := stripRequestRouting(serverConfig.Prefix, rawRequest)
-	if err != nil {
-		log.Printf("request [ %s ] was passed to the wrong handler - got %v", request.URL.Path, err)
-		http.Error(responsePipe, "Request not allowed", 403)
-		return
-	}
+	request.URL.Path = strings.TrimPrefix(request.URL.Path, serverConfig.Prefix)
 
 	// If the request is empty, set it to the default.
 	if request.URL.Path == "" || request.URL.Path == "/" {
-		request.URL.Path = serverConfig.DefaultPage
+		request.URL.Path = serverConfig.Default
 	}
 
 	// If the request is a blocked restriction, shut it down.
-	extension, err := FindExtension(request.URL.Path)
-	if err == nil {
-		for _, restricted := range serverConfig.Restricted {
-			if restricted == extension {
-				log.Printf("request %s was improperly routed to the file handler with an disallowed extension %s", request.URL.Path, extension)
-				http.Error(responsePipe, "Request not allowed", 403)
-				return
-			}
+	for _, restricted := range serverConfig.Restricted {
+		if strings.HasSuffix(request.URL.Path, restricted) {
+			log.Printf("request %s was improperly routed to the file handler with an disallowed extension %s", request.URL.Path, restricted)
+			http.Error(responsePipe, "Request not allowed", 403)
+			return
 		}
 	}
 
@@ -202,6 +104,52 @@ func RawHandler(responsePipe http.ResponseWriter, rawRequest *http.Request, serv
 	return
 }
 
+func SearchHandler(responsePipe http.ResponseWriter, request *http.Request, serverConfig ServerSection) {
+
+	var err error
+
+	request.URL.Path = strings.TrimPrefix(request.URL.Path, serverConfig.Prefix)
+
+	queryArgs := request.URL.Query()
+
+	query := bleve.NewQueryStringQuery(queryArgs["s"][0])
+	searchRequest := bleve.NewSearchRequest(query)
+
+	// validate the query
+	err = searchRequest.Query.Validate()
+	if err != nil {
+		log.Printf("Error validating query: %v", err)
+		http.Error(responsePipe, err.Error(), 400)
+		return
+	}
+
+	index, err := bleve.Open(serverConfig.Path)
+	defer index.Close()
+	if index == nil {
+		log.Printf("no such index '%s'", serverConfig.Default)
+		http.Error(responsePipe, err.Error(), 404)
+		return
+	} else if err != nil {
+		log.Printf("no such index '%s'", serverConfig.Path)
+		http.Error(responsePipe, err.Error(), 404)
+		log.Printf("problem opening index '%s' - %v", serverConfig.Path, err)
+		return
+	}
+
+	// execute the query
+	searchResponse, err := index.Search(searchRequest)
+	if err != nil {
+		log.Printf("Error executing query: %v", err)
+		http.Error(responsePipe, err.Error(), 400)
+		return
+	}
+
+	err = allTemplates.ExecuteTemplate(responsePipe, serverConfig.Template, searchResponse)
+	if err != nil {
+		http.Error(responsePipe, err.Error(), 500)
+	}
+}
+
 func MakeHandler(handlerConfig ServerSection) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		switch handlerConfig.ServerType {
@@ -209,6 +157,8 @@ func MakeHandler(handlerConfig ServerSection) http.HandlerFunc {
 			MarkdownHandler(w, r, handlerConfig)
 		case "raw":
 			RawHandler(w, r, handlerConfig)
+		case "simpleSearch":
+			SearchHandler(w, r, handlerConfig)
 		default:
 			log.Printf("Bad server type [%s]", handlerConfig.ServerType)
 		}

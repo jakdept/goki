@@ -9,15 +9,54 @@ import (
 	"html/template"
 	"io"
 	"sort"
+	"strings"
 	//"log"
+	"github.com/JackKnifed/blackfriday"
 	"os"
 )
 
 type PageMetadata struct {
-	Keywords map[string]bool
-	Topics   map[string]bool
-	Page     []byte
+	Keywords  map[string]bool
+	Topics    map[string]bool
+	Page      []byte
+	Title     string
+	FileStats os.FileInfo
 }
+
+const (
+	bodyHtmlFlags = 0 |
+		blackfriday.HTML_USE_XHTML |
+		blackfriday.HTML_USE_SMARTYPANTS |
+		blackfriday.HTML_SMARTYPANTS_FRACTIONS |
+		blackfriday.HTML_SMARTYPANTS_LATEX_DASHES
+
+	bodyExtensions = 0 |
+		blackfriday.EXTENSION_NO_INTRA_EMPHASIS |
+		blackfriday.EXTENSION_TABLES |
+		blackfriday.EXTENSION_FENCED_CODE |
+		blackfriday.EXTENSION_AUTOLINK |
+		blackfriday.EXTENSION_STRIKETHROUGH |
+		blackfriday.EXTENSION_SPACE_HEADERS |
+		blackfriday.EXTENSION_AUTO_HEADER_IDS |
+		blackfriday.EXTENSION_TITLEBLOCK
+
+	tocHtmlFlags = 0 |
+		blackfriday.HTML_USE_XHTML |
+		blackfriday.HTML_SMARTYPANTS_FRACTIONS |
+		blackfriday.HTML_SMARTYPANTS_LATEX_DASHES |
+		blackfriday.HTML_TOC |
+		blackfriday.HTML_OMIT_CONTENTS
+
+	tocExtensions = 0 |
+		blackfriday.EXTENSION_NO_INTRA_EMPHASIS |
+		blackfriday.EXTENSION_TABLES |
+		blackfriday.EXTENSION_FENCED_CODE |
+		blackfriday.EXTENSION_AUTOLINK |
+		blackfriday.EXTENSION_STRIKETHROUGH |
+		blackfriday.EXTENSION_SPACE_HEADERS |
+		blackfriday.EXTENSION_AUTO_HEADER_IDS |
+		blackfriday.EXTENSION_TITLEBLOCK
+)
 
 // takes a single line of input and determines if it's a top level markdown header
 func (pdata *PageMetadata) lineIsTitle(line []byte) bool {
@@ -109,6 +148,7 @@ func (pdata *PageMetadata) LoadPage(pageName string) error {
 	if err != nil {
 		return err
 	}
+	pdata.FileStats, err = os.Stat(pageName)
 
 	// read a line
 	upperLine, err := reader.ReadBytes(byte('\n'))
@@ -124,10 +164,11 @@ func (pdata *PageMetadata) LoadPage(pageName string) error {
 	lowerLine, err := reader.ReadBytes('\n')
 	// inspect the lower line
 	if err == io.EOF {
-		return errors.New("Is this page just a title?")
+		return errors.New("Is this Metadata just a title?")
 	} else if err != nil {
 		return errors.New("secont line error - " + err.Error())
 	} else if pdata.lineIsTitle(lowerLine) {
+		pdata.Title = strings.TrimSpace(string(upperLine))
 		return pdata.readRestOfPage(upperLine, lowerLine, reader)
 	}
 
@@ -148,6 +189,7 @@ func (pdata *PageMetadata) LoadPage(pageName string) error {
 	}
 
 	// by this point, I should have read everything in - let's read the rest and just return it
+	pdata.Title = strings.TrimSpace(string(upperLine))
 	return pdata.readRestOfPage(upperLine, lowerLine, reader)
 }
 
@@ -176,7 +218,7 @@ func (pdata *PageMetadata) ListMeta() (topics []string, keywords []string) {
 	return
 }
 
-// return the bytes to display the tags on the page
+// return the bytes to display the tags on the Metadata
 // takes the prefix for the tags
 func (pdata *PageMetadata) PrintTopics(tagPrefix string) template.HTML {
 	response := []byte{}
@@ -205,4 +247,16 @@ func (pdata *PageMetadata) PrintKeywords() template.HTML {
 	} else {
 		return template.HTML("")
 	}
+}
+
+func bodyParseMarkdown(input []byte) []byte {
+	// set up the HTML renderer
+	renderer := blackfriday.HtmlRenderer(bodyHtmlFlags, "", "")
+	return blackfriday.Markdown(input, renderer, bodyExtensions)
+}
+
+func tocParseMarkdown(input []byte) []byte {
+	// set up the HTML renderer
+	renderer := blackfriday.HtmlRenderer(tocHtmlFlags, "", "")
+	return blackfriday.Markdown(input, renderer, tocExtensions)
 }

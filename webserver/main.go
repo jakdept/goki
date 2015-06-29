@@ -5,7 +5,9 @@ import (
 	//"io/ioutil"
 	"log"
 	//"regexp"
+	"os"
 
+	// "os/signal"
 	"net/http"
 
 	"flag"
@@ -17,15 +19,38 @@ import (
 
 var configFile = flag.String("config", "config.json", "specify a configuration file")
 
+var quitChan = make(chan os.Signal, 1)
+
+/*
+ func cleanup() {
+	_ = <- quitChan
+		log.Println("Recieved an interrupt, shutting down")
+		for _, index := range indexes {
+			index.CloseIndex()
+		}
+}
+*/
+
 func main() {
 	flag.Parse()
 
 	// ##TODO## check for false returnear- if null, the config could not be loaded
-	gnosis.LoadConfig(*configFile)
+	if success := gnosis.LoadConfig(*configFile); success == false {
+		log.Fatal("Could not parse the config, abandoning")
+	}
 
 	config := gnosis.GetConfig()
 
-	// ##TODO## add global redirects and set them up in here
+	// set up my interrupt channel and go routine
+	// signal.Notify(quitChan, os.Interrupt)
+	// go cleanup()
+
+		for _, individualIndex := range config.Indexes {
+			// #TODO change this?
+			if ! gnosis.EnableIndex(individualIndex) {
+				log.Fatalf("Failed opening index %s, abandoning", individualIndex.IndexPath)
+			}
+		}
 
 	gnosis.ParseTemplates(config.Global)
 

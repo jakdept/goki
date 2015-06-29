@@ -2,14 +2,25 @@ package gnosis
 
 import (
 	"encoding/json"
+	"net/http"
 	"html/template"
 	"io/ioutil"
 	"log"
 	"sync"
+	"strings"
+	"os"
 )
 
 var staticConfig *Config
 var configLock = new(sync.RWMutex)
+
+type Config struct {
+	Global      GlobalSection
+	Redirects   []RedirectSection
+	Server      []ServerSection
+	Indexes     []IndexSection
+	TemplateDir string
+}
 
 //var templates = template.Must(template.ParseFiles("/var/wiki-backend/wiki.html"))
 //template.New("allTemplates")
@@ -20,18 +31,6 @@ type GlobalSection struct {
 	Port        string
 	Hostname    string
 	TemplateDir string
-	Templates   []string
-	Redirects   map[string]string
-}
-
-type ServerSection struct {
-	Path        string
-	Prefix      string
-	DefaultPage string
-	Template    string
-	ServerType  string
-	TopicURL    string
-	Restricted  []string
 }
 
 type RedirectSection struct {
@@ -40,32 +39,24 @@ type RedirectSection struct {
 	Code      int
 }
 
-type Config struct {
-	Global     GlobalSection
-	Redirects  []RedirectSection
-	Mainserver ServerSection
-	Server     []ServerSection
+type IndexSection struct {
+	WatchDirs      map[string]string // Location that we will be watching for updates
+	WatchExtension string   // file extensions that we will watch for within that dir
+	IndexPath      string   //location to store the index
+	IndexType      string   // type of index - likely "en"
+	IndexName      string   // name of the index
+	Restricted     []string // Tags to restrict indexing on
 }
 
-var defaultConfig = []byte(`{
-  "Global": {
-    "Port": "8080",
-    "Hostname": "localhost"
-  },
-  "Mainserver": {
-      "Path": "/var/www/wiki/",
-      "Prefix": "/",
-      "DefaultPage": "index",
-      "ServerType": "markdown",
-      "Template": "wiki.html",
-      "Restricted": [
-        "internal",
-        "handbook"
-      ]
-    },
-  "Server": [
-  ]
-}`)
+type ServerSection struct {
+	Path        string   // filesystem path to serve out
+	Prefix      string   // Web URL Prefix - alternatively the prefix for a search handler
+	Default	string   // Default page to serve if empty URI
+	Template    string   // Template file to build the web URL from
+	ServerType  string   // markdown, raw, or search to denote the type of Server handle
+	TopicURL    string   // URI prefix to redirect to topic pages
+	Restricted  []string // list of restricts - extensions for raw, topics for markdown
+}
 
 func GetConfig() *Config {
 	configLock.RLock()
@@ -90,19 +81,17 @@ func LoadConfig(configFile string) bool {
 	// UnMarshal the config file that was read in
 	temp := new(Config)
 
-	err = json.Unmarshal(defaultConfig, temp)
-
-	if err != nil {
-		log.Println("problem parsing built in default configuration - this should not happen")
-		return false
-	}
-
 	err = json.Unmarshal(fileContents, temp)
 	//Make sure you were able to read it in
 	if err != nil {
 		log.Printf("parse config error: %s", err.Error())
+		log.Print(temp)
 		return false
 	}
+
+	CleanConfig(temp)
+
+	log.Println(temp.Indexes)
 
 	configLock.Lock()
 	staticConfig = temp
@@ -111,12 +100,50 @@ func LoadConfig(configFile string) bool {
 	return true
 }
 
+func CleanConfig(config *Config) {
+	if ! strings.HasSuffix(config.Global.TemplateDir, string(os.PathSeparator)) {
+		config.Global.TemplateDir = config.Global.TemplateDir + string(os.PathSeparator)
+	}
+	for _, indexSection := range config.Indexes {
+		for origDirPath, origWebPath := range indexSection.WatchDirs {
+			newDirPath := strings.TrimSuffix(origDirPath, string(os.PathSeparator))
+			newWebPath := strings.TrimSuffix(origWebPath, string(os.PathSeparator))
+			if newDirPath == "" {
+				newDirPath = string(os.PathSeparator)
+			}
+			if newWebPath == "" {
+				newWebPath = string(os.PathSeparator)
+			}
+			if (newDirPath != origDirPath || newWebPath != origWebPath) {
+				delete(indexSection.WatchDirs, origDirPath)
+				indexSection.WatchDirs[newDirPath] = newWebPath
+			}
+		}
+	}
+	for _, serverSection := range config.Server {
+		if serverSection.Path != string(os.PathSeparator) {
+			serverSection.Path = strings.TrimSuffix(serverSection.Path, string(os.PathSeparator))
+		}
+		if serverSection.Prefix != string(os.PathSeparator) {
+			serverSection.Prefix = strings.TrimSuffix(serverSection.Prefix, string(os.PathSeparator))
+		}
+	}
+}
+
+func RenderTemplate(responsePipe http.ResponseWriter, templateName string, data interface{}) error {
+		templateLock.RLock()
+		defer templateLock.RUnlock()
+
+		return allTemplates.ExecuteTemplate(responsePipe, templateName, data)
+}
+
 func ParseTemplates(globalConfig GlobalSection) {
 	var err error
 	//newTemplate := template.New("newTemplate")
 	newTemplate, err := template.ParseGlob(globalConfig.TemplateDir + "*")
 	if err != nil {
 		log.Println("Found an invalid template, abandoning updating templates")
+		log.Println(err)
 		return
 	}
 
@@ -124,19 +151,6 @@ func ParseTemplates(globalConfig GlobalSection) {
 	for _, individualTemplate := range loadedTemplates {
 		log.Printf("Loaded template %s ", individualTemplate.Name())
 	}
-
-	/*
-		for _, templateFile := range globalConfig.Templates {
-			nextTemplate, err = newTemplate.ParseFiles(globalConfig.TemplateDir + templateFile)
-			if nextTemplate != nil {
-				newTemplate = nextTemplate
-			} else {
-				log.Println("Found an invalid template, abandoning updating templates")
-			}
-		}
-	*/
-
-	// log.Printf("loaded templates - %s", newTemplate.Name())
 
 	if err == nil {
 		templateLock.Lock()
