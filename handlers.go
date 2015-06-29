@@ -27,19 +27,13 @@ func MarkdownHandler(responsePipe http.ResponseWriter, request *http.Request, se
 
 	var err error
 
-	// break up the request parameters - for reference, regex is listed below
-	//filteredRequest, err := wikiFilter.FindStringSubmatch(request.URL.Path)
-
 	requestPath := strings.TrimPrefix(request.URL.Path, serverConfig.Prefix)
 
 	// If the request is empty, set it to the default.
-	//if requestPath == "" || requestPath == "/" {
 	if requestPath == "" {
 		requestPath = serverConfig.Default
 	log.Printf("replaced the request path - Request path is [%s] of length [%d], comparing against [%s] of length [%d]", requestPath, len(requestPath), "", len(""))
-	} else {
-	log.Printf("did not replace - Request path is [%s] of length [%d], comparing against [%s] of length [%d]", requestPath, len(requestPath), "", len(""))
-}
+	} 
 
 	// If the request doesn't end in .md, add that
 	if !strings.HasSuffix(requestPath, ".md") {
@@ -75,15 +69,6 @@ func MarkdownHandler(responsePipe http.ResponseWriter, request *http.Request, se
 	}
 }
 
-func FindExtension(s string) (string, error) {
-	for i := len(s); i > 0; i-- {
-		if string(s[i]) == "." {
-			return s[i:], nil
-		}
-	}
-	return "", errors.New("found no extension")
-}
-
 func RawHandler(responsePipe http.ResponseWriter, request *http.Request, serverConfig ServerSection) {
 
 	var err error
@@ -96,7 +81,6 @@ func RawHandler(responsePipe http.ResponseWriter, request *http.Request, serverC
 	}
 
 	// If the request is a blocked restriction, shut it down.
-	//extension, err := FindExtension(request.URL.Path)
 	for _, restricted := range serverConfig.Restricted {
 		if strings.HasSuffix(request.URL.Path, restricted) {
 			log.Printf("request %s was improperly routed to the file handler with an disallowed extension %s", request.URL.Path, restricted)
@@ -126,19 +110,7 @@ func SearchHandler(responsePipe http.ResponseWriter, request *http.Request, serv
 
 	request.URL.Path = strings.TrimPrefix(request.URL.Path, serverConfig.Prefix)
 
-	// if err = request.ParseForm(); err != nil {
-	// 	log.Printf("error parsing search request, %v", err)
-	// 	http.Error(responsePipe, err.Error(), 500)
-	// 	return
-	// }
-
 	queryArgs := request.URL.Query()
-
-	// debugging information
-	for k, v := range queryArgs {
-		log.Println("key:", k)
-		log.Println("val:", strings.Join(v, ""))
-	}
 
 	query := bleve.NewQueryStringQuery(queryArgs["s"][0])
 	searchRequest := bleve.NewSearchRequest(query)
@@ -151,13 +123,6 @@ func SearchHandler(responsePipe http.ResponseWriter, request *http.Request, serv
 		return
 	}
 
-	log.Println("validated query")
-
-	// log.Println(bleveHttp.IndexNames())
-
-	return
-
-	// index := bleveHttp.IndexByName(serverConfig.Default)
 	index, err := bleve.Open(serverConfig.Path)
 	defer index.Close()
 	if index == nil {
@@ -171,8 +136,6 @@ func SearchHandler(responsePipe http.ResponseWriter, request *http.Request, serv
 		return
 	}
 
-	log.Println("opened index")
-
 	// execute the query
 	searchResponse, err := index.Search(searchRequest)
 	if err != nil {
@@ -181,15 +144,10 @@ func SearchHandler(responsePipe http.ResponseWriter, request *http.Request, serv
 		return
 	}
 
-	log.Println("ran query")
-
 	err = allTemplates.ExecuteTemplate(responsePipe, serverConfig.Template, searchResponse)
-	// err = RenderTemplate(responsePipe, serverConfig.Template, searchResponse)
 	if err != nil {
 		http.Error(responsePipe, err.Error(), 500)
 	}
-
-	log.Println("Responded")
 }
 
 func MakeHandler(handlerConfig ServerSection) http.HandlerFunc {
