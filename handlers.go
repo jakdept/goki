@@ -107,17 +107,20 @@ func RawHandler(responsePipe http.ResponseWriter, request *http.Request, serverC
 func SearchHandler(responsePipe http.ResponseWriter, request *http.Request, serverConfig ServerSection) {
 
 	var err error
+	var ok bool
 
 	request.URL.Path = strings.TrimPrefix(request.URL.Path, serverConfig.Prefix)
 
 	queryArgs := request.URL.Query()
 
-	if queryArgs["s"][0] == "" {
+	if _, ok = queryArgs["s"]; !ok {
 		err = allTemplates.ExecuteTemplate(responsePipe, serverConfig.Template, make([]bleve.SearchResult, 0))
 		if err != nil {
 			http.Error(responsePipe, err.Error(), 500)
 		}
+		return
 	}
+
 	query := bleve.NewQueryStringQuery(queryArgs["s"][0])
 	searchRequest := bleve.NewSearchRequest(query)
 
