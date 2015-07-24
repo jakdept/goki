@@ -11,7 +11,7 @@ import (
 
 	"github.com/JackKnifed/blackfriday"
 	"github.com/blevesearch/bleve"
-	"github.com/mschoch/blackfriday-text"
+	"github.com/JackKnifed/blackfriday-text"
 	"gopkg.in/fsnotify.v1"
 )
 

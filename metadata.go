@@ -28,7 +28,8 @@ const (
 		blackfriday.HTML_USE_XHTML |
 		blackfriday.HTML_USE_SMARTYPANTS |
 		blackfriday.HTML_SMARTYPANTS_FRACTIONS |
-		blackfriday.HTML_SMARTYPANTS_LATEX_DASHES
+		blackfriday.HTML_SMARTYPANTS_LATEX_DASHES |
+		blackfriday.HTML_ALERT_BOXES
 
 	bodyExtensions = 0 |
 		blackfriday.EXTENSION_NO_INTRA_EMPHASIS |
@@ -38,7 +39,8 @@ const (
 		blackfriday.EXTENSION_STRIKETHROUGH |
 		blackfriday.EXTENSION_SPACE_HEADERS |
 		blackfriday.EXTENSION_AUTO_HEADER_IDS |
-		blackfriday.EXTENSION_TITLEBLOCK
+		blackfriday.EXTENSION_TITLEBLOCK |
+		blackfriday.EXTENSION_ALERT_BOXES
 
 	tocHtmlFlags = 0 |
 		blackfriday.HTML_USE_XHTML |
