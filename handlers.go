@@ -30,10 +30,9 @@ func MarkdownHandler(responsePipe http.ResponseWriter, request *http.Request, se
 	requestPath := strings.TrimPrefix(request.URL.Path, serverConfig.Prefix)
 
 	// If the request is empty, set it to the default.
-	if requestPath == "" {
-		requestPath = serverConfig.Default
-	log.Printf("replaced the request path - Request path is [%s] of length [%d], comparing against [%s] of length [%d]", requestPath, len(requestPath), "", len(""))
-	} 
+	if request.URL.Path == "" || request.URL.Path == "/" {
+		request.URL.Path = serverConfig.Default
+	}
 
 	// If the request doesn't end in .md, add that
 	if !strings.HasSuffix(requestPath, ".md") {
@@ -44,13 +43,14 @@ func MarkdownHandler(responsePipe http.ResponseWriter, request *http.Request, se
 	err = pdata.LoadPage(serverConfig.Path + requestPath)
 	if err != nil {
 		log.Printf("request [ %s ] points to an bad file target [ %s ] sent to server %s", request.URL.Path, requestPath, serverConfig.Prefix)
-		http.Error(responsePipe, err.Error(), 404)
+		http.Error(responsePipe, "Page not Found", http.StatusNotFound)
 		return
 	}
 
 	if pdata.MatchedTag(serverConfig.Restricted) {
 		log.Printf("request [ %s ] was against a page [ %s ] with a restricted tag", request.URL.Path, requestPath)
-		http.Error(responsePipe, err.Error(), 403)
+		http.Error(responsePipe, "Restricted Page", http.StatusNotFound)
+		//http.Error(responsePipe, err.Error(), http.StatusForbidden)
 		return
 	}
 
