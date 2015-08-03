@@ -9,7 +9,7 @@ import (
 	"html/template"
 	"io"
 	"sort"
-	"strings"
+	//"strings"
 	//"log"
 	"github.com/JackKnifed/blackfriday"
 	"os"
@@ -18,6 +18,7 @@ import (
 type PageMetadata struct {
 	Keywords  map[string]bool
 	Topics    map[string]bool
+	Author    map[string]bool
 	Page      []byte
 	Title     string
 	FileStats os.FileInfo
@@ -84,6 +85,9 @@ func (pdata *PageMetadata) processMetadata(line []byte) {
 
 	pdata.checkMatch(line, []byte("keyword"), &pdata.Keywords)
 	pdata.checkMatch(line, []byte("meta"), &pdata.Keywords)
+
+	pdata.checkMatch(line, []byte("author"), &pdata.Author)
+	pdata.checkMatch(line, []byte("maintainer"), &pdata.Author)
 }
 
 func (pdata *PageMetadata) checkMatch(input []byte, looking []byte, tracker *map[string]bool) {
@@ -122,13 +126,10 @@ func (pdata *PageMetadata) checkMatch(input []byte, looking []byte, tracker *map
 	}
 }
 
-func (pdata *PageMetadata) readRestOfPage(topLine []byte, bottomLine []byte, r *bufio.Reader) error {
+func (pdata *PageMetadata) readRestOfPage(r *bufio.Reader) error {
 	// read the rest of the page
 	var restOfPage []byte
 	var err error
-
-	// put the start of stuff into the final destination
-	pdata.Page = bytes.Join([][]byte{topLine, bottomLine, []byte("")}, []byte(""))
 
 	for err == nil {
 		// read a line, and then add it to pdata
@@ -146,6 +147,7 @@ func (pdata *PageMetadata) readRestOfPage(topLine []byte, bottomLine []byte, r *
 func (pdata *PageMetadata) LoadPage(pageName string) error {
 	// open the file
 	f, err := os.Open(pageName)
+	defer f.Close()
 	reader := bufio.NewReader(f)
 	if err != nil {
 		return err
@@ -153,46 +155,75 @@ func (pdata *PageMetadata) LoadPage(pageName string) error {
 	pdata.FileStats, err = os.Stat(pageName)
 
 	// read a line
-	upperLine, err := reader.ReadBytes(byte('\n'))
+	lineBuffer, err := reader.ReadBytes('\n')
 
-	// check the first line you read
-	if err == io.EOF {
-		return errors.New("I only read in... one line?")
-	} else if err != nil {
-		return errors.New("first line error - " + err.Error())
+	for err != io.EOF {
+		// check the first line you read
+		if err != nil {
+			return errors.New("error reading from file - " + err.Error())
+		}
+		bytesDone := pdata.isTitle(lineBuffer)
+		if bytesDone == len(lineBuffer) {
+			return pdata.readRestOfPage(reader)
+		} else {
+			var newLine []byte
+			lineBuffer = lineBuffer[bytesDone+1:]
+			newLine, err = reader.ReadBytes('\n')
+			lineBuffer = append(lineBuffer, newLine...)
+		}
 	}
+	return errors.New("need to hit a title in the file")
+}
 
-	// read a second line - this might actually be a real line
-	lowerLine, err := reader.ReadBytes('\n')
-	// inspect the lower line
-	if err == io.EOF {
-		return errors.New("Is this Metadata just a title?")
-	} else if err != nil {
-		return errors.New("secont line error - " + err.Error())
-	} else if pdata.lineIsTitle(lowerLine) {
-		pdata.Title = strings.TrimSpace(string(upperLine))
-		return pdata.readRestOfPage(upperLine, lowerLine, reader)
-	}
+// determines if the next two lines contain a title line
+// if the first line is not a line, treat it as metadata
+// return the amount of characters processed if not a new line
+// if title line, return total length of the input
+func (pdata *PageMetadata) isTitle(input []byte) int {
+	nextLine := pdata.findNextLine(input)
+	nextLineContent := input[nextLine+1:]
+	nextLineContent = bytes.TrimSpace(nextLineContent)
 
-	// if you're at this point, the first line is metadata
-	// you gotta process it and work with the next line
-	for !pdata.lineIsTitle(lowerLine) && err != io.EOF {
-		// process the line
-		pdata.processMetadata(upperLine)
-		// shift the lower line up
-		upperLine = lowerLine
-		// read in a new lower line
-		lowerLine, err = reader.ReadBytes('\n')
-		if err == io.EOF {
-			return errors.New("never hit a title")
-		} else if err != nil {
-			return err
+	// step thru each position in the second line
+	// if they are all '=', then this whole input is title
+	for i:=0; i<len(nextLineContent); i++ {
+		if nextLineContent[i] != '=' {
+			i = 0
+			break 
+		} else if i +1 == len(nextLineContent){
+			pdata.Title = string(input[:nextLine])
+			return len(input)
 		}
 	}
 
-	// by this point, I should have read everything in - let's read the rest and just return it
-	pdata.Title = strings.TrimSpace(string(upperLine))
-	return pdata.readRestOfPage(upperLine, lowerLine, reader)
+	pdata.processMetadata(input[:nextLine])
+
+	// reworked header stuff from blackfriday
+	for i:=nextLine; i < 6 && i + 1 < len(input); i++{
+		if input[i] == '#' && input[i+1] != '#' {
+			newTitle := bytes.TrimSpace(input[nextLine:])
+			newTitle = bytes.TrimSuffix(newTitle, []byte("#"))
+			newTitle = bytes.TrimSpace(newTitle)
+			pdata.Title = string(newTitle)
+			return len(input)	
+		} else if input[i] != ' ' && input[i] != '\t' {
+			break
+		}
+	}
+	return nextLine
+}
+
+// given input, find where the next line starts
+func (pdata *PageMetadata) findNextLine(input []byte) int {
+	nextLine := 0
+	for nextLine < len(input) && nextLine != '\n' {
+		nextLine++
+	}
+	if nextLine + 1 == len(input) {
+		return 0
+	} else {
+		return nextLine
+	}
 }
 
 // runs through all restricted tags, and looks for a match

@@ -33,36 +33,36 @@ func writeFileForTest(t *testing.T, s string) string {
 	return filepath
 }
 
-func TestLineIsTitle(t *testing.T) {
+func TestIsTitle(t *testing.T) {
 	pdata := new(PageMetadata)
 
 	// test the most normal topic line I'd expect
 	titleLine := []byte("=======")
-	assert.True(t, pdata.lineIsTitle(titleLine), "the most basic topic line just failed")
+	assert.Equal(t, 0, pdata.isTitle(titleLine), "the most basic topic line just failed")
 
 	titleLine = []byte("=")
-	assert.True(t, pdata.lineIsTitle(titleLine), "one = should be enough")
+	assert.Equal(t, 0, pdata.isTitle(titleLine), "one = should be enough")
 
 	titleLine = []byte("   ======")
-	assert.True(t, pdata.lineIsTitle(titleLine), "any spaces before the heading portion should not cause failure")
+	assert.Equal(t, 0, pdata.isTitle(titleLine), "any spaces before the heading portion should not cause failure")
 
 	titleLine = []byte("\t\t\t======")
-	assert.True(t, pdata.lineIsTitle(titleLine), "tabs before the heading portion should not cause failure")
+	assert.Equal(t, 0, pdata.isTitle(titleLine), "tabs before the heading portion should not cause failure")
 
 	titleLine = []byte("=======     ")
-	assert.True(t, pdata.lineIsTitle(titleLine), "spaces after the heading portion should not cause failure")
+	assert.EQual(t, 0, pdata.isTitle(titleLine), "spaces after the heading portion should not cause failure")
 
 	titleLine = []byte("=======\t\t\t")
-	assert.True(t, pdata.lineIsTitle(titleLine), "tabs after the heading portion should not cause failure")
+	assert.Equal(t, 0, pdata.isTitle(titleLine), "tabs after the heading portion should not cause failure")
 
 	titleLine = []byte("=======\n")
-	assert.True(t, pdata.lineIsTitle(titleLine), "a newline after the heading portion should not cause failure")
+	assert.Equal(t, 0, pdata.isTitle(titleLine), "a newline after the heading portion should not cause failure")
 
 	titleLine = []byte("===== ===")
-	assert.False(t, pdata.lineIsTitle(titleLine), "the underlining has to be continous - no spaces - so this should have failed")
+	assert.Equal(t, 0, pdata.isTitle(titleLine), "the underlining has to be continous - no spaces - so this should have failed")
 
 	titleLine = []byte("====	=====")
-	assert.False(t, pdata.lineIsTitle(titleLine), "the underlining has to be continous - no tabs - so this should have failed")
+	assert.Equal(t, 0, pdata.isTitle(titleLine), "the underlining has to be continous - no tabs - so this should have failed")
 }
 
 func TestCheckMatch(t *testing.T) {

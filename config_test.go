@@ -15,15 +15,14 @@ func TestDefaultJsonConfig(t *testing.T) {
     "Hostname": "localhost"
   },
   "Server": [
-  {
+	  {
       "Path": "/var/www/wiki/",
       "Prefix": "/",
-      "DefaultPage": "index",
+      "Default": "index",
       "ServerType": "markdown",
-      "Restricted": [
-      ]
+      "Restricted": []
+    }
   ]
-}
 }`
 
 	filepath := path.Join(os.TempDir(), "simpleini.txt")

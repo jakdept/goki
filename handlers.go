@@ -159,6 +159,44 @@ func SearchHandler(responsePipe http.ResponseWriter, request *http.Request, serv
 	}
 }
 
+func FacetHandler(responsePipe http.ResponseWriter, request *http.Request, serverConfig ServerSection) {
+
+	var err error
+	facetValue := ""
+
+	urlWithoutPrefix := strings.TrimPrefix(request.URL.Path, serverConfig.Prefix)
+	urlWithoutPrefix = strings.TrimPrefix(urlWithoutPrefix, "/")
+	if len(urlWithoutPrefix) > 0 {
+		temp := strings.SplitN(urlWithoutPrefix, "/", 2)
+		if len(temp)> 0{
+			facetValue = temp[0]
+		}
+	}
+
+	if facetValue == "" {
+		// this is where I would put my facet listing thing
+		// IF I HAD ONE
+		// #TODO ^^ that ^^
+		log.Printf("facet listing requested, not implemented", err)
+		http.Error(responsePipe, "Sorry - cannot list this yet", 404)
+		return
+	} 
+
+	// Open the index
+	index, err := bleve.Open(serverConfig.Path)
+	defer index.Close()
+	if index == nil {
+		log.Printf("no such index '%s'", serverConfig.Default)
+		http.Error(responsePipe, err.Error(), 404)
+		return
+	} else if err != nil {
+		log.Printf("no such index '%s'", serverConfig.Path)
+		http.Error(responsePipe, err.Error(), 404)
+		log.Printf("problem opening index '%s' - %v", serverConfig.Path, err)
+		return
+	}
+}
+
 func MakeHandler(handlerConfig ServerSection) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		switch handlerConfig.ServerType {
