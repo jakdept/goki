@@ -34,35 +34,22 @@ func writeFileForTest(t *testing.T, s string) string {
 }
 
 func TestIsTitle(t *testing.T) {
-	pdata := new(PageMetadata)
 
-	// test the most normal topic line I'd expect
-	titleLine := []byte("=======")
-	assert.Equal(t, 0, pdata.isTitle(titleLine), "the most basic topic line just failed")
+	var isTitleTests = []struct{
+		expected int
+		expectedTitle string
+		input string
+		errorMsg string
+	}{
+		{0, "title", "#title\n", "basic one line title failed",},
+		{0, "title", "title\n===\n", "basic two line title failed"},
+	}
 
-	titleLine = []byte("=")
-	assert.Equal(t, 0, pdata.isTitle(titleLine), "one = should be enough")
-
-	titleLine = []byte("   ======")
-	assert.Equal(t, 0, pdata.isTitle(titleLine), "any spaces before the heading portion should not cause failure")
-
-	titleLine = []byte("\t\t\t======")
-	assert.Equal(t, 0, pdata.isTitle(titleLine), "tabs before the heading portion should not cause failure")
-
-	titleLine = []byte("=======     ")
-	assert.EQual(t, 0, pdata.isTitle(titleLine), "spaces after the heading portion should not cause failure")
-
-	titleLine = []byte("=======\t\t\t")
-	assert.Equal(t, 0, pdata.isTitle(titleLine), "tabs after the heading portion should not cause failure")
-
-	titleLine = []byte("=======\n")
-	assert.Equal(t, 0, pdata.isTitle(titleLine), "a newline after the heading portion should not cause failure")
-
-	titleLine = []byte("===== ===")
-	assert.Equal(t, 0, pdata.isTitle(titleLine), "the underlining has to be continous - no spaces - so this should have failed")
-
-	titleLine = []byte("====	=====")
-	assert.Equal(t, 0, pdata.isTitle(titleLine), "the underlining has to be continous - no tabs - so this should have failed")
+	for _, testSet := range isTitleTests {
+		pdata := new(PageMetadata)
+		assert.Equal(t, testSet.expected, pdata.isTitle([]byte(testSet.input)), "%s - title not detected", testSet.errorMsg)
+		assert.Equal(t, testSet.expectedTitle, pdata.Title, "%s - title not detected", testSet.errorMsg)
+	}
 }
 
 func TestCheckMatch(t *testing.T) {

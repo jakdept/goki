@@ -154,8 +154,9 @@ func (pdata *PageMetadata) LoadPage(pageName string) error {
 	}
 	pdata.FileStats, err = os.Stat(pageName)
 
-	// read a line
+	// read a line and sneak a newline on the front
 	lineBuffer, err := reader.ReadBytes('\n')
+	lineBuffer = append([]byte("\n"), lineBuffer...)
 
 	for err != io.EOF {
 		// check the first line you read
@@ -181,7 +182,7 @@ func (pdata *PageMetadata) LoadPage(pageName string) error {
 // if title line, return total length of the input
 func (pdata *PageMetadata) isTitle(input []byte) int {
 	nextLine := pdata.findNextLine(input)
-	nextLineContent := input[nextLine+1:]
+	nextLineContent := input[nextLine:]
 	nextLineContent = bytes.TrimSpace(nextLineContent)
 
 	// step thru each position in the second line
