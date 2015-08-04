@@ -10,7 +10,7 @@ import (
 	"io"
 	"sort"
 	//"strings"
-	//"log"
+	// "log"
 	"github.com/JackKnifed/blackfriday"
 	"os"
 )
@@ -182,31 +182,43 @@ func (pdata *PageMetadata) LoadPage(pageName string) error {
 // if title line, return total length of the input
 func (pdata *PageMetadata) isTitle(input []byte) int {
 	nextLine := pdata.findNextLine(input)
-	nextLineContent := input[nextLine:]
-	nextLineContent = bytes.TrimSpace(nextLineContent)
+	if nextLine == -1 {
+		return 0
+	}
+	var endOfInput int
+	if nextLine == len(input) - 1 {
+		endOfInput = nextLine
+	} else {
+		endOfInput = pdata.findNextLine(input[nextLine+1:])
+	}
+	if endOfInput == -1 {
+		endOfInput = len(input)
+	}
 
-	// step thru each position in the second line
-	// if they are all '=', then this whole input is title
-	for i:=0; i<len(nextLineContent); i++ {
-		if nextLineContent[i] != '=' {
-			i = 0
-			break 
-		} else if i +1 == len(nextLineContent){
-			pdata.Title = string(input[:nextLine])
-			return len(input)
+	log.Printf("first newline pos [%d] second newline pos [%d]", nextLine, endOfInput)
+
+	// handle dual line titals
+	nextLineContent := input[nextLine:endOfInput]
+	nextLineContent = bytes.TrimSpace(nextLineContent)
+	if len(nextLineContent) >=2 {
+		nextLineContent = bytes.TrimLeft(nextLineContent, "=")
+		if len(nextLineContent) == 0{
+			pdata.Title = string(bytes.TrimSpace(input[:nextLine]))
+			return endOfInput
 		}
 	}
 
+	// at this point we know it is not a two line title
 	pdata.processMetadata(input[:nextLine])
 
 	// reworked header stuff from blackfriday
-	for i:=nextLine; i < 6 && i + 1 < len(input); i++{
+	for i:=nextLine+1; i < nextLine + 6 && i + 1 < len(input); i++{
 		if input[i] == '#' && input[i+1] != '#' {
-			newTitle := bytes.TrimSpace(input[nextLine:])
-			newTitle = bytes.TrimSuffix(newTitle, []byte("#"))
+			newTitle := bytes.TrimSpace(input[i+1:endOfInput])
+			newTitle = bytes.TrimRight(newTitle, "#")
 			newTitle = bytes.TrimSpace(newTitle)
 			pdata.Title = string(newTitle)
-			return len(input)	
+			return endOfInput
 		} else if input[i] != ' ' && input[i] != '\t' {
 			break
 		}
@@ -217,11 +229,11 @@ func (pdata *PageMetadata) isTitle(input []byte) int {
 // given input, find where the next line starts
 func (pdata *PageMetadata) findNextLine(input []byte) int {
 	nextLine := 0
-	for nextLine < len(input) && nextLine != '\n' {
+	for nextLine < len(input) && input[nextLine] != '\n' {
 		nextLine++
 	}
-	if nextLine + 1 == len(input) {
-		return 0
+	if nextLine == len(input) {
+		return -1
 	} else {
 		return nextLine
 	}

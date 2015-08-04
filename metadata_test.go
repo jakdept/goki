@@ -41,14 +41,30 @@ func TestIsTitle(t *testing.T) {
 		input string
 		errorMsg string
 	}{
-		{0, "title", "#title\n", "basic one line title failed",},
-		{0, "title", "title\n===\n", "basic two line title failed"},
+		{12, "title", "stuff\n#title", "basic one line title failed",},
+		{9, "title", "title\n===", "basic two line title failed"},
 	}
 
 	for _, testSet := range isTitleTests {
 		pdata := new(PageMetadata)
 		assert.Equal(t, testSet.expected, pdata.isTitle([]byte(testSet.input)), "%s - title not detected", testSet.errorMsg)
 		assert.Equal(t, testSet.expectedTitle, pdata.Title, "%s - title not detected", testSet.errorMsg)
+	}
+}
+
+func TestFindNextLine(t *testing.T) {
+	var isTitleTests = []struct{
+		expected int
+		input string
+	}{
+		{0, "\n#title\n",},
+		{5, "title\n===\n",},
+		{-1, "title===",},
+	}
+	for _, testSet := range isTitleTests {
+		pdata := new(PageMetadata)
+		result := pdata.findNextLine([]byte(testSet.input))
+		assert.Equal(t, testSet.expected, result, "nextLine at wrong pos - expected [%d] but found [%d], input was [%s]", testSet.expected, result, testSet.input)
 	}
 }
 
