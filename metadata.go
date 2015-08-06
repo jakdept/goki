@@ -209,6 +209,9 @@ func (pdata *PageMetadata) isTitle(input []byte) int {
 	}
 }
 
+// checks to see if the first lines of a []byte contain a markdown title
+// returns the number of characters to lose
+// 0 indicates failure (no characters to lose)
 func (pdata *PageMetadata) isOneLineTitle(input []byte) int {
 	var singleLine []byte
 	var endOfLine int
@@ -228,23 +231,28 @@ func (pdata *PageMetadata) isOneLineTitle(input []byte) int {
 	return 0
 }
 
+// checks to see if the first two lines of a []byte contain a markdown title
+// returns the number of characters to lose
+// 0 indicates failure (no characters to lose)
 func (pdata *PageMetadata) isTwoLineTitle(input []byte) int {
 	var firstNewLine, secondNewLine int
 
 	if firstNewLine = pdata.findNextLine(input); firstNewLine == -1 {
 		return 0
 	}
-	secondNewLine = pdata.findNextLine(input[firstNewLine+1:])
+	secondNewLine = pdata.findNextLine(input[firstNewLine+1:]) 
 	if secondNewLine == -1 {
-		secondNewLine = len(input)
+		secondNewLine = len(input) - 1
+	} else {
+		secondNewLine += firstNewLine + 1
 	}
 
-	secondLine := bytes.TrimSpace(input[firstNewLine+1:secondNewLine])
+	secondLine := bytes.TrimSpace(input[firstNewLine+1:secondNewLine+1])
 	if len(secondLine) >=2 {
 		secondLine = bytes.TrimLeft(secondLine, "=")
 		if len(secondLine) == 0{
 			pdata.Title = string(bytes.TrimSpace(input[:firstNewLine]))
-			return secondNewLine
+			return secondNewLine +1
 		}
 	}
 	return 0
