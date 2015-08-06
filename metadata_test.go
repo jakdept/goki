@@ -39,19 +39,18 @@ func TestIsTitle(t *testing.T) {
 		expected int
 		expectedTitle string
 		input string
-		errorMsg string
 	}{
-		{12, "title", "stuff\n#title", "basic one line title failed",},
-		{9, "title", "title\n===", "basic two line title failed"},
-		{0, "", "#title\n\n", "test failed"},
-		{6, "title", "\n#title\n\n", "test failed"},
-		{0, "", "\ntitle\n====\n\n", "test failed"},
+		{12, "title", "stuff\n#title",},
+		{9, "title", "title\n===",},
+		{7, "title", "#title\n\n",},
+		{7, "title", "\n#title\n\n",},
+		{1, "", "\ntitle\n====\n\n",},
 	}
 
 	for _, testSet := range isTitleTests {
 		pdata := new(PageMetadata)
-		assert.Equal(t, testSet.expected, pdata.isTitle([]byte(testSet.input)), "%q - wrong amount of characters discarded", testSet.errorMsg)
-		assert.Equal(t, testSet.expectedTitle, pdata.Title, "%q - title not detected", testSet.errorMsg)
+		assert.Equal(t, testSet.expected, pdata.isTitle([]byte(testSet.input)), "[%q] - wrong amount of characters discarded", testSet.input)
+		assert.Equal(t, testSet.expectedTitle, pdata.Title, "[%q] - title not detected", testSet.input)
 	}
 }
 

@@ -185,7 +185,7 @@ func (pdata *PageMetadata) isTitle(input []byte) int {
 	if nextLine == -1 {
 		return pdata.isOneLineTitle(input)
 	}
-	if rv := pdata.isOneLineTitle(input[:nextLine]); rv != 0 {
+	if rv := pdata.isOneLineTitle(input[:nextLine+1]); rv != 0 {
 		return rv
 	}
 	if nextLine >= len(input) {
@@ -197,15 +197,15 @@ func (pdata *PageMetadata) isTitle(input []byte) int {
 		lineAfter = len(input) - 1
 	}
 
-	if rv := pdata.isTwoLineTitle(input[:lineAfter]); rv != 0 {
+	if rv := pdata.isTwoLineTitle(input[:lineAfter+1]); rv != 0 {
 		return rv
 	}
 
 	pdata.processMetadata(input[:nextLine])
-	if rv := pdata.isOneLineTitle(input[nextLine+1:lineAfter]); rv != 0 {
-		return rv
+	if rv := pdata.isOneLineTitle(input[nextLine+1:lineAfter+1]); rv != 0 {
+		return rv + nextLine + 1
 	} else {
-		return nextLine
+		return nextLine + 1
 	}
 }
 
