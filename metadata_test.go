@@ -43,14 +43,40 @@ func TestIsTitle(t *testing.T) {
 	}{
 		{12, "title", "stuff\n#title", "basic one line title failed",},
 		{9, "title", "title\n===", "basic two line title failed"},
+		{0, "", "#title\n\n", "test failed"},
+		{6, "title", "\n#title\n\n", "test failed"},
+		{0, "", "\ntitle\n====\n\n", "test failed"},
 	}
 
 	for _, testSet := range isTitleTests {
 		pdata := new(PageMetadata)
-		assert.Equal(t, testSet.expected, pdata.isTitle([]byte(testSet.input)), "%s - title not detected", testSet.errorMsg)
+		assert.Equal(t, testSet.expected, pdata.isTitle([]byte(testSet.input)), "%s - wrong amount of characters discarded", testSet.errorMsg)
 		assert.Equal(t, testSet.expectedTitle, pdata.Title, "%s - title not detected", testSet.errorMsg)
 	}
 }
+
+func TestIsOneLineTitle(t *testing.T) {
+
+	var isTitleTests = []struct{
+		expected int
+		expectedTitle string
+		input string
+	}{
+		{7, "title", "#title\n",},
+		{6, "title", "#title",},
+		{0, "", "\n#title\n\n",},
+		{0, "", "title#\n",},
+		{9, "yuup", "# yuup #\nother junk that should not matter",},
+		{16, "space stays", "# space stays #\nother junk that should not matter",},
+	}
+
+	for _, testSet := range isTitleTests {
+		pdata := new(PageMetadata)
+		assert.Equal(t, testSet.expected, pdata.isOneLineTitle([]byte(testSet.input)), "input was [%s]\nwrong amount of characters to discard", testSet.input)
+		assert.Equal(t, testSet.expectedTitle, pdata.Title, "input was [%s]\ntitle not detected", testSet.input)
+	}
+}
+
 
 func TestFindNextLine(t *testing.T) {
 	var isTitleTests = []struct{
@@ -60,6 +86,7 @@ func TestFindNextLine(t *testing.T) {
 		{0, "\n#title\n",},
 		{5, "title\n===\n",},
 		{-1, "title===",},
+		{8, "title===\n",},
 	}
 	for _, testSet := range isTitleTests {
 		pdata := new(PageMetadata)

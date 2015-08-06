@@ -183,47 +183,71 @@ func (pdata *PageMetadata) LoadPage(pageName string) error {
 func (pdata *PageMetadata) isTitle(input []byte) int {
 	nextLine := pdata.findNextLine(input)
 	if nextLine == -1 {
+		return pdata.isOneLineTitle(input)
+	}
+	if rv := pdata.isOneLineTitle(input[:nextLine]); rv != 0 {
+		return rv
+	}
+	if nextLine >= len(input) {
 		return 0
 	}
-	var endOfInput int
-	if nextLine == len(input) - 1 {
-		endOfInput = nextLine
-	} else {
-		endOfInput = pdata.findNextLine(input[nextLine+1:])
-	}
-	if endOfInput == -1 {
-		endOfInput = len(input)
+
+	lineAfter := pdata.findNextLine(input[nextLine+1:])
+	if lineAfter == -1 {
+		lineAfter = len(input) - 1
 	}
 
-	log.Printf("first newline pos [%d] second newline pos [%d]", nextLine, endOfInput)
-
-	// handle dual line titals
-	nextLineContent := input[nextLine:endOfInput]
-	nextLineContent = bytes.TrimSpace(nextLineContent)
-	if len(nextLineContent) >=2 {
-		nextLineContent = bytes.TrimLeft(nextLineContent, "=")
-		if len(nextLineContent) == 0{
-			pdata.Title = string(bytes.TrimSpace(input[:nextLine]))
-			return endOfInput
-		}
+	if rv := pdata.isTwoLineTitle(input[:lineAfter]); rv != 0 {
+		return rv
 	}
 
-	// at this point we know it is not a two line title
 	pdata.processMetadata(input[:nextLine])
+	if rv := pdata.isOneLineTitle(input[nextLine+1:lineAfter]); rv != 0 {
+		return rv
+	} else {
+		return nextLine
+	}
+}
 
-	// reworked header stuff from blackfriday
-	for i:=nextLine+1; i < nextLine + 6 && i + 1 < len(input); i++{
-		if input[i] == '#' && input[i+1] != '#' {
-			newTitle := bytes.TrimSpace(input[i+1:endOfInput])
-			newTitle = bytes.TrimRight(newTitle, "#")
-			newTitle = bytes.TrimSpace(newTitle)
-			pdata.Title = string(newTitle)
-			return endOfInput
-		} else if input[i] != ' ' && input[i] != '\t' {
-			break
+func (pdata *PageMetadata) isOneLineTitle(input []byte) int {
+	var singleLine []byte
+	var endOfLine int
+
+	if endOfLine = pdata.findNextLine(input); endOfLine != -1 {
+		singleLine = bytes.TrimSpace(input[:endOfLine])
+	} else {
+		endOfLine = len(input) - 1
+		singleLine = bytes.TrimSpace(input)
+	}
+
+	if len(singleLine) > 2 && singleLine[0] == '#' && singleLine[1] != '#' {
+		singleLine = bytes.Trim(singleLine, "#")
+		pdata.Title = string(bytes.TrimSpace(singleLine))
+		return endOfLine + 1
+	} 
+	return 0
+}
+
+func (pdata *PageMetadata) isTwoLineTitle(input []byte) int {
+	var firstNewLine, secondNewLine int
+
+	if firstNewLine = pdata.findNextLine(input); firstNewLine == -1 {
+		return 0
+	}
+	secondNewLine = pdata.findNextLine(input[firstNewLine+1:])
+	if secondNewLine == -1 {
+		secondNewLine = len(input)
+	}
+
+	secondLine := bytes.TrimSpace(input[firstNewLine+1:secondNewLine])
+	if len(secondLine) >=2 {
+		secondLine = bytes.TrimLeft(secondLine, "=")
+		if len(secondLine) == 0{
+			pdata.Title = string(bytes.TrimSpace(input[:firstNewLine]))
+			return secondNewLine
 		}
 	}
-	return nextLine
+	return 0
 }
 
 // given input, find where the next line starts
