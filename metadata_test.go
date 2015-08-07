@@ -124,37 +124,32 @@ func TestFindNextLine(t *testing.T) {
 }
 
 func TestCheckMatch(t *testing.T) {
-	pdata := new(PageMetadata)
+	var checkMatchTests = []struct{
+		expected bool
+		expectedMatch string
+		input string
+	}{
+		{true, "a", "topic = a",},
+		{true, "b", "topic= b",},
+		{true, "c", "topic=c",},
+		{true, "c", "topic=c",},
+		{true, "d-e-f", "topic=d-e-f",},
+		{true, "g-h", "topic=g  h",},
+		{true, "i", "topic:i",},
+		{true, "j", "topic: j",},
+		{true, "k", "topic :k",},
+		{true, "l-m-no", "topic : l m   no",},
+	}
 
-	metadataLine := []byte("topic = a")
-	metadataMatch := []byte("topic")
-	pdata.checkMatch(metadataLine, metadataMatch, &pdata.Topics)
-	assert.True(t, pdata.Topics["a"], "should have been able to add element a to the thingy")
-
-	metadataLine = []byte("topic= b")
-	metadataMatch = []byte("topic")
-	pdata.checkMatch(metadataLine, metadataMatch, &pdata.Topics)
-	assert.True(t, pdata.Topics["b"], "should have been able to add element b to the thingy")
-
-	metadataLine = []byte("topic=c")
-	metadataMatch = []byte("topic")
-	pdata.checkMatch(metadataLine, metadataMatch, &pdata.Topics)
-	assert.True(t, pdata.Topics["c"], "should have been able to add element c to the thingy")
-
-	metadataLine = []byte("topic=d e f")
-	metadataMatch = []byte("topic")
-	pdata.checkMatch(metadataLine, metadataMatch, &pdata.Topics)
-	assert.True(t, pdata.Topics["d-e-f"], "should have been able to add element d e f to the thingy")
-
-	metadataLine = []byte("topic=g  h")
-	metadataMatch = []byte("topic")
-	pdata.checkMatch(metadataLine, metadataMatch, &pdata.Topics)
-	assert.True(t, pdata.Topics["g-h"], "should have been able to add element g-h to the thingy")
-
-	metadataLine = []byte("topic:i")
-	metadataMatch = []byte("topic")
-	pdata.checkMatch(metadataLine, metadataMatch, &pdata.Topics)
-	assert.True(t, pdata.Topics["i"], "should have been able to add element i to the thingy")
+	for _, testSet := range checkMatchTests {
+		pdata := new(PageMetadata)
+		pdata.checkMatch([]byte(testSet.input), []byte("topic"), &pdata.Topics)
+		if testSet.expected {
+			assert.True(t, pdata.Topics[testSet.expectedMatch], "[%q] - should have seen topic [%q]", testSet.input, testSet.expectedMatch)
+		} else {
+			assert.False(t, pdata.Topics[testSet.expectedMatch], "[%q] - should not have seen topic [%q]", testSet.input, testSet.expectedMatch)
+		}
+	}
 }
 
 func TestProcessMetadata(t *testing.T) {
