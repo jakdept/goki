@@ -38,19 +38,24 @@ func TestIsTitle(t *testing.T) {
 	var isTitleTests = []struct{
 		expected int
 		expectedTitle string
+		expectedTopic string
 		input string
 	}{
-		{12, "title", "stuff\n#title",},
-		{9, "title", "title\n===",},
-		{7, "title", "#title\n\n",},
-		{7, "title", "\n#title\n\n",},
-		{1, "", "\ntitle\n====\n\n",},
+		{12, "title", "", "stuff\n#title",},
+		{9, "title", "", "title\n===",},
+		{7, "title", "", "#title\n\n",},
+		{8, "title", "", "\n#title\n\n",},
+		{1, "", "", "\ntitle\n====\n\n",},
+		{23, "title", "pageTopic", "topic:pageTopic\n#title\n\n",},
+		{22, "title", "pageTopic", "topic:pageTopic\n#title",},
+		{16, "", "pageTopic", "topic:pageTopic\ntitle is too late\n====",},
 	}
 
 	for _, testSet := range isTitleTests {
 		pdata := new(PageMetadata)
 		assert.Equal(t, testSet.expected, pdata.isTitle([]byte(testSet.input)), "[%q] - wrong amount of characters discarded", testSet.input)
 		assert.Equal(t, testSet.expectedTitle, pdata.Title, "[%q] - title not detected", testSet.input)
+		assert.True(t, stringKeyExistsInMap(pdata.Topics, testSet.expectedTopic), "[%q] - metadata key not found", testSet.input)
 	}
 }
 
@@ -282,7 +287,7 @@ func TestListMeta(t *testing.T) {
 	filepath := writeFileForTest(t, "keyword : junk\ncategory = other junk\nsome other Page\n=========\nsome test content\nthere should be keywords")
 	pdata := new(PageMetadata)
 	err := pdata.LoadPage(filepath)
-	allTopics, allKeywords := pdata.ListMeta()
+	allTopics, allKeywords, _ := pdata.ListMeta()
 	assert.NoError(t, err)
 	assert.Equal(t, allTopics, []string{"other-junk"}, "I didn't get the right topic list")
 	assert.Equal(t, allKeywords, []string{"junk"}, "I didn't get the right keyword list")
@@ -291,7 +296,7 @@ func TestListMeta(t *testing.T) {
 	filepath = writeFileForTest(t, "some other Page\n=========\nsome test content\nthere should be keywords")
 	pdata = new(PageMetadata)
 	err = pdata.LoadPage(filepath)
-	allTopics, allKeywords = pdata.ListMeta()
+	allTopics, allKeywords, _ = pdata.ListMeta()
 	assert.NoError(t, err)
 	assert.Equal(t, []string(nil), allTopics, "I didn't get the empty topic list")
 	assert.Equal(t, []string(nil), allKeywords, "I didn't get the empty keyword list")

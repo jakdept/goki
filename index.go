@@ -218,7 +218,8 @@ func generateWikiFromFile(filePath string, config IndexSection) (*indexedPage, e
 		return nil, errors.New("Hit a restricted page - " + pdata.Title)
 	} else {
 		cleanedUpPage := cleanupMarkdown(pdata.Page)
-		topics, keywords := pdata.ListMeta()
+		// #TODO reimplement indexer to include authors
+		topics, keywords, _ := pdata.ListMeta()
 		rv := indexedPage{
 			Name:     pdata.Title,
 			Body:     string(cleanedUpPage),
