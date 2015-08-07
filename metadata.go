@@ -9,7 +9,7 @@ import (
 	"html/template"
 	"io"
 	"sort"
-	//"strings"
+	// "strings"
 	// "log"
 	"github.com/JackKnifed/blackfriday"
 	"os"
@@ -92,37 +92,42 @@ func (pdata *PageMetadata) processMetadata(line []byte) {
 
 func (pdata *PageMetadata) checkMatch(input []byte, looking []byte, tracker *map[string]bool) {
 	// trim off any blank spaces at the start of the line
-	value := bytes.TrimSpace(input)
+	input = bytes.ToLower(bytes.TrimSpace(input))
+	looking = bytes.ToLower(bytes.TrimSpace(looking))
 
-	// should be a substring match based on the start of the array
-	if len(input) > len(looking) && bytes.Equal(input[:len(looking)], looking) {
+	if ! bytes.HasPrefix(input, looking){ 
+		return
+	}
 
-		// trim off the target from the []byte
-		value = input[len(looking):]
+	input = bytes.TrimSpace(bytes.TrimPrefix(input, looking))
 
-		// trim spaces at the start and at the end
-		value = bytes.TrimSpace(value)
+	if input[0] != '=' && input[0] != ':' {
+		return
+	}
 
-		if value[0] == ':' || value[0] == '=' {
-			value = bytes.Trim(value, " \t\n=:")
+	input = bytes.TrimSpace(input[1:])
+
+	if input[0] == '=' || input[0] == ':' {
+		return
+	}
+
+	input = bytes.Replace(input, []byte("\t"), []byte(" "), -1)
+
+	parts := bytes.Split(input, []byte(" "))
+	var cleanParts [][]byte
+
+	for _, piece := range parts {
+		if len(piece) > 0 {
+			cleanParts = append(cleanParts[:], piece)
 		}
+	}
 
-		// replace any spaces in the middle with -'s
-		value = bytes.Replace(value, []byte(" "), []byte("-"), -1)
+	key := bytes.Join(cleanParts, []byte("-"))
 
-		// suppress any double dashes
-		for i := 0; i < len(value)-1; i++ {
-			if value[i] == '-' && value[i+1] == '-' {
-				value = append(value[:i], value[i+1:]...)
-			}
-		}
-
-		// now just add the value to the array that you're tracking
-		if *tracker != nil {
-			(*tracker)[string(value)] = true
-		} else {
-			*tracker = map[string]bool{string(value): true}
-		}
+	if *tracker != nil {
+		(*tracker)[string(key)] = true
+	} else {
+		*tracker = map[string]bool{string(key): true}
 	}
 }
 
