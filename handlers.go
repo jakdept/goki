@@ -161,21 +161,21 @@ func SearchHandler(responsePipe http.ResponseWriter, request *http.Request, serv
 	}
 }
 
-func FacetHandler(responsePipe http.ResponseWriter, request *http.Request, serverConfig ServerSection) {
+func FieldListHandler(responsePipe http.ResponseWriter, request *http.Request, serverConfig ServerSection) {
 
 	var err error
-	facetValue := ""
+	fieldValue := ""
 
 	urlWithoutPrefix := strings.TrimPrefix(request.URL.Path, serverConfig.Prefix)
 	urlWithoutPrefix = strings.TrimPrefix(urlWithoutPrefix, "/")
 	if len(urlWithoutPrefix) > 0 {
 		temp := strings.SplitN(urlWithoutPrefix, "/", 2)
 		if len(temp)> 0{
-			facetValue = temp[0]
+			fieldValue = temp[0]
 		}
 	}
 
-	if facetValue == "" {
+	if fieldValue == "" {
 		// this is where I would put my facet listing thing
 		// IF I HAD ONE
 		// #TODO ^^ that ^^
@@ -183,6 +183,18 @@ func FacetHandler(responsePipe http.ResponseWriter, request *http.Request, serve
 		http.Error(responsePipe, "Sorry - cannot list this yet", 404)
 		return
 	} 
+
+
+	query := bleve.NewTermQuery(fieldValue).SetField(serverConfig.Default)
+	searchRequest := bleve.NewSearchRequest(query)
+
+	// validate the query
+	err = searchRequest.Query.Validate()
+	if err != nil {
+		log.Printf("Error validating query: %v", err)
+		http.Error(responsePipe, err.Error(), 400)
+		return
+	}
 
 	// Open the index
 	index, err := bleve.Open(serverConfig.Path)
@@ -197,6 +209,19 @@ func FacetHandler(responsePipe http.ResponseWriter, request *http.Request, serve
 		log.Printf("problem opening index '%s' - %v", serverConfig.Path, err)
 		return
 	}
+
+	// execute the query
+	searchResponse, err := index.Search(searchRequest)
+	if err != nil {
+		log.Printf("Error executing query: %v", err)
+		http.Error(responsePipe, err.Error(), 400)
+		return
+	}
+
+	err = allTemplates.ExecuteTemplate(responsePipe, serverConfig.Template, searchResponse)
+	if err != nil {
+		http.Error(responsePipe, err.Error(), 500)
+	}
 }
 
 func MakeHandler(handlerConfig ServerSection) http.HandlerFunc {
@@ -208,6 +233,8 @@ func MakeHandler(handlerConfig ServerSection) http.HandlerFunc {
 			RawHandler(w, r, handlerConfig)
 		case "simpleSearch":
 			SearchHandler(w, r, handlerConfig)
+		case "fieldList" :
+			FieldListHandler(w, r, handlerConfig)
 		default:
 			log.Printf("Bad server type [%s]", handlerConfig.ServerType)
 		}
