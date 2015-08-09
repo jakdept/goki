@@ -31,8 +31,8 @@ func MarkdownHandler(responsePipe http.ResponseWriter, request *http.Request, se
 	requestPath := strings.TrimPrefix(request.URL.Path, serverConfig.Prefix)
 
 	// If the request is empty, set it to the default.
-	if request.URL.Path == "" || request.URL.Path == "/" {
-		request.URL.Path = serverConfig.Default
+	if requestPath == "" || requestPath == "/" {
+		requestPath = serverConfig.Default
 	}
 
 	// If the request doesn't end in .md, add that

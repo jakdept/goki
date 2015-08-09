@@ -276,13 +276,16 @@ func TestLoadPage(t *testing.T) {
 		assert.Equal(t, len(testSet.expectedAuthors), len(pdata.Authors), "input [%q] keyword count did not match", testSet.input)
 
 		for _, keyword := range testSet.expectedKeywords {
-			assert.True(t, pdata.Keywords[keyword], "input [%q] failed to find keyword [%q]", testSet.input, keyword)
+			assert.True(t, pdata.Keywords[keyword], "input [%q] failed to find keyword [%q]",
+				testSet.input, keyword)
 		}
 		for _, topic := range testSet.expectedTopics {
-			assert.True(t, pdata.Topics[topic], "input [%q] failed to find topic [%q]", testSet.input, topic)
+			assert.True(t, pdata.Topics[topic], "input [%q] failed to find topic [%q]",
+				testSet.input, topic)
 		}
 		for _, author := range testSet.expectedAuthors {
-			assert.True(t, pdata.Authors[author], "input [%q] failed to find author [%q]", testSet.input, author)
+			assert.True(t, pdata.Authors[author], "input [%q] failed to find author [%q]",
+				testSet.input, author)
 		}
 	}
 }
