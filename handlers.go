@@ -19,8 +19,9 @@ type Page struct {
 	Title    string
 	ToC      template.HTML
 	Body     template.HTML
-	Topics   template.HTML
-	Keywords template.HTML
+	Topics   []string
+	Keywords []string
+	Authors  []string
 }
 
 func MarkdownHandler(responsePipe http.ResponseWriter, request *http.Request, serverConfig ServerSection) {
@@ -57,12 +58,13 @@ func MarkdownHandler(responsePipe http.ResponseWriter, request *http.Request, se
 	// parse any markdown in the input
 	body := template.HTML(bodyParseMarkdown(pdata.Page))
 	toc := template.HTML(tocParseMarkdown(pdata.Page))
-	keywords := pdata.PrintKeywords()
-	topics := pdata.PrintTopics(serverConfig.TopicURL)
+	topics, keywords, authors := pdata.ListMeta()
+	// keywords := pdata.PrintKeywords()
+	// topics := pdata.PrintTopics(serverConfig.TopicURL)
 
 	// ##TODO## put this template right in the function call
 	// Then remove the Page Struct above
-	response := Page{Title: "", ToC: toc, Body: body, Keywords: keywords, Topics: topics}
+	response := Page{Title: "", ToC: toc, Body: body, Keywords: keywords, Topics: topics, Authors: authors}
 	err = allTemplates.ExecuteTemplate(responsePipe, serverConfig.Template, response)
 	if err != nil {
 		http.Error(responsePipe, err.Error(), 500)
