@@ -47,7 +47,7 @@ func MarkdownHandler(responsePipe http.ResponseWriter, request *http.Request, se
 		return
 	}
 
-	if pdata.MatchedTag(serverConfig.Restricted) {
+	if pdata.MatchedTopic(serverConfig.Restricted) {
 		log.Printf("request [ %s ] was against a page [ %s ] with a restricted tag", request.URL.Path, requestPath)
 		http.Error(responsePipe, "Restricted Page", http.StatusNotFound)
 		//http.Error(responsePipe, err.Error(), http.StatusForbidden)

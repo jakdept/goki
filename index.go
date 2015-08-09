@@ -214,7 +214,7 @@ func generateWikiFromFile(filePath string, config IndexSection) (*indexedPage, e
 		return nil, err
 	}
 
-	if pdata.MatchedTag(config.Restricted) == true {
+	if pdata.MatchedTopic(config.Restricted) == true {
 		return nil, errors.New("Hit a restricted page - " + pdata.Title)
 	} else {
 		cleanedUpPage := cleanupMarkdown(pdata.Page)

@@ -173,7 +173,7 @@ func (pdata *PageMetadata) LoadPage(pageName string) error {
 			return pdata.readRestOfPage(reader)
 		} else {
 			var newLine []byte
-			lineBuffer = lineBuffer[bytesDone+1:]
+			lineBuffer = lineBuffer[bytesDone:]
 			newLine, err = reader.ReadBytes('\n')
 			lineBuffer = append(lineBuffer, newLine...)
 		}
@@ -186,7 +186,8 @@ func (pdata *PageMetadata) LoadPage(pageName string) error {
 // return the amount of characters processed if not a new line
 // if title line, return total length of the input
 func (pdata *PageMetadata) isTitle(input []byte) int {
-	nextLine := pdata.findNextLine(input)
+	newline := []byte("\n")
+	nextLine := bytes.Index(input, newline)
 	if nextLine == -1 {
 		return pdata.isOneLineTitle(input)
 	}
@@ -197,7 +198,7 @@ func (pdata *PageMetadata) isTitle(input []byte) int {
 		return 0
 	}
 
-	lineAfter := pdata.findNextLine(input[nextLine+1:])
+	lineAfter := bytes.Index(input[nextLine+1:], newline)
 	if lineAfter == -1 {
 		lineAfter = len(input) - 1
 	} else {
@@ -280,7 +281,7 @@ func (pdata *PageMetadata) findNextLine(input []byte) int {
 
 // runs through all restricted tags, and looks for a match
 // if matched, returns true, otherwise false
-func (pdata *PageMetadata) MatchedTag(checkTags []string) bool {
+func (pdata *PageMetadata) MatchedTopic(checkTags []string) bool {
 	for _, tag := range checkTags {
 		if pdata.Topics[tag] == true {
 			return true
