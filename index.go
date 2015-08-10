@@ -25,7 +25,7 @@ type WatcherMeta struct {
 var openWatchers []WatcherMeta
 
 type indexedPage struct {
-	Name     string    `json:"name"`
+	Title     string    `json:"title"`
 	Filepath string    `json:"path"`
 	Body     string    `json:"body"`
 	Topics   string    `json:"topic"`
@@ -88,10 +88,12 @@ func buildIndexMapping(config IndexSection) *bleve.IndexMapping {
 
 	// map out the wiki page
 	wikiMapping := bleve.NewDocumentMapping()
+	wikiMapping.AddFieldMappingsAt("title", enTextFieldMapping)
 	wikiMapping.AddFieldMappingsAt("path", enTextFieldMapping)
 	wikiMapping.AddFieldMappingsAt("body", enTextFieldMapping)
 	wikiMapping.AddFieldMappingsAt("topic", enTextFieldMapping)
 	wikiMapping.AddFieldMappingsAt("keyword", enTextFieldMapping)
+	wikiMapping.AddFieldMappingsAt("author", enTextFieldMapping)
 	wikiMapping.AddFieldMappingsAt("modified", dateTimeMapping)
 
 	// add the wiki page mapping to a new index
@@ -180,13 +182,13 @@ func startWatching(filePath string, requestPath string, config IndexSection) Wat
 // Update the entry in the index to the output from a given file
 func processUpdate(filePath string, relativePath string, config IndexSection) {
 	log.Printf("updated: %s as %s", filePath, relativePath)
-	wiki, err := generateWikiFromFile(filePath, config)
+	page, err := generateWikiFromFile(filePath, config)
 	if err != nil {
 		log.Print(err)
 	} else {
 		index, _ := bleve.Open(config.IndexPath)
 		defer index.Close()
-		index.Index(relativePath, wiki)
+		index.Index(relativePath, page)
 	}
 }
 
@@ -220,13 +222,14 @@ func generateWikiFromFile(filePath string, config IndexSection) (*indexedPage, e
 	} else {
 		cleanedUpPage := cleanupMarkdown(pdata.Page)
 		// #TODO reimplement indexer to include authors
-		topics, keywords, _ := pdata.ListMeta()
+		topics, keywords, authors := pdata.ListMeta()
 		rv := indexedPage{
-			Name:     pdata.Title,
+			Title:     pdata.Title,
 			Body:     string(cleanedUpPage),
 			Filepath: filePath,
 			Topics:   strings.Join(topics, " "),
 			Keywords: strings.Join(keywords, " "),
+			Authors: strings.Join(authors, " "),
 			Modified: pdata.FileStats.ModTime(),
 		}
 		return &rv, nil
