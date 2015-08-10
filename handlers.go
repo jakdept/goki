@@ -64,7 +64,7 @@ func MarkdownHandler(responsePipe http.ResponseWriter, request *http.Request, se
 
 	// ##TODO## put this template right in the function call
 	// Then remove the Page Struct above
-	response := Page{Title: "", ToC: toc, Body: body, Keywords: keywords, Topics: topics, Authors: authors}
+	response := Page{Title: pdata.Title, ToC: toc, Body: body, Keywords: keywords, Topics: topics, Authors: authors}
 	err = allTemplates.ExecuteTemplate(responsePipe, serverConfig.Template, response)
 	if err != nil {
 		http.Error(responsePipe, err.Error(), 500)
@@ -125,6 +125,8 @@ func SearchHandler(responsePipe http.ResponseWriter, request *http.Request, serv
 
 	query := bleve.NewQueryStringQuery(queryArgs["s"][0])
 	searchRequest := bleve.NewSearchRequest(query)
+	searchRequest.Fields = []string{"path", "title", "topic", "author", "modified"}
+	searchRequest.Size = 1000
 
 	// validate the query
 	err = searchRequest.Query.Validate()
@@ -187,6 +189,9 @@ func FieldListHandler(responsePipe http.ResponseWriter, request *http.Request, s
 
 	query := bleve.NewTermQuery(fieldValue).SetField(serverConfig.Default)
 	searchRequest := bleve.NewSearchRequest(query)
+
+	searchRequest.Fields = []string{"path", "title", "topic", "author", "modified"}
+	searchRequest.Size = 1000
 
 	// validate the query
 	err = searchRequest.Query.Validate()
