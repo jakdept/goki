@@ -26,7 +26,7 @@ var openWatchers []WatcherMeta
 
 type indexedPage struct {
 	Title     string    `json:"title"`
-	Filepath string    `json:"path"`
+	URIPath string    `json:"path"`
 	Body     string    `json:"body"`
 	Topics   string    `json:"topic"`
 	Keywords string    `json:"keyword"`
@@ -105,7 +105,7 @@ func buildIndexMapping(config IndexSection) *bleve.IndexMapping {
 }
 
 // walks a given path, and runs processUpdate on each File
-func walkForIndexing(path string, origPath string, requestPath string, config IndexSection) {
+func walkForIndexing(path, filePath, requestPath string, config IndexSection) {
 	dirEntries, err := ioutil.ReadDir(path)
 	if err != nil {
 		log.Fatal(err)
@@ -113,9 +113,9 @@ func walkForIndexing(path string, origPath string, requestPath string, config In
 	for _, dirEntry := range dirEntries {
 		dirEntryPath := path + string(os.PathSeparator) + dirEntry.Name()
 		if dirEntry.IsDir() {
-			walkForIndexing(dirEntryPath, origPath, requestPath, config)
+			walkForIndexing(dirEntryPath, filePath, requestPath, config)
 		} else if strings.HasSuffix(dirEntry.Name(), config.WatchExtension) {
-			processUpdate(dirEntryPath, requestPath + dirEntry.Name(), config)
+			processUpdate(dirEntryPath, getURIPrefix(dirEntryPath, filePath, requestPath), config)
 		}
 	}
 }
@@ -180,59 +180,64 @@ func startWatching(filePath string, requestPath string, config IndexSection) Wat
 }
 
 // Update the entry in the index to the output from a given file
-func processUpdate(filePath string, relativePath string, config IndexSection) {
-	log.Printf("updated: %s as %s", filePath, relativePath)
-	page, err := generateWikiFromFile(filePath, config)
+func processUpdate(filePath, uriPath string, config IndexSection) {
+	page, err := generateWikiFromFile(filePath, uriPath, config.Restricted)
 	if err != nil {
 		log.Print(err)
 	} else {
 		index, _ := bleve.Open(config.IndexPath)
 		defer index.Close()
-		index.Index(relativePath, page)
+		index.Index(uriPath, page)
+		log.Printf("updated: %s as %s", filePath, uriPath)
 	}
 }
 
 // Deletes a given path from the wiki entry
-func processDelete(filePath string, relativePath string, config IndexSection) {
+func processDelete(filePath, uriPath string, config IndexSection) {
 	log.Printf("delete: %s", filePath)
 	index, _ := bleve.Open(config.IndexPath)
 	defer index.Close()
-	err := index.Delete(relativePath)
+	err := index.Delete(uriPath)
 	if err != nil {
 		log.Print(err)
 	}
 }
 
-func cleanupMarkdown(input []byte) []byte {
-	extensions := 0
+func cleanupMarkdown(input []byte) string {
+	extensions := 0 | blackfriday.EXTENSION_ALERT_BOXES
 	renderer := blackfridaytext.TextRenderer()
 	output := blackfriday.Markdown(input, renderer, extensions)
-	return output
+	return string(output)
 }
 
-func generateWikiFromFile(filePath string, config IndexSection) (*indexedPage, error) {
+func generateWikiFromFile(filePath, uriPath string, restrictedTopics []string) (*indexedPage, error) {
 	pdata := new(PageMetadata)
 	err := pdata.LoadPage(filePath)
 	if err != nil {
 		return nil, err
 	}
 
-	if pdata.MatchedTopic(config.Restricted) == true {
+	if pdata.MatchedTopic(restrictedTopics) == true {
 		return nil, errors.New("Hit a restricted page - " + pdata.Title)
-	} else {
-		cleanedUpPage := cleanupMarkdown(pdata.Page)
-		// #TODO reimplement indexer to include authors
-		topics, keywords, authors := pdata.ListMeta()
-		rv := indexedPage{
-			Title:     pdata.Title,
-			Body:     string(cleanedUpPage),
-			Filepath: filePath,
-			Topics:   strings.Join(topics, " "),
-			Keywords: strings.Join(keywords, " "),
-			Authors: strings.Join(authors, " "),
-			Modified: pdata.FileStats.ModTime(),
-		}
-		return &rv, nil
+	} 
+
+	topics, keywords, authors := pdata.ListMeta()
+	rv := indexedPage{
+		Title:     pdata.Title,
+		Body:     cleanupMarkdown(pdata.Page),
+		URIPath: uriPath
+		Topics:   strings.Join(topics, " "),
+		Keywords: strings.Join(keywords, " "),
+		Authors: strings.Join(authors, " "),
+		Modified: pdata.FileStats.ModTime(),
 	}
+
+	return &rv, nil
+}
+
+func getURIPath(filePath, filePrefix, uriPrefix string) string {
+	uriPath := strings.TrimPrefix(filePath, config.Path)
+	uriPath = config.Prefix + uriPath
+	return uriPath
 }
 
