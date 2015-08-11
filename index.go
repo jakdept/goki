@@ -15,14 +15,7 @@ import (
 	"gopkg.in/fsnotify.v1"
 )
 
-type WatcherMeta struct {
-	watcher fsnotify.Watcher
-	filePath string
-	requestPath string
-	indexPath string
-}
-
-var openWatchers []WatcherMeta
+var openWatchers []fsnotify.Watcher
 
 type indexedPage struct {
 	Title     string    `json:"title"`
@@ -63,8 +56,6 @@ func EnableIndex(config IndexSection) bool {
 	for dir, path := range config.WatchDirs {
 		// dir = strings.TrimSuffix(dir, "/")
 		log.Printf("Watching and walking dir %s index %s", dir, config.IndexPath)
-		watcher := startWatching(dir, path, config)
-		openWatchers = append(openWatchers, watcher)
 		walkForIndexing(dir, dir, path, config)
 	}
 	return true
@@ -73,7 +64,7 @@ func EnableIndex(config IndexSection) bool {
 func DisableAllIndexes() {
 	log.Println("Stopping all watchers")
 	for _, watcher := range openWatchers {
-		watcher.watcher.Close()
+		watcher.Close()
 	}
 }
 
@@ -106,6 +97,7 @@ func buildIndexMapping(config IndexSection) *bleve.IndexMapping {
 
 // walks a given path, and runs processUpdate on each File
 func walkForIndexing(path, filePath, requestPath string, config IndexSection) {
+	watcherLoop(path, filePath, requestPath, config)
 	dirEntries, err := ioutil.ReadDir(path)
 	if err != nil {
 		log.Fatal(err)
@@ -115,68 +107,58 @@ func walkForIndexing(path, filePath, requestPath string, config IndexSection) {
 		if dirEntry.IsDir() {
 			walkForIndexing(dirEntryPath, filePath, requestPath, config)
 		} else if strings.HasSuffix(dirEntry.Name(), config.WatchExtension) {
-			processUpdate(dirEntryPath, getURIPrefix(dirEntryPath, filePath, requestPath), config)
+			processUpdate(dirEntryPath, getURIPath(dirEntryPath, filePath, requestPath), config)
 		}
 	}
 }
 
-// watches a given filepath for an index for changes
-func startWatching(filePath string, requestPath string, config IndexSection) WatcherMeta {
+// given all of the inputs, watches afor new/deleted files in that directory
+// adds/removes/udpates index as necessary
+func watcherLoop(watchPath, filePrefix, uriPrefix string, config IndexSection) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	activeWatcher := new(WatcherMeta)
-	activeWatcher.watcher = *watcher
-	activeWatcher.filePath = filePath
-	activeWatcher.requestPath = requestPath
-	activeWatcher.indexPath = config.IndexPath
-
-	// maybe rework the index so the Watcher is inside the index? idk
-
-	// #TODO this is where my loop isn't stopping
-	// #TODO keep rewriting this function (and below) to work differently - per path
-	// start a go routine to process events
-	go func() {
-		idleTimer := time.NewTimer(10 * time.Second)
-		queuedEvents := make([]fsnotify.Event, 0)
-		for {
-			select {
-			case ev := <-activeWatcher.watcher.Events:
-				queuedEvents = append(queuedEvents, ev)
-				idleTimer.Reset(10 * time.Second)
-			case err := <-watcher.Errors:
-				log.Fatal(err)
-			case <-idleTimer.C:
-				for _, ev := range queuedEvents {
-					if strings.HasSuffix(ev.Name, config.WatchExtension) {
-						switch ev.Op {
-						case fsnotify.Remove, fsnotify.Rename:
-							// delete the filePath
-							processDelete(activeWatcher.filePath + ev.Name, activeWatcher.requestPath + ev.Name, config)
-						case fsnotify.Create, fsnotify.Write:
-							// update the filePath
-							processUpdate(activeWatcher.filePath + ev.Name, activeWatcher.requestPath + ev.Name, config)
-						default:
-							// ignore
-						}
-					}
-				}
-				queuedEvents = make([]fsnotify.Event, 0)
-				idleTimer.Reset(10 * time.Second)
-			}
-		}
-	}()
-
-	// now actually watch the filePath requested
-	err = watcher.Add(filePath)
+	err = watcher.Add(watchPath)
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Printf("watching '%s' for changes...", filePath)
 
-	return *activeWatcher
+	idleTimer := time.NewTimer(10 * time.Second)
+	queuedEvents := make([]fsnotify.Event, 0)
+
+	openWatchers = append(openWatchers, *watcher)
+
+	log.Printf("watching '%s' for changes...", watchPath)
+
+	for {
+		select {
+		case event := <-watcher.Events:
+			queuedEvents = append(queuedEvents, event)
+			idleTimer.Reset(10 * time.Second)
+		case err := <-watcher.Errors:
+			log.Fatal(err)
+		case <-idleTimer.C:
+			for _, event := range queuedEvents {
+				if strings.HasSuffix(event.Name, config.WatchExtension) {
+					switch event.Op {
+					case fsnotify.Remove, fsnotify.Rename:
+						// delete the filePath
+						processDelete(getURIPath(watchPath + event.Name, filePrefix, uriPrefix),
+							config.IndexName)
+					case fsnotify.Create, fsnotify.Write:
+						// update the filePath
+						processUpdate(watchPath + event.Name,
+							getURIPath(watchPath + event.Name, filePrefix, uriPrefix), config)
+					default:
+						// ignore
+					}
+				}
+			}
+			queuedEvents = make([]fsnotify.Event, 0)
+			idleTimer.Reset(10 * time.Second)
+		}
+	}
 }
 
 // Update the entry in the index to the output from a given file
@@ -193,9 +175,9 @@ func processUpdate(filePath, uriPath string, config IndexSection) {
 }
 
 // Deletes a given path from the wiki entry
-func processDelete(filePath, uriPath string, config IndexSection) {
-	log.Printf("delete: %s", filePath)
-	index, _ := bleve.Open(config.IndexPath)
+func processDelete(uriPath, indexPath string) {
+	log.Printf("delete: %s", uriPath)
+	index, _ := bleve.Open(indexPath)
 	defer index.Close()
 	err := index.Delete(uriPath)
 	if err != nil {
@@ -225,7 +207,7 @@ func generateWikiFromFile(filePath, uriPath string, restrictedTopics []string) (
 	rv := indexedPage{
 		Title:     pdata.Title,
 		Body:     cleanupMarkdown(pdata.Page),
-		URIPath: uriPath
+		URIPath: uriPath,
 		Topics:   strings.Join(topics, " "),
 		Keywords: strings.Join(keywords, " "),
 		Authors: strings.Join(authors, " "),
@@ -235,9 +217,9 @@ func generateWikiFromFile(filePath, uriPath string, restrictedTopics []string) (
 	return &rv, nil
 }
 
-func getURIPath(filePath, filePrefix, uriPrefix string) string {
-	uriPath := strings.TrimPrefix(filePath, config.Path)
-	uriPath = config.Prefix + uriPath
-	return uriPath
+func getURIPath(filePath, filePrefix, uriPrefix string) (uriPath string) {
+	uriPath = strings.TrimPrefix(filePath, filePrefix)
+	uriPath = uriPrefix + uriPath
+	return
 }
 
