@@ -223,3 +223,25 @@ func getURIPath(filePath, filePrefix, uriPrefix string) (uriPath string) {
 	return
 }
 
+// given a path to an index, and a name of field to check
+// lists all unique values for that field in index
+func ListField(indexPath, field string) ([]string, error) {
+	facet := NewFacetRequest(field, 1)
+	query := NewMatchAllQuery()
+	if err := query.Validate(); err != nil {
+		return err
+	}
+	searchRequest := NewSearchRequest(query)
+	searchRequest.AddFacet("allValues", facet)
+	searchResults, err := example_index.Search(searchRequest)
+	if err != nil {
+		return err
+	}
+
+	results := new([]string)
+	for _, oneTerm := range searchResults.Facets["allValues"].Terms {
+		results = append(results, oneTerm.Term)
+	}
+
+	return results, nil
+}
