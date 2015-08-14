@@ -181,8 +181,11 @@ func FieldListHandler(responsePipe http.ResponseWriter, request *http.Request, s
 		// this is where I would put my facet listing thing
 		// IF I HAD ONE
 		// #TODO ^^ that ^^
-		log.Printf("facet listing requested, not implemented", err)
-		http.Error(responsePipe, "Sorry - cannot list this yet", 404)
+		fields := ListField(serverConfig.Path, serverConfig.Default)
+		err = allTemplates.ExecuteTemplate(responsePipe, serverConfig.Template, fields)
+		if err != nil {
+			http.Error(responsePipe, err.Error(), 500)
+		}
 		return
 	} 
 
