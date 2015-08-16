@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"fmt"
 	"path"
 	"strings"
 	"time"
@@ -226,19 +227,29 @@ func getURIPath(filePath, filePrefix, uriPrefix string) (uriPath string) {
 // given a path to an index, and a name of field to check
 // lists all unique values for that field in index
 func ListField(indexPath, field string) ([]string, error) {
-	facet := NewFacetRequest(field, 1)
-	query := NewMatchAllQuery()
+	facet := bleve.NewFacetRequest(field, 1)
+	query := bleve.NewMatchAllQuery()
 	if err := query.Validate(); err != nil {
-		return err
+		return nil, err
 	}
-	searchRequest := NewSearchRequest(query)
+	searchRequest := bleve.NewSearchRequest(query)
 	searchRequest.AddFacet("allValues", facet)
-	searchResults, err := example_index.Search(searchRequest)
-	if err != nil {
-		return err
+
+	// Open the index
+	index, err := bleve.Open(indexPath)
+	defer index.Close()
+	if index == nil  {
+		return nil, fmt.Errorf("no such index [%s]", indexPath)
+	} else if err != nil {
+		return nil, fmt.Errorf("problem opening index [%s] - %s", indexPath, err)
 	}
 
-	results := new([]string)
+	searchResults, err := index.Search(searchRequest)
+	if err != nil {
+		return nil, err
+	}
+
+	results := *new([]string)
 	for _, oneTerm := range searchResults.Facets["allValues"].Terms {
 		results = append(results, oneTerm.Term)
 	}

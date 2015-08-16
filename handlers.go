@@ -123,10 +123,110 @@ func SearchHandler(responsePipe http.ResponseWriter, request *http.Request, serv
 		return
 	}
 
+	page := 0
+	if _, ok := queryArgs["page"]; ok {
+		page = int(queryArgs["page"][0])
+	}
+
+	pageSize := 50
+	if _, ok := queryArgs["pagesize"]; ok {
+		pageSize = int(queryArgs["pagesize"][0])
+	}
+
 	query := bleve.NewQueryStringQuery(queryArgs["s"][0])
 	searchRequest := bleve.NewSearchRequest(query)
 	searchRequest.Fields = []string{"path", "title", "topic", "author", "modified"}
-	searchRequest.Size = 1000
+	searchRequest.Size = pageSize
+	searchRequest.From = pageSize * page
+
+	// validate the query
+	err = searchRequest.Query.Validate()
+	if err != nil {
+		log.Printf("Error validating query: %v", err)
+		http.Error(responsePipe, err.Error(), 400)
+		return
+	}
+
+	index, err := bleve.Open(serverConfig.Path)
+	defer index.Close()
+	if index == nil {
+		log.Printf("no such index '%s'", serverConfig.Default)
+		http.Error(responsePipe, err.Error(), 404)
+		return
+	} else if err != nil {
+		log.Printf("no such index '%s'", serverConfig.Path)
+		http.Error(responsePipe, err.Error(), 404)
+		log.Printf("problem opening index '%s' - %v", serverConfig.Path, err)
+		return
+	}
+
+	// execute the query
+	searchResponse, err := index.Search(searchRequest)
+	if err != nil {
+		log.Printf("Error executing query: %v", err)
+		http.Error(responsePipe, err.Error(), 400)
+		return
+	}
+
+	err = allTemplates.ExecuteTemplate(responsePipe, serverConfig.Template, searchResponse)
+	if err != nil {
+		http.Error(responsePipe, err.Error(), 500)
+	}
+}
+
+func FuzzySearch(responsePipe http.ResponseWriter, request *http.Request, serverConfig ServerSection) {
+
+	var err error
+	var ok bool
+
+	request.URL.Path = strings.TrimPrefix(request.URL.Path, serverConfig.Prefix)
+
+	queryArgs := request.URL.Query()
+
+	if _, ok = queryArgs["s"]; !ok {
+		err = allTemplates.ExecuteTemplate(responsePipe, serverConfig.Template, make([]bleve.SearchResult, 0))
+		if err != nil {
+			http.Error(responsePipe, err.Error(), 500)
+		}
+		return
+	}
+
+	// start with a string query
+	var multiQuery []bleve.Query
+	multiQuery[0] = bleve.NewFuzzyQuery(queryArgs["s"][0])
+
+	// add in the required topics to the query
+	var topics []bleve.Query
+	for _, topic := range queryArgs["topic"] {
+		topics = append(topics, bleve.NewTermQuery(topic))
+	}
+	if len(topics) > 0 {
+		multiQuery = append(multiQuery, bleve.NewDisjunctionQuery(topics))
+	}
+
+	var authors []bleve.Query
+	for _, author := range queryArgs["author"] {
+		authors = append(authors, bleve.NewTermQuery(author))
+	}
+	if len(authors) > 0 {
+		multiQuery = append(multiQuery, bleve.NewDisjunctionQuery(authors))
+	}
+
+	page := 0
+	if _, ok := queryArgs["page"]; ok {
+		page = int(queryArgs["page"][0])
+	}
+
+	pageSize := 50
+	if _, ok := queryArgs["pagesize"]; ok {
+		pageSize = int(queryArgs["pagesize"][0])
+	}
+
+	query := bleve.NewConjunctionQuery(multiQuery)
+	searchRequest := bleve.NewSearchRequest(query)
+	searchRequest.Fields = []string{"path", "title", "topic", "author", "modified"}
+	searchRequest.Size = pageSize
+	searchRequest.From = pageSize * page
 
 	// validate the query
 	err = searchRequest.Query.Validate()
@@ -181,7 +281,10 @@ func FieldListHandler(responsePipe http.ResponseWriter, request *http.Request, s
 		// this is where I would put my facet listing thing
 		// IF I HAD ONE
 		// #TODO ^^ that ^^
-		fields := ListField(serverConfig.Path, serverConfig.Default)
+		fields, err := ListField(serverConfig.Path, serverConfig.Default)
+		if err != nil {
+			http.Error(responsePipe, err.Error(), 500)
+		}
 		err = allTemplates.ExecuteTemplate(responsePipe, serverConfig.Template, fields)
 		if err != nil {
 			http.Error(responsePipe, err.Error(), 500)
