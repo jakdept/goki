@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"strconv"
 
 	"github.com/blevesearch/bleve"
 	// bleveHttp "github.com/blevesearch/bleve/http"
@@ -125,12 +126,20 @@ func SearchHandler(responsePipe http.ResponseWriter, request *http.Request, serv
 
 	page := 0
 	if _, ok := queryArgs["page"]; ok {
-		page = int(queryArgs["page"][0])
+		page, err = strconv.Atoi(queryArgs["page"][0])
+		if err != nil {
+			log.Printf("invalid page detected [%s] - %s", queryArgs["page"][0], err)
+			page = 0
+		}
 	}
 
 	pageSize := 50
 	if _, ok := queryArgs["pagesize"]; ok {
-		pageSize = int(queryArgs["pagesize"][0])
+		pageSize, err = strconv.Atoi(queryArgs["pagesize"][0])
+		if err != nil {
+			log.Printf("invalid pageSize detected [%s] - %s", queryArgs["pagesize"][0], err)
+			pageSize = 0
+		}
 	}
 
 	query := bleve.NewQueryStringQuery(queryArgs["s"][0])
@@ -214,12 +223,20 @@ func FuzzySearch(responsePipe http.ResponseWriter, request *http.Request, server
 
 	page := 0
 	if _, ok := queryArgs["page"]; ok {
-		page = int(queryArgs["page"][0])
+		page, err = strconv.Atoi(queryArgs["page"][0])
+		if err != nil {
+			log.Printf("invalid page detected [%s] - %s", queryArgs["page"][0], err)
+			page = 0
+		}
 	}
 
 	pageSize := 50
 	if _, ok := queryArgs["pagesize"]; ok {
-		pageSize = int(queryArgs["pagesize"][0])
+		pageSize, err = strconv.Atoi(queryArgs["pagesize"][0])
+		if err != nil {
+			log.Printf("invalid pageSize detected [%s] - %s", queryArgs["pagesize"][0], err)
+			pageSize = 0
+		}
 	}
 
 	query := bleve.NewConjunctionQuery(multiQuery)
