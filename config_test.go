@@ -5,7 +5,7 @@ import (
 	"os"
 	"path"
 	"testing"
-	"time"
+	// "time"
 )
 
 func TestSimpleConfig(t *testing.T) {
