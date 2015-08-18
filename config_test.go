@@ -5,9 +5,10 @@ import (
 	"os"
 	"path"
 	"testing"
+	"time"
 )
 
-func TestDefaultJsonConfig(t *testing.T) {
+func TestSimpleConfig(t *testing.T) {
 
 	defaultConfig := `{
   "Global": {
@@ -58,59 +59,52 @@ func TestDefaultJsonConfig(t *testing.T) {
 }
 
 /*
-func TestSimpleJsonConfig(t *testing.T) {
-
-	defaultConfig := `{
-  "Global": {
-    "Port": "8080",
-    "Hostname": "wiki.hostbaitor.com"
-  },
-  "Mainserver": {
-      "Path": "/var/www/wiki/",
-      "Prefix": "/",
-      "DefaultPage": "index",
-      "ServerType": "markdown",
-      "Restricted": [
-        "internal",
-        "handbook"
-      ]
-    },
-  "Server": [
-  ]
-}`
-
-	filepath := path.Join(os.TempDir(), "simpleini.txt")
-	f, err := os.Create(filepath)
-	if err != nil {
-		t.Fatal(err)
+func TestGetConfig(t *testing.T) {
+	// directly put a config in the spot
+	staticConfig = &Config{
+		Global:GlobalSection{
+			Port: "8080",
+			Hostname: "localhost",
+			TemplateDir: "/templates/",
+		},
+		Redirects: []RedirectSection{
+			RedirectSection{
+				Requested: "source",
+				Target: "dest",
+				Code: 302,
+			},
+		},
+		Server: []ServerSection{
+			ServerSection{
+				ServerType: "markdown",
+				Prefix: "/",
+				Path: "/var/www/",
+				Default: "readme",
+				Template: "wiki.html",
+				Restricted: []string{},
+			},
+		},
+		Indexes: IndexSection{
+			WatchDirs: map[string]string{
+				"/var/www/": "/",
+			},
+			WatchExtension: ".md",
+			IndexPath: "/index/",
+			IndexType: "en",
+			IndexName: "wiki",
+			Restricted: []string{},
+		},
 	}
-	defer os.Remove(filepath)
-	if _, err := f.WriteString(defaultConfig); err != nil {
-		t.Fatal(err)
-	}
-	if err := f.Close(); err != nil {
-		t.Fatal(err)
-	}
 
-	success := LoadConfig(filepath)
+	configLock.RWLoci()
+	var config *Config
+	go func{
+	config = GetConfig()
+	}()
 
-	assert.True(t, success, "Default configuration should load without error.")
-
-	config := GetConfig()
-
-	//assert.Nil(t, config, "Config file could not be accessed")
-
-	assert.Equal(t, config.Global.Port, "8080", "read Port value incorrectly")
-	assert.Equal(t, config.Global.Hostname, "wiki.hostbaitor.com", "read Hostname value incorrectly")
-
-	assert.Equal(t, config.Mainserver.Path, "/var/www/wiki/", "read Path value incorrectly")
-	assert.Equal(t, config.Mainserver.Prefix, "/", "read Prefix value incorrectly")
-	assert.Equal(t, config.Mainserver.DefaultPage, "index", "read Default page value incorrectly")
-	assert.Equal(t, config.Mainserver.ServerType, "markdown", "read ServerType value incorrectly")
-
-	assert.Equal(t, config.Mainserver.Restricted[0], "internal", "read first Restricted value incorrectly")
-	assert.Equal(t, config.Mainserver.Restricted[1], "handbook", "read first Restricted value incorrectly")
-
-	assert.Equal(t, len(config.Mainserver.Restricted), 2, "incorrect number of restricted elements") // putting this comment here so sublime stops freaking out about a line with one character
+	assert.Nil(t, config, "Config should current be blocked and shoult not have loaded.")
+	configLock.RWUnlock()
+	time.Sleep(10)
+	assert.NotNil(t, config, "Config should have loaded - is no longer blocked.")
 }
 */

@@ -19,7 +19,6 @@ type Config struct {
 	Redirects   []RedirectSection
 	Server      []ServerSection
 	Indexes     []IndexSection
-	TemplateDir string
 }
 
 //var templates = template.Must(template.ParseFiles("/var/wiki-backend/wiki.html"))
@@ -107,12 +106,12 @@ func CleanConfig(config *Config) {
 	for _, indexSection := range config.Indexes {
 		for origDirPath, origWebPath := range indexSection.WatchDirs {
 			newDirPath := strings.TrimSuffix(origDirPath, string(os.PathSeparator))
-			newWebPath := strings.TrimSuffix(origWebPath, string(os.PathSeparator))
+			newWebPath := strings.TrimSuffix(origWebPath, "/")
 			if newDirPath == "" {
 				newDirPath = string(os.PathSeparator)
 			}
 			if newWebPath == "" {
-				newWebPath = string(os.PathSeparator)
+				newWebPath = "/"
 			}
 			if (newDirPath != origDirPath || newWebPath != origWebPath) {
 				delete(indexSection.WatchDirs, origDirPath)
@@ -124,8 +123,8 @@ func CleanConfig(config *Config) {
 		if serverSection.Path != string(os.PathSeparator) {
 			serverSection.Path = strings.TrimSuffix(serverSection.Path, string(os.PathSeparator))
 		}
-		if serverSection.Prefix != string(os.PathSeparator) {
-			serverSection.Prefix = strings.TrimSuffix(serverSection.Prefix, string(os.PathSeparator))
+		if serverSection.Prefix != "/" {
+			serverSection.Prefix = strings.TrimSuffix(serverSection.Prefix, "/")
 		}
 	}
 }
@@ -138,8 +137,6 @@ func RenderTemplate(responsePipe http.ResponseWriter, templateName string, data 
 }
 
 func ParseTemplates(globalConfig GlobalSection) {
-	var err error
-	//newTemplate := template.New("newTemplate")
 	newTemplate, err := template.ParseGlob(globalConfig.TemplateDir + "*")
 	if err != nil {
 		log.Println("Found an invalid template, abandoning updating templates")
