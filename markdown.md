@@ -3,7 +3,7 @@ topic : touchup
 Markdown Formatting
 ===================
 
-Note: If you are already familiar with Markdown, you might want to look at [the source of this wiki](link to source), which is itself created with MDwiki.
+Note: If you are already familiar with Markdown, you might want to look at [the source of this wiki](link to source), which is itself rendered with Gnosis.
 
 Markdown
 --------
@@ -28,7 +28,7 @@ SubHeading
 
 ```
 
-MDwiki uses the [GitHub flavored markdown dialect](link to github), so you can i.e. add tables:
+Gnosis uses the [GitHub flavored markdown dialect](https://help.github.com/articles/github-flavored-markdown/), so you can i.e. add tables:
 
     | Tables        | Are           | Cool  |
     | ------------- |:-------------:| -----:|
@@ -42,7 +42,7 @@ MDwiki uses the [GitHub flavored markdown dialect](link to github), so you can i
 | col 2 is      | centered      |   $12 |
 | zebra stripes | are neat      |    $1 |
 
-See the [GitHub Markdown Cheatsheet][link to github] for detailed GFM reference.
+See the [GitHub Markdown Cheatsheet](https://help.github.com/articles/github-flavored-markdown/) for detailed GFM reference. This is built upon the [original markdwon standard](http://daringfireball.net/projects/markdown/syntax).
 
 Page Title
 ----------
