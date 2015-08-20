@@ -1,0 +1,28 @@
+<h1 id="this-is-a-page">This is a page</h1>
+
+<ul>
+<li>It has some lists</li>
+<li>Lots of lists</li>
+<li>Even more</li>
+</ul>
+
+<h2 id="numbered-list">Numbered List</h2>
+
+<blockquote class='warning-box'>
+<p>Be careful, there is a numbered list ahead</p>
+</blockquote>
+
+<ol>
+<li>It has a numbered list</li>
+<li>There are a few items</li>
+<li>On the numbered list</li>
+<li>Of note, this list</li>
+<li>Is out of order</li>
+</ol>
+
+<h2 id="this-section-has-quotes">This section has quotes</h2>
+
+<blockquote>
+<p>This is a very important quote. It is insightful
+and helpful. - anonymous</p>
+</blockquote>

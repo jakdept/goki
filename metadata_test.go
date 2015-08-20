@@ -6,6 +6,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"os"
 	"path"
+	"path/filepath"
+	"strings"
+	"bytes"
 	"testing"
 	"io/ioutil"
 )
@@ -364,6 +367,102 @@ func TestListMeta(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, []string(nil), allTopics, "I didn't get the empty topic list")
 	assert.Equal(t, []string(nil), allKeywords, "I didn't get the empty keyword list")
+}
+
+func TestBodyParseMarkdown(t *testing.T) {
+	var input string
+	defer func() {
+		if err := recover(); err != nil {
+			t.Errorf("\npanic while processing [%#v]\n", input)
+		}
+	}()
+
+	inputFiles, err := filepath.Glob("./testfiles/*.md")
+	if err != nil {
+		t.Errorf("Failed to find all markdown files - %s", err)
+		return
+	}
+
+	for _, input = range inputFiles {
+		output := strings.TrimSuffix(input, ".md") + ".bodyParseMarkdown"
+
+		rawData, err := ioutil.ReadFile(input)
+		if err != nil {
+			t.Errorf("failed to open input file [%q] - %s", input, err)
+			return
+		}
+
+		expectedData, err := ioutil.ReadFile(output)
+		if err != nil {
+			t.Errorf("failed to open input file [%q] - %s", output, err)
+			return
+		}
+
+		cleanData := bodyParseMarkdown(rawData)
+		if bytes.Compare(cleanData, expectedData) != 0 {
+			f, err := ioutil.TempFile("", "bodyParseMarkdown.")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := f.Write(cleanData); err != nil {
+				t.Fatal(err)
+			}
+			t.Errorf("Input [%q] gave incorrect output against [%q]\nwrote to [%q]",
+				input, output, f.Name())
+			t.Errorf("actual [%q]\nexpected [%q]", cleanData, expectedData)
+			if err := f.Close(); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+}
+
+func TestTocParseMarkdown(t *testing.T) {
+	var input string
+	defer func() {
+		if err := recover(); err != nil {
+			t.Errorf("\npanic while processing [%#v]\n", input)
+		}
+	}()
+
+	inputFiles, err := filepath.Glob("./testfiles/*.md")
+	if err != nil {
+		t.Errorf("Failed to find all markdown files - %s", err)
+		return
+	}
+
+	for _, input = range inputFiles {
+		output := strings.TrimSuffix(input, ".md") + ".tocParseMarkdown"
+
+		rawData, err := ioutil.ReadFile(input)
+		if err != nil {
+			t.Errorf("failed to open input file [%q] - %s", input, err)
+			return
+		}
+
+		expectedData, err := ioutil.ReadFile(output)
+		if err != nil {
+			t.Errorf("failed to open input file [%q] - %s", output, err)
+			return
+		}
+
+		cleanData := tocParseMarkdown(rawData)
+		if bytes.Compare(cleanData, expectedData) != 0 {
+			f, err := ioutil.TempFile("", "tocParseMarkdown.")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := f.Write(cleanData); err != nil {
+				t.Fatal(err)
+			}
+			t.Errorf("Input [%q] gave incorrect output against [%q]\nwrote to [%q]",
+				input, output, f.Name())
+			t.Errorf("actual [%q]\nexpected [%q]", cleanData, expectedData)
+			if err := f.Close(); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
 }
 
 /*
