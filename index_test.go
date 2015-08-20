@@ -3,10 +3,14 @@ package gnosis
 
 import (
 	"github.com/stretchr/testify/assert"
-	// "os"
-	// "path"
+	"os"
+	// "bytes"
+	"path"
+	"path/filepath"
 	"testing"
 	// "time"
+	"io/ioutil"
+	"strings"
 )
 
 func TestGetURIPath(t *testing.T) {
@@ -29,6 +33,52 @@ func TestGetURIPath(t *testing.T) {
 	}
 }
 
-// func TestCleanupMarkdown(t *testing.T) {
-	
-// }
+func TestCleanupMarkdownFiles(t *testing.T) {
+	var input string
+	defer func() {
+		if err := recover(); err != nil {
+			t.Errorf("\npanic while processing [%#v]\n", input)
+		}
+	}()
+
+	inputFiles, err := filepath.Glob("./testfiles/*.md")
+	if err != nil {
+		t.Errorf("Failed to find all markdown files - %s", err)
+		return
+	}
+
+	for _, input = range inputFiles {
+		output := filepath.Join(strings.TrimSuffix(input, ".md"), ".cleanupMarkdown")
+
+		rawData, err := ioutil.ReadFile(input)
+		if err != nil {
+			t.Errorf("Failed to open input file [%q] - %s", input, err)
+			return
+		}
+
+		expectedData, err := ioutil.ReadFile(output)
+		if err != nil {
+			t.Errorf("Failed to open input file [%q] - %s", output, err)
+			return
+		}
+
+		cleanData := cleanupMarkdown(rawData)
+		if cleanData != string(expectedData) {
+			splitPath:= strings.Split(output, string(os.PathSeparator))
+			filepath := path.Join(os.TempDir(), splitPath[len(splitPath)-1])
+			f, err := os.Create(filepath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := f.WriteString(cleanData); err != nil {
+				t.Fatal(err)
+			}
+			if err := f.Close(); err != nil {
+				t.Fatal(err)
+			}
+			t.Errorf("Input [%q] gave incorrect output against [%q] - wrote to [%q]",
+				input, output, filepath)
+		}
+	}
+
+}

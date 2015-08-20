@@ -5,7 +5,7 @@ import (
 	"os"
 	"path"
 	"testing"
-	// "time"
+	"time"
 )
 
 func TestSimpleConfig(t *testing.T) {
@@ -58,7 +58,6 @@ func TestSimpleConfig(t *testing.T) {
 	assert.Equal(t, len(config.Server[0].Restricted), 0, "incorrect number of restricted elements") // putting this comment here so sublime stops freaking out about a line with one character
 }
 
-/*
 func TestGetConfig(t *testing.T) {
 	// directly put a config in the spot
 	staticConfig = &Config{
@@ -84,27 +83,30 @@ func TestGetConfig(t *testing.T) {
 				Restricted: []string{},
 			},
 		},
-		Indexes: IndexSection{
-			WatchDirs: map[string]string{
-				"/var/www/": "/",
+		Indexes: []IndexSection{
+			IndexSection{
+				WatchDirs: map[string]string{
+					"/var/www/": "/",
+				},
+				WatchExtension: ".md",
+				IndexPath: "/index/",
+				IndexType: "en",
+				IndexName: "wiki",
+				Restricted: []string{},
 			},
-			WatchExtension: ".md",
-			IndexPath: "/index/",
-			IndexType: "en",
-			IndexName: "wiki",
-			Restricted: []string{},
 		},
 	}
 
-	configLock.RWLoci()
+	configLock.Lock()
+
 	var config *Config
-	go func{
-	config = GetConfig()
+
+	go func() {
+		config = GetConfig()
 	}()
 
 	assert.Nil(t, config, "Config should current be blocked and shoult not have loaded.")
-	configLock.RWUnlock()
+	configLock.Unlock()
 	time.Sleep(10)
 	assert.NotNil(t, config, "Config should have loaded - is no longer blocked.")
 }
-*/
