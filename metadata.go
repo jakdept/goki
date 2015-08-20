@@ -61,22 +61,6 @@ const (
 		blackfriday.EXTENSION_TITLEBLOCK
 )
 
-// takes a single line of input and determines if it's a top level markdown header
-func (pdata *PageMetadata) lineIsTitle(line []byte) bool {
-	// trim any whitespace from the start and the end of the line
-	line = bytes.TrimSpace(line)
-
-	// run through all of the ='s - make sure they're all correct
-	for i := 0; i < len(line); i++ {
-		if line[i] != '=' {
-			return false
-		}
-	}
-
-	// if you got here, it should all be legit
-	return true
-}
-
 // take a given line, and check it against every possible type of tag
 func (pdata *PageMetadata) processMetadata(line []byte) {
 	pdata.checkMatch(line, []byte("tag"), &pdata.Topics)
