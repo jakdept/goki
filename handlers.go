@@ -60,8 +60,6 @@ func MarkdownHandler(responsePipe http.ResponseWriter, request *http.Request, se
 	body := template.HTML(bodyParseMarkdown(pdata.Page))
 	toc := template.HTML(tocParseMarkdown(pdata.Page))
 	topics, keywords, authors := pdata.ListMeta()
-	// keywords := pdata.PrintKeywords()
-	// topics := pdata.PrintTopics(serverConfig.TopicURL)
 
 	// ##TODO## put this template right in the function call
 	// Then remove the Page Struct above

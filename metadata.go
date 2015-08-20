@@ -6,7 +6,7 @@ import (
 	"bufio"
 	"bytes"
 	"errors"
-	"html/template"
+	// "html/template"
 	"io"
 	"sort"
 	// "strings"
@@ -307,37 +307,6 @@ func (pdata *PageMetadata) ListMeta() (topics []string, keywords []string, autho
 	}
 	sort.Strings(topics)
 	return
-}
-
-// return the bytes to display the tags on the Metadata
-// takes the prefix for the tags
-func (pdata *PageMetadata) PrintTopics(tagPrefix string) template.HTML {
-	response := []byte{}
-	openingTag := []byte("<div class='tag'>")
-	closingTag := []byte("</div>")
-	allTopics, _, _ := pdata.ListMeta()
-	for _, oneTopic := range allTopics {
-		response = bytes.Join([][]byte{openingTag, []byte(tagPrefix), []byte(oneTopic), closingTag}, []byte(""))
-	}
-	return template.HTML(response)
-}
-
-// returns the bytes to add the keywrods to the html output
-func (pdata *PageMetadata) PrintKeywords() template.HTML {
-	if len(pdata.Keywords) > 0 {
-		var response []byte
-		_, allKeywords, _ := pdata.ListMeta()
-		for _, oneKeyword := range allKeywords {
-			response = bytes.Join([][]byte{response, []byte(oneKeyword)}, []byte(","))
-		}
-		// clean up the end of the string and add the ending tag
-		response = bytes.Trim(response, ",")
-		response = bytes.Join([][]byte{[]byte("<meta name='keywords' content='"), response, []byte("'>")}, []byte(""))
-
-		return template.HTML(response)
-	} else {
-		return template.HTML("")
-	}
 }
 
 func bodyParseMarkdown(input []byte) []byte {
