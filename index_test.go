@@ -8,6 +8,7 @@ import (
 	"path"
 	"path/filepath"
 	"testing"
+	"log"
 	// "time"
 	"io/ioutil"
 	"strings"
@@ -48,7 +49,7 @@ func TestCleanupMarkdownFiles(t *testing.T) {
 	}
 
 	for _, input = range inputFiles {
-		output := filepath.Join(strings.TrimSuffix(input, ".md"), ".cleanupMarkdown")
+		output := strings.TrimSuffix(input, ".md") + ".cleanupMarkdown"
 
 		rawData, err := ioutil.ReadFile(input)
 		if err != nil {
