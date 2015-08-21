@@ -137,12 +137,10 @@ func RenderTemplate(responsePipe http.ResponseWriter, templateName string,
 	return allTemplates.ExecuteTemplate(responsePipe, templateName, data)
 }
 
-func ParseTemplates(globalConfig GlobalSection) {
+func ParseTemplates(globalConfig GlobalSection) error {
 	newTemplate, err := template.ParseGlob(globalConfig.TemplateDir + "*")
 	if err != nil {
-		log.Println("Found an invalid template, abandoning updating templates")
-		log.Println(err)
-		return
+		return err
 	}
 
 	loadedTemplates := newTemplate.Templates()
@@ -150,10 +148,8 @@ func ParseTemplates(globalConfig GlobalSection) {
 		log.Printf("Loaded template %s ", individualTemplate.Name())
 	}
 
-	if err == nil {
-		templateLock.Lock()
-		defer templateLock.Unlock()
-		allTemplates = newTemplate
-	}
-
+	templateLock.Lock()
+	defer templateLock.Unlock()
+	allTemplates = newTemplate
+	return nil
 }

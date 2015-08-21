@@ -5,8 +5,11 @@ import (
 	"os"
 	"path"
 	"testing"
+	"path/filepath"
+	"errors"
 	// "bytes"
 	// "io"
+	"strings"
 	// "net/http"
 	"time"
 	"html/template"
@@ -157,5 +160,32 @@ func TestRenderTemplate(t *testing.T) {
 					actualContent.Body.String())
 			}
 		}
+	}
+}
+
+func TestParseTemplates(t *testing.T) {
+	ParseTemplates(GlobalSection{TemplateDir: "./templates/*"})
+
+	files, err := filepath.Glob("./templates/*")
+	if err != nil {
+		t.Error(err)
+	}
+	if len(files) != len(allTemplates.Templates()) {
+		t.Error("There are unparsed templates in the direcory")
+	}
+
+	for _, templateName := range files {
+		if allTemplates.Lookup(strings.TrimPrefix(templateName, "templates/")) == nil {
+			t.Errorf("Could not find template %s", templateName)
+		}
+	}
+}
+
+func TestBadParseTemplates(t *testing.T) {
+	err := ParseTemplates(GlobalSection{TemplateDir: "./notadir/*"})
+	expectedError := errors.New("html/template: pattern matches no files: `./notadir/**`")
+	if err != expectedError {
+		t.Errorf("got the wrong error response\nexpecting [%q]\n      got [%q]",
+			err, expectedError)
 	}
 }
