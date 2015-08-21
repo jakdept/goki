@@ -44,13 +44,15 @@ func MarkdownHandler(responsePipe http.ResponseWriter, request *http.Request, se
 	pdata := new(PageMetadata)
 	err = pdata.LoadPage(serverConfig.Path + requestPath)
 	if err != nil {
-		log.Printf("request [ %s ] points to an bad file target [ %s ] sent to server %s", request.URL.Path, requestPath, serverConfig.Prefix)
+		log.Printf("request [ %s ] points to an bad file target [ %s ] sent to server %s",
+			request.URL.Path, requestPath, serverConfig.Prefix)
 		http.Error(responsePipe, "Page not Found", http.StatusNotFound)
 		return
 	}
 
 	if pdata.MatchedTopic(serverConfig.Restricted) {
-		log.Printf("request [ %s ] was against a page [ %s ] with a restricted tag", request.URL.Path, requestPath)
+		log.Printf("request [ %s ] was against a page [ %s ] with a restricted tag",
+			request.URL.Path, requestPath)
 		http.Error(responsePipe, "Restricted Page", http.StatusNotFound)
 		//http.Error(responsePipe, err.Error(), http.StatusForbidden)
 		return
@@ -93,10 +95,13 @@ func RawHandler(responsePipe http.ResponseWriter, request *http.Request, serverC
 	// Load the file - 404 on failure.
 	contents, err := ioutil.ReadFile(serverConfig.Path + request.URL.Path)
 	if err != nil {
-		log.Printf("request [ %s ] points to an bad file target sent to server %s - %v", request.URL.Path, serverConfig.Prefix, err)
+		log.Printf("request [ %s ] points to an bad file target sent to server %s - %v",
+			request.URL.Path, serverConfig.Prefix, err)
 		http.Error(responsePipe, err.Error(), 404)
 		return
 	}
+
+	responsePipe.Header().Set("Content-Type", http.DetectContentType(contents))
 
 	_, err = responsePipe.Write([]byte(contents))
 	if err != nil {

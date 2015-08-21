@@ -5,7 +5,12 @@ import (
 	"os"
 	"path"
 	"testing"
+	// "bytes"
+	// "io"
+	// "net/http"
 	"time"
+	"html/template"
+	"net/http/httptest"
 )
 
 func TestSimpleConfig(t *testing.T) {
@@ -109,4 +114,48 @@ func TestGetConfig(t *testing.T) {
 	configLock.Unlock()
 	time.Sleep(10)
 	assert.NotNil(t, config, "Config should have loaded - is no longer blocked.")
+}
+
+func TestRenderTemplate(t *testing.T) {
+	var tests = []struct{
+		input string
+		template string
+		expected string
+	}{
+		{"abc", "debug.raw", "abc"},
+	}
+
+
+	var err error
+	allTemplates, err = template.ParseGlob("./templates/*")
+	if err != nil {
+		t.Errorf("failed to parse templates - %s", err)
+	}
+
+	for _, testSet := range tests {
+		templateLock.Lock()
+
+		actualContent := httptest.NewRecorder()
+
+		if allTemplates.Lookup(testSet.template) == nil {
+			t.Errorf("did not find template [%q] that is needed", testSet.template)
+		}
+
+		go func() {
+			err = RenderTemplate(actualContent, testSet.template, testSet.input)
+		}()
+
+		if actualContent.Body.String() != "" {
+			t.Errorf("response buffer should currently be empty, but it contains [%q]",
+				actualContent.Body.String())
+		} else {
+			templateLock.Unlock()
+			time.Sleep(10)
+
+			if string(actualContent.Body.String()) != testSet.expected {
+				t.Errorf("\nexpected [%q]\ngot      [%q]", testSet.expected,
+					actualContent.Body.String())
+			}
+		}
+	}
 }

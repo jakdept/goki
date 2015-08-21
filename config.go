@@ -129,11 +129,12 @@ func CleanConfig(config *Config) {
 	}
 }
 
-func RenderTemplate(responsePipe http.ResponseWriter, templateName string, data interface{}) error {
-		templateLock.RLock()
-		defer templateLock.RUnlock()
+func RenderTemplate(responsePipe http.ResponseWriter, templateName string,
+	data interface{}) (error) {
+	templateLock.RLock()
+	defer templateLock.RUnlock()
 
-		return allTemplates.ExecuteTemplate(responsePipe, templateName, data)
+	return allTemplates.ExecuteTemplate(responsePipe, templateName, data)
 }
 
 func ParseTemplates(globalConfig GlobalSection) {
