@@ -11,7 +11,7 @@ An example config section for this handler:
 {
 	"ServerType": "raw",
 	"Prefix": "/raw/",
-	"Path": "wiki/",
+	"Path": "/var/www/wiki/",
 	"Default": "readme.md",
 	"Restricted": [
 		"ini",
