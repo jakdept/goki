@@ -305,7 +305,8 @@ func FieldListHandler(responsePipe http.ResponseWriter, request *http.Request, s
 		if err != nil {
 			http.Error(responsePipe, err.Error(), 500)
 		}
-		err = allTemplates.ExecuteTemplate(responsePipe, serverConfig.Template, fields)
+		err = allTemplates.ExecuteTemplate(responsePipe, serverConfig.Template,
+			struct{allFields []string}{allFields: fields})
 		if err != nil {
 			http.Error(responsePipe, err.Error(), 500)
 		}
@@ -357,14 +358,14 @@ func FieldListHandler(responsePipe http.ResponseWriter, request *http.Request, s
 
 func MakeHandler(handlerConfig ServerSection) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		switch handlerConfig.ServerType {
+		switch strings.ToLower(handlerConfig.ServerType) {
 		case "markdown":
 			MarkdownHandler(w, r, handlerConfig)
 		case "raw":
 			RawHandler(w, r, handlerConfig)
-		case "simpleSearch":
+		case "simplesearch":
 			SearchHandler(w, r, handlerConfig)
-		case "fieldList" :
+		case "fieldlist" :
 			FieldListHandler(w, r, handlerConfig)
 		default:
 			log.Printf("Bad server type [%s]", handlerConfig.ServerType)
