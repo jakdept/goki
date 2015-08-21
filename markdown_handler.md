@@ -12,7 +12,7 @@ An example config section for this handler:
   "ServerType": "markdown",
   "Prefix": "/",
   "Path": "/var/www/wiki/",
-  "Default": "README",
+  "Default": "readme",
   "Extension": ".md"
   "Restricted": [
     "internal",
