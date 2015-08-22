@@ -85,7 +85,7 @@ Output Data
 
 The data output to the template is one of two structures - depending on the request.
 
-If the request did not feature a field value - it's a list of the values of the field - the dataset will be
+If the request did not feature a field value - it's a list of the values of the field - the dataset will be structured:
 
 ```go
 struct {
@@ -94,3 +94,50 @@ struct {
 ```
 
 * `allFields` is an array of strings that simply contains each field
+
+- - - - - - - - - - - - -
+
+If the request did contain a field value - it's a list of all documents within that field - the dataset will be structured as:
+
+```go
+struct {
+    Request  *SearchRequest
+    Hits     search.DocumentMatchCollection
+    Total    uint64
+    MaxScore float64
+    Took     time.Duration
+    Facets   search.FacetResults
+}
+```
+
+Where:
+
+* `Request` is the request that was sent - likely not needed
+* `Hits` is an array of hits - structure explained later
+* `Total` is the number of results that were matched
+* `MaxScore` is the highest result match score
+* `Took` is the amount of time the search took
+* `Facets` is not used
+
+The Hits are each structured as:
+
+```go
+type DocumentMatchCollection []struct {
+    ID        string
+    Score     float64
+    Expl      *Explanation
+    Locations FieldTermLocationMap
+    Fragments FieldFragmentMap
+    Fields    map[string]interface{}
+}
+```
+
+Of note in here:
+
+* `Score` contains the score of the match - the higher the closer the match to the search query
+* `Fields` is a map containing the fields:
+	* `path` - `string` - URI path pointing to the page
+	* `title` - `string` - the page title
+	* `topic` - `string` - all of the topics for the page, seperated by spaces
+	* `author` - `string` - all of the authors for the page, seperated by spaces
+	* `modified` - `time.Time` - timestamp of the last modification for that page

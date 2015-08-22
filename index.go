@@ -227,13 +227,14 @@ func getURIPath(filePath, filePrefix, uriPrefix string) (uriPath string) {
 // given a path to an index, and a name of field to check
 // lists all unique values for that field in index
 func ListField(indexPath, field string) ([]string, error) {
-	facet := bleve.NewFacetRequest(field, 1)
 	query := bleve.NewMatchAllQuery()
+	searchRequest := bleve.NewSearchRequest(query)
+
+	facet := bleve.NewFacetRequest(field, 1)
+	searchRequest.AddFacet("allValues", facet)
 	if err := query.Validate(); err != nil {
 		return nil, err
 	}
-	searchRequest := bleve.NewSearchRequest(query)
-	searchRequest.AddFacet("allValues", facet)
 
 	// Open the index
 	index, err := bleve.Open(indexPath)
