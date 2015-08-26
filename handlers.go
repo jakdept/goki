@@ -180,7 +180,13 @@ func SearchHandler(responsePipe http.ResponseWriter, request *http.Request, serv
 		return
 	}
 
-	err = allTemplates.ExecuteTemplate(responsePipe, serverConfig.Template, searchResponse)
+	templateData, err := CreateResponseData(searchResponse, page * pageSize)
+	if err != nil {
+		log.Printf("Error translating query results: %v", err)
+		http.Error(responsePipe, err.Error(), 500)
+	}
+
+	err = allTemplates.ExecuteTemplate(responsePipe, serverConfig.Template, templateData)
 	if err != nil {
 		http.Error(responsePipe, err.Error(), 500)
 	}
@@ -277,7 +283,13 @@ func FuzzySearch(responsePipe http.ResponseWriter, request *http.Request, server
 		return
 	}
 
-	err = allTemplates.ExecuteTemplate(responsePipe, serverConfig.Template, searchResponse)
+	templateData, err := CreateResponseData(searchResponse, page * pageSize)
+	if err != nil {
+		log.Printf("Error translating query results: %v", err)
+		http.Error(responsePipe, err.Error(), 500)
+	}
+
+	err = allTemplates.ExecuteTemplate(responsePipe, serverConfig.Template, templateData)
 	if err != nil {
 		http.Error(responsePipe, err.Error(), 500)
 	}
@@ -310,50 +322,72 @@ func FieldListHandler(responsePipe http.ResponseWriter, request *http.Request, s
 		if err != nil {
 			http.Error(responsePipe, err.Error(), 500)
 		}
-		return
+		} else {
+			page := 0
+			if _, ok := queryArgs["page"]; ok {
+				page, err = strconv.Atoi(queryArgs["page"][0])
+				if err != nil {
+					log.Printf("invalid page detected [%s] - %s", queryArgs["page"][0], err)
+					page = 0
+				}
+			}
+
+			pageSize := 50
+			if _, ok := queryArgs["pagesize"]; ok {
+				pageSize, err = strconv.Atoi(queryArgs["pagesize"][0])
+				if err != nil {
+					log.Printf("invalid pageSize detected [%s] - %s", queryArgs["pagesize"][0], err)
+					pageSize = 0
+				}
+			}
+
+		query := bleve.NewTermQuery(fieldValue).SetField(serverConfig.Default)
+		searchRequest := bleve.NewSearchRequest(query)
+
+		searchRequest.Fields = []string{"path", "title", "topic", "author", "modified"}
+		searchRequest.Size = 1000
+
+		// validate the query
+		err = searchRequest.Query.Validate()
+		if err != nil {
+			log.Printf("Error validating query: %v", err)
+			http.Error(responsePipe, err.Error(), 400)
+			return
+		}
+
+		// Open the index
+		index, err := bleve.Open(serverConfig.Path)
+		defer index.Close()
+		if index == nil {
+			log.Printf("no such index '%s'", serverConfig.Default)
+			http.Error(responsePipe, err.Error(), 404)
+			return
+		} else if err != nil {
+			log.Printf("no such index '%s'", serverConfig.Path)
+			http.Error(responsePipe, err.Error(), 404)
+			log.Printf("problem opening index '%s' - %v", serverConfig.Path, err)
+			return
+		}
+
+		// execute the query
+		searchResponse, err := index.Search(searchRequest)
+		if err != nil {
+			log.Printf("Error executing query: %v", err)
+			http.Error(responsePipe, err.Error(), 400)
+			return
+		}
+
+		templateData, err := CreateResponseData(searchResponse, page * pageSize)
+		if err != nil {
+			log.Printf("Error translating query results: %v", err)
+			http.Error(responsePipe, err.Error(), 500)
+		}
+
+		err = allTemplates.ExecuteTemplate(responsePipe, serverConfig.Template, templateData)
+		if err != nil {
+			http.Error(responsePipe, err.Error(), 500)
+		}
 	} 
-
-
-	query := bleve.NewTermQuery(fieldValue).SetField(serverConfig.Default)
-	searchRequest := bleve.NewSearchRequest(query)
-
-	searchRequest.Fields = []string{"path", "title", "topic", "author", "modified"}
-	searchRequest.Size = 1000
-
-	// validate the query
-	err = searchRequest.Query.Validate()
-	if err != nil {
-		log.Printf("Error validating query: %v", err)
-		http.Error(responsePipe, err.Error(), 400)
-		return
-	}
-
-	// Open the index
-	index, err := bleve.Open(serverConfig.Path)
-	defer index.Close()
-	if index == nil {
-		log.Printf("no such index '%s'", serverConfig.Default)
-		http.Error(responsePipe, err.Error(), 404)
-		return
-	} else if err != nil {
-		log.Printf("no such index '%s'", serverConfig.Path)
-		http.Error(responsePipe, err.Error(), 404)
-		log.Printf("problem opening index '%s' - %v", serverConfig.Path, err)
-		return
-	}
-
-	// execute the query
-	searchResponse, err := index.Search(searchRequest)
-	if err != nil {
-		log.Printf("Error executing query: %v", err)
-		http.Error(responsePipe, err.Error(), 400)
-		return
-	}
-
-	err = allTemplates.ExecuteTemplate(responsePipe, serverConfig.Template, searchResponse)
-	if err != nil {
-		http.Error(responsePipe, err.Error(), 500)
-	}
 }
 
 func MakeHandler(handlerConfig ServerSection) http.HandlerFunc {

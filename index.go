@@ -257,3 +257,73 @@ func ListField(indexPath, field string) ([]string, error) {
 
 	return results, nil
 }
+
+type SearchResponse struct {
+	TotalHits int
+	MaxScore float64
+	PageOffset int
+	SearchTime time.Duration
+	Results []SearchResponseResult
+}
+
+type SearchResponseResult struct {
+	Title string
+	URIPath string
+	Score float64
+	Topics []string
+	Keywords []string
+	Authors []string
+	Body string
+}
+
+func CreateResponseData(rawResults bleve.SearchResult, pageOffset int) (SearchResponse, error) {
+	var response SearchResponse
+
+	response.TotalHits = int(rawResults.Total)
+	response.MaxScore = float64(rawResults.MaxScore)
+	response.PageOffset = pageOffset
+	response.SearchTime = rawResults.Took
+	for _, hit := range rawResults.Hits {
+		var newHit SearchResponseResult
+
+		newHit.Score = hit.Score
+
+		if str, ok := hit.Fields["title"].(string); ok {
+			newHit.Title = str
+		} else {
+			return response, errors.New("returned title was not a string")
+		}
+
+		if str, ok := hit.Fields["path"].(string); ok{
+			newHit.URIPath = str
+		} else {
+			return response, errors.New("returned path was not a string")
+		}
+
+		if str, ok := hit.Fields["body"].(string); ok {
+			newHit.Body = str
+		} else {
+			return response, errors.New("returned body was not a string")
+		}
+
+		if str, ok := hit.Fields["topic"].(string); ok {
+			newHit.Topics = strings.Split(str, " ")
+		} else {
+			return response, errors.New("returned topics were not a string")
+		}
+
+		if str, ok := hit.Fields["keyword"].(string); ok {
+			newHit.Keywords = strings.Split(str, " ")
+		} else {
+			return response, errors.New("returned keywords were not a string")
+		}
+
+		if str, ok :=hit.Fields["author"].(string); ok {
+			newHit.Authors = strings.Split(str, " ")
+		}
+
+		response.Results = append(response.Results, newHit)
+	}
+
+	return response, nil
+}

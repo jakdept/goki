@@ -100,44 +100,44 @@ struct {
 If the request did contain a field value - it's a list of all documents within that field - the dataset will be structured as:
 
 ```go
-struct {
-    Request  *SearchRequest
-    Hits     search.DocumentMatchCollection
-    Total    uint64
-    MaxScore float64
-    Took     time.Duration
-    Facets   search.FacetResults
+type SearchResponse struct {
+	TotalHits int
+	MaxScore float64
+	PageOffset int
+	SearchTime time.Duration
+	Results []SearchResponseResult
 }
 ```
 
 Where:
 
-* `Request` is the request that was sent - likely not needed
-* `Hits` is an array of hits - structure explained later
-* `Total` is the number of results that were matched
+* `TotalHits` is the number of results that were matched
 * `MaxScore` is the highest result match score
-* `Took` is the amount of time the search took
-* `Facets` is not used
+* `PageOffset` is the number of results skipped before the current page
+* `SearchTime` is the amount of time the search took
+* `Results` is an array of hits - structure explained later
 
 The Hits are each structured as:
 
 ```go
-type DocumentMatchCollection []struct {
-    ID        string
-    Score     float64
-    Expl      *Explanation
-    Locations FieldTermLocationMap
-    Fragments FieldFragmentMap
-    Fields    map[string]interface{}
+type SearchResponseResult struct {
+	Title string
+	URIPath string
+	Score float64
+	Topics []string
+	Keywords []string
+	Authors []string
+	Body string
 }
 ```
 
 Of note in here:
 
+* `Title` - the page title
+* `URIPath` - URI path pointing to the page
 * `Score` contains the score of the match - the higher the closer the match to the search query
-* `Fields` is a map containing the fields:
-	* `path` - `string` - URI path pointing to the page
-	* `title` - `string` - the page title
-	* `topic` - `string` - all of the topics for the page, seperated by spaces
-	* `author` - `string` - all of the authors for the page, seperated by spaces
-	* `modified` - `time.Time` - timestamp of the last modification for that page
+* `Topics` - all of the topics for the page
+* `Keywords` - all of the keywords associated with the page
+* `Author` - all of the authors for the page
+* `Body` - contains a relevant portion of the page, with results highlighted
+* `modified` - timestamp of the last modification for that page
