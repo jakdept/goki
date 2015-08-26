@@ -2,25 +2,25 @@ package gnosis
 
 import (
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
-	"fmt"
 	"path"
 	"strings"
 	"time"
 
 	"github.com/JackKnifed/blackfriday"
-	"github.com/blevesearch/bleve"
 	"github.com/JackKnifed/blackfriday-text"
+	"github.com/blevesearch/bleve"
 	"gopkg.in/fsnotify.v1"
 )
 
 var openWatchers []fsnotify.Watcher
 
 type indexedPage struct {
-	Title     string    `json:"title"`
-	URIPath string    `json:"path"`
+	Title    string    `json:"title"`
+	URIPath  string    `json:"path"`
 	Body     string    `json:"body"`
 	Topics   string    `json:"topic"`
 	Keywords string    `json:"keyword"`
@@ -51,7 +51,7 @@ func createIndex(config IndexSection) bool {
 }
 
 func EnableIndex(config IndexSection) bool {
-	if ! createIndex(config) {
+	if !createIndex(config) {
 		return false
 	}
 	for dir, path := range config.WatchDirs {
@@ -145,12 +145,12 @@ func watcherLoop(watchPath, filePrefix, uriPrefix string, config IndexSection) {
 					switch event.Op {
 					case fsnotify.Remove, fsnotify.Rename:
 						// delete the filePath
-						processDelete(getURIPath(watchPath + event.Name, filePrefix, uriPrefix),
+						processDelete(getURIPath(watchPath+event.Name, filePrefix, uriPrefix),
 							config.IndexName)
 					case fsnotify.Create, fsnotify.Write:
 						// update the filePath
-						processUpdate(watchPath + event.Name,
-							getURIPath(watchPath + event.Name, filePrefix, uriPrefix), config)
+						processUpdate(watchPath+event.Name,
+							getURIPath(watchPath+event.Name, filePrefix, uriPrefix), config)
 					default:
 						// ignore
 					}
@@ -202,16 +202,16 @@ func generateWikiFromFile(filePath, uriPath string, restrictedTopics []string) (
 
 	if pdata.MatchedTopic(restrictedTopics) == true {
 		return nil, errors.New("Hit a restricted page - " + pdata.Title)
-	} 
+	}
 
 	topics, keywords, authors := pdata.ListMeta()
 	rv := indexedPage{
-		Title:     pdata.Title,
+		Title:    pdata.Title,
 		Body:     cleanupMarkdown(pdata.Page),
-		URIPath: uriPath,
+		URIPath:  uriPath,
 		Topics:   strings.Join(topics, " "),
 		Keywords: strings.Join(keywords, " "),
-		Authors: strings.Join(authors, " "),
+		Authors:  strings.Join(authors, " "),
 		Modified: pdata.FileStats.ModTime(),
 	}
 
@@ -239,7 +239,7 @@ func ListField(indexPath, field string) ([]string, error) {
 	// Open the index
 	index, err := bleve.Open(indexPath)
 	defer index.Close()
-	if index == nil  {
+	if index == nil {
 		return nil, fmt.Errorf("no such index [%s]", indexPath)
 	} else if err != nil {
 		return nil, fmt.Errorf("problem opening index [%s] - %s", indexPath, err)
@@ -259,21 +259,21 @@ func ListField(indexPath, field string) ([]string, error) {
 }
 
 type SearchResponse struct {
-	TotalHits int
-	MaxScore float64
+	TotalHits  int
+	MaxScore   float64
 	PageOffset int
 	SearchTime time.Duration
-	Results []SearchResponseResult
+	Results    []SearchResponseResult
 }
 
 type SearchResponseResult struct {
-	Title string
-	URIPath string
-	Score float64
-	Topics []string
+	Title    string
+	URIPath  string
+	Score    float64
+	Topics   []string
 	Keywords []string
-	Authors []string
-	Body string
+	Authors  []string
+	Body     string
 }
 
 func CreateResponseData(rawResults bleve.SearchResult, pageOffset int) (SearchResponse, error) {
@@ -294,7 +294,7 @@ func CreateResponseData(rawResults bleve.SearchResult, pageOffset int) (SearchRe
 			return response, errors.New("returned title was not a string")
 		}
 
-		if str, ok := hit.Fields["path"].(string); ok{
+		if str, ok := hit.Fields["path"].(string); ok {
 			newHit.URIPath = str
 		} else {
 			return response, errors.New("returned path was not a string")
@@ -318,7 +318,7 @@ func CreateResponseData(rawResults bleve.SearchResult, pageOffset int) (SearchRe
 			return response, errors.New("returned keywords were not a string")
 		}
 
-		if str, ok :=hit.Fields["author"].(string); ok {
+		if str, ok := hit.Fields["author"].(string); ok {
 			newHit.Authors = strings.Split(str, " ")
 		}
 

@@ -1,4 +1,3 @@
-
 package gnosis
 
 import (
@@ -16,10 +15,10 @@ import (
 )
 
 func TestGetURIPath(t *testing.T) {
-	var tests = []struct{
-		input string
-		trim string
-		add string
+	var tests = []struct {
+		input  string
+		trim   string
+		add    string
 		output string
 	}{
 		{"/wiki.md", "/", "/var/www/", "/var/www/wiki.md"},
@@ -111,7 +110,7 @@ func TestGenerateWikiFromFile(t *testing.T) {
 			t.Errorf("Failed to unmarshal the expected values - %s", err)
 		}
 
-		expectedRaw, err = json.Marshal(expectedValue) 
+		expectedRaw, err = json.Marshal(expectedValue)
 		if err != nil {
 			t.Errorf("Failed to marshal the expected values - %s", err)
 		}

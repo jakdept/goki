@@ -1,19 +1,19 @@
 package gnosis
 
 import (
+	"errors"
 	"github.com/stretchr/testify/assert"
 	"os"
 	"path"
-	"testing"
 	"path/filepath"
-	"errors"
+	"testing"
 	// "bytes"
 	// "io"
 	"strings"
 	// "net/http"
-	"time"
 	"html/template"
 	"net/http/httptest"
+	"time"
 )
 
 func TestSimpleConfig(t *testing.T) {
@@ -69,25 +69,25 @@ func TestSimpleConfig(t *testing.T) {
 func TestGetConfig(t *testing.T) {
 	// directly put a config in the spot
 	staticConfig = &Config{
-		Global:GlobalSection{
-			Port: "8080",
-			Hostname: "localhost",
+		Global: GlobalSection{
+			Port:        "8080",
+			Hostname:    "localhost",
 			TemplateDir: "/templates/",
 		},
 		Redirects: []RedirectSection{
 			RedirectSection{
 				Requested: "source",
-				Target: "dest",
-				Code: 302,
+				Target:    "dest",
+				Code:      302,
 			},
 		},
 		Server: []ServerSection{
 			ServerSection{
 				ServerType: "markdown",
-				Prefix: "/",
-				Path: "/var/www/",
-				Default: "readme",
-				Template: "wiki.html",
+				Prefix:     "/",
+				Path:       "/var/www/",
+				Default:    "readme",
+				Template:   "wiki.html",
 				Restricted: []string{},
 			},
 		},
@@ -97,10 +97,10 @@ func TestGetConfig(t *testing.T) {
 					"/var/www/": "/",
 				},
 				WatchExtension: ".md",
-				IndexPath: "/index/",
-				IndexType: "en",
-				IndexName: "wiki",
-				Restricted: []string{},
+				IndexPath:      "/index/",
+				IndexType:      "en",
+				IndexName:      "wiki",
+				Restricted:     []string{},
 			},
 		},
 	}
@@ -120,14 +120,13 @@ func TestGetConfig(t *testing.T) {
 }
 
 func TestRenderTemplate(t *testing.T) {
-	var tests = []struct{
-		input string
+	var tests = []struct {
+		input    string
 		template string
 		expected string
 	}{
 		{"abc", "debug.raw", "abc"},
 	}
-
 
 	var err error
 	allTemplates, err = template.ParseGlob("./templates/*")

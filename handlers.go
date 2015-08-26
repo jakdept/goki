@@ -9,8 +9,8 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"strings"
 	"strconv"
+	"strings"
 
 	"github.com/blevesearch/bleve"
 	// bleveHttp "github.com/blevesearch/bleve/http"
@@ -180,7 +180,7 @@ func SearchHandler(responsePipe http.ResponseWriter, request *http.Request, serv
 		return
 	}
 
-	templateData, err := CreateResponseData(searchResponse, page * pageSize)
+	templateData, err := CreateResponseData(*searchResponse, page*pageSize)
 	if err != nil {
 		log.Printf("Error translating query results: %v", err)
 		http.Error(responsePipe, err.Error(), 500)
@@ -283,7 +283,7 @@ func FuzzySearch(responsePipe http.ResponseWriter, request *http.Request, server
 		return
 	}
 
-	templateData, err := CreateResponseData(searchResponse, page * pageSize)
+	templateData, err := CreateResponseData(*searchResponse, page*pageSize)
 	if err != nil {
 		log.Printf("Error translating query results: %v", err)
 		http.Error(responsePipe, err.Error(), 500)
@@ -304,7 +304,7 @@ func FieldListHandler(responsePipe http.ResponseWriter, request *http.Request, s
 	urlWithoutPrefix = strings.TrimPrefix(urlWithoutPrefix, "/")
 	if len(urlWithoutPrefix) > 0 {
 		temp := strings.SplitN(urlWithoutPrefix, "/", 2)
-		if len(temp)> 0{
+		if len(temp) > 0 {
 			fieldValue = temp[0]
 		}
 	}
@@ -318,28 +318,31 @@ func FieldListHandler(responsePipe http.ResponseWriter, request *http.Request, s
 			http.Error(responsePipe, err.Error(), 500)
 		}
 		err = allTemplates.ExecuteTemplate(responsePipe, serverConfig.Template,
-			struct{allFields []string}{allFields: fields})
+			struct{ allFields []string }{allFields: fields})
 		if err != nil {
 			http.Error(responsePipe, err.Error(), 500)
 		}
-		} else {
-			page := 0
-			if _, ok := queryArgs["page"]; ok {
-				page, err = strconv.Atoi(queryArgs["page"][0])
-				if err != nil {
-					log.Printf("invalid page detected [%s] - %s", queryArgs["page"][0], err)
-					page = 0
-				}
-			}
+	} else {
 
-			pageSize := 50
-			if _, ok := queryArgs["pagesize"]; ok {
-				pageSize, err = strconv.Atoi(queryArgs["pagesize"][0])
-				if err != nil {
-					log.Printf("invalid pageSize detected [%s] - %s", queryArgs["pagesize"][0], err)
-					pageSize = 0
-				}
+		queryArgs := request.URL.Query()
+
+		page := 0
+		if _, ok := queryArgs["page"]; ok {
+			page, err = strconv.Atoi(queryArgs["page"][0])
+			if err != nil {
+				log.Printf("invalid page detected [%s] - %s", queryArgs["page"][0], err)
+				page = 0
 			}
+		}
+
+		pageSize := 50
+		if _, ok := queryArgs["pagesize"]; ok {
+			pageSize, err = strconv.Atoi(queryArgs["pagesize"][0])
+			if err != nil {
+				log.Printf("invalid pageSize detected [%s] - %s", queryArgs["pagesize"][0], err)
+				pageSize = 0
+			}
+		}
 
 		query := bleve.NewTermQuery(fieldValue).SetField(serverConfig.Default)
 		searchRequest := bleve.NewSearchRequest(query)
@@ -377,7 +380,7 @@ func FieldListHandler(responsePipe http.ResponseWriter, request *http.Request, s
 			return
 		}
 
-		templateData, err := CreateResponseData(searchResponse, page * pageSize)
+		templateData, err := CreateResponseData(*searchResponse, page*pageSize)
 		if err != nil {
 			log.Printf("Error translating query results: %v", err)
 			http.Error(responsePipe, err.Error(), 500)
@@ -387,7 +390,7 @@ func FieldListHandler(responsePipe http.ResponseWriter, request *http.Request, s
 		if err != nil {
 			http.Error(responsePipe, err.Error(), 500)
 		}
-	} 
+	}
 }
 
 func MakeHandler(handlerConfig ServerSection) http.HandlerFunc {
@@ -399,7 +402,7 @@ func MakeHandler(handlerConfig ServerSection) http.HandlerFunc {
 			RawHandler(w, r, handlerConfig)
 		case "simplesearch":
 			SearchHandler(w, r, handlerConfig)
-		case "fieldlist" :
+		case "fieldlist":
 			FieldListHandler(w, r, handlerConfig)
 		default:
 			log.Printf("Bad server type [%s]", handlerConfig.ServerType)

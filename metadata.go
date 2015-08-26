@@ -18,7 +18,7 @@ import (
 type PageMetadata struct {
 	Keywords  map[string]bool
 	Topics    map[string]bool
-	Authors    map[string]bool
+	Authors   map[string]bool
 	Page      []byte
 	Title     string
 	FileStats os.FileInfo
@@ -79,7 +79,7 @@ func (pdata *PageMetadata) checkMatch(input []byte, looking []byte, tracker *map
 	input = bytes.ToLower(bytes.TrimSpace(input))
 	looking = bytes.ToLower(bytes.TrimSpace(looking))
 
-	if ! bytes.HasPrefix(input, looking){ 
+	if !bytes.HasPrefix(input, looking) {
 		return
 	}
 
@@ -194,7 +194,7 @@ func (pdata *PageMetadata) isTitle(input []byte) int {
 	}
 
 	pdata.processMetadata(input[:nextLine])
-	if rv := pdata.isOneLineTitle(input[nextLine+1:lineAfter+1]); rv != 0 {
+	if rv := pdata.isOneLineTitle(input[nextLine+1 : lineAfter+1]); rv != 0 {
 		return rv + nextLine + 1
 	} else {
 		return nextLine + 1
@@ -219,7 +219,7 @@ func (pdata *PageMetadata) isOneLineTitle(input []byte) int {
 		singleLine = bytes.Trim(singleLine, "#")
 		pdata.Title = string(bytes.TrimSpace(singleLine))
 		return endOfLine + 1
-	} 
+	}
 	return 0
 }
 
@@ -232,19 +232,19 @@ func (pdata *PageMetadata) isTwoLineTitle(input []byte) int {
 	if firstNewLine = pdata.findNextLine(input); firstNewLine == -1 {
 		return 0
 	}
-	secondNewLine = pdata.findNextLine(input[firstNewLine+1:]) 
+	secondNewLine = pdata.findNextLine(input[firstNewLine+1:])
 	if secondNewLine == -1 {
 		secondNewLine = len(input) - 1
 	} else {
 		secondNewLine += firstNewLine + 1
 	}
 
-	secondLine := bytes.TrimSpace(input[firstNewLine+1:secondNewLine+1])
-	if len(secondLine) >=2 {
+	secondLine := bytes.TrimSpace(input[firstNewLine+1 : secondNewLine+1])
+	if len(secondLine) >= 2 {
 		secondLine = bytes.TrimLeft(secondLine, "=")
-		if len(secondLine) == 0{
+		if len(secondLine) == 0 {
 			pdata.Title = string(bytes.TrimSpace(input[:firstNewLine]))
-			return secondNewLine +1
+			return secondNewLine + 1
 		}
 	}
 	return 0

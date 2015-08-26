@@ -2,23 +2,23 @@ package gnosis
 
 import (
 	"encoding/json"
-	"net/http"
 	"html/template"
 	"io/ioutil"
 	"log"
-	"sync"
-	"strings"
+	"net/http"
 	"os"
+	"strings"
+	"sync"
 )
 
 var staticConfig *Config
 var configLock = new(sync.RWMutex)
 
 type Config struct {
-	Global      GlobalSection
-	Redirects   []RedirectSection
-	Server      []ServerSection
-	Indexes     []IndexSection
+	Global    GlobalSection
+	Redirects []RedirectSection
+	Server    []ServerSection
+	Indexes   []IndexSection
 }
 
 //var templates = template.Must(template.ParseFiles("/var/wiki-backend/wiki.html"))
@@ -40,21 +40,21 @@ type RedirectSection struct {
 
 type IndexSection struct {
 	WatchDirs      map[string]string // Location that we will be watching for updates
-	WatchExtension string   // file extensions that we will watch for within that dir
-	IndexPath      string   //location to store the index
-	IndexType      string   // type of index - likely "en"
-	IndexName      string   // name of the index
-	Restricted     []string // Tags to restrict indexing on
+	WatchExtension string            // file extensions that we will watch for within that dir
+	IndexPath      string            //location to store the index
+	IndexType      string            // type of index - likely "en"
+	IndexName      string            // name of the index
+	Restricted     []string          // Tags to restrict indexing on
 }
 
 type ServerSection struct {
-	Path        string   // filesystem path to serve out
-	Prefix      string   // Web URL Prefix - alternatively the prefix for a search handler
-	Default	string   // Default page to serve if empty URI - alternatively the facet to list against
-	Template    string   // Template file to build the response from
-	ServerType  string   // markdown, raw, search, or facet to denote the type of Server handle
-	TopicURL    string   // URI prefix to redirect to topic pages
-	Restricted  []string // list of restricts - extensions for raw, topics for markdown
+	Path       string   // filesystem path to serve out
+	Prefix     string   // Web URL Prefix - alternatively the prefix for a search handler
+	Default    string   // Default page to serve if empty URI - alternatively the facet to list against
+	Template   string   // Template file to build the response from
+	ServerType string   // markdown, raw, search, or facet to denote the type of Server handle
+	TopicURL   string   // URI prefix to redirect to topic pages
+	Restricted []string // list of restricts - extensions for raw, topics for markdown
 }
 
 func GetConfig() *Config {
@@ -100,7 +100,7 @@ func LoadConfig(configFile string) bool {
 }
 
 func CleanConfig(config *Config) {
-	if ! strings.HasSuffix(config.Global.TemplateDir, string(os.PathSeparator)) {
+	if !strings.HasSuffix(config.Global.TemplateDir, string(os.PathSeparator)) {
 		config.Global.TemplateDir = config.Global.TemplateDir + string(os.PathSeparator)
 	}
 	for _, indexSection := range config.Indexes {
@@ -113,7 +113,7 @@ func CleanConfig(config *Config) {
 			if newWebPath == "" {
 				newWebPath = "/"
 			}
-			if (newDirPath != origDirPath || newWebPath != origWebPath) {
+			if newDirPath != origDirPath || newWebPath != origWebPath {
 				delete(indexSection.WatchDirs, origDirPath)
 				indexSection.WatchDirs[newDirPath] = newWebPath
 			}
@@ -130,7 +130,7 @@ func CleanConfig(config *Config) {
 }
 
 func RenderTemplate(responsePipe http.ResponseWriter, templateName string,
-	data interface{}) (error) {
+	data interface{}) error {
 	templateLock.RLock()
 	defer templateLock.RUnlock()
 

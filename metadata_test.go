@@ -3,14 +3,14 @@
 package gnosis
 
 import (
+	"bytes"
 	"github.com/stretchr/testify/assert"
+	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
-	"bytes"
 	"testing"
-	"io/ioutil"
 )
 
 func stringKeyExistsInMap(itemMap map[string]bool, key string) bool {
@@ -47,21 +47,21 @@ func TestWriteFileForTest(t *testing.T) {
 
 func TestIsTitle(t *testing.T) {
 
-	var isTitleTests = []struct{
-		expected int
+	var isTitleTests = []struct {
+		expected      int
 		expectedTitle string
 		expectedTopic string
-		input string
+		input         string
 	}{
-		{12, "title", "", "stuff\n#title",},
-		{9, "title", "", "title\n===",},
-		{7, "title", "", "#title\n\n",},
-		{8, "title", "", "\n#title\n\n",},
-		{1, "", "", "\ntitle\n====\n\n",},
-		{23, "title", "pageTopic", "topic:pageTopic\n#title\n\n",},
-		{22, "title", "pageTopic", "topic:pageTopic\n#title",},
-		{16, "", "pageTopic", "topic:pageTopic\ntitle is too late\n====",},
-		{1, "", "", "\nTest Page\n",},
+		{12, "title", "", "stuff\n#title"},
+		{9, "title", "", "title\n==="},
+		{7, "title", "", "#title\n\n"},
+		{8, "title", "", "\n#title\n\n"},
+		{1, "", "", "\ntitle\n====\n\n"},
+		{23, "title", "pageTopic", "topic:pageTopic\n#title\n\n"},
+		{22, "title", "pageTopic", "topic:pageTopic\n#title"},
+		{16, "", "pageTopic", "topic:pageTopic\ntitle is too late\n===="},
+		{1, "", "", "\nTest Page\n"},
 	}
 
 	for _, testSet := range isTitleTests {
@@ -73,17 +73,17 @@ func TestIsTitle(t *testing.T) {
 }
 
 func TestIsOneLineTitle(t *testing.T) {
-	var isTitleTests = []struct{
-		expected int
+	var isTitleTests = []struct {
+		expected      int
 		expectedTitle string
-		input string
+		input         string
 	}{
-		{7, "title", "#title\n",},
-		{6, "title", "#title",},
-		{0, "", "\n#title\n\n",},
-		{0, "", "title#\n",},
-		{9, "yuup", "# yuup #\nother junk that should not matter",},
-		{16, "space stays", "# space stays #\nother junk that should not matter",},
+		{7, "title", "#title\n"},
+		{6, "title", "#title"},
+		{0, "", "\n#title\n\n"},
+		{0, "", "title#\n"},
+		{9, "yuup", "# yuup #\nother junk that should not matter"},
+		{16, "space stays", "# space stays #\nother junk that should not matter"},
 	}
 
 	for _, testSet := range isTitleTests {
@@ -96,21 +96,21 @@ func TestIsOneLineTitle(t *testing.T) {
 }
 
 func TestIsTwoLineTitle(t *testing.T) {
-	var isTitleTests = []struct{
-		expected int
+	var isTitleTests = []struct {
+		expected      int
 		expectedTitle string
-		input string
+		input         string
 	}{
-		{0, "", "#title\n",},
-		{0, "", "#title",},
-		{0, "", "\ntitle\n====\n\n",},
-		{11, "title", "title\n====\n\n",},
-		{10, "title", "title\n====",},
-		{8, "title", "title\n==",},
-		{11, "title", "title\n====\nother stuff that should not matter",},
-		{22, "three word title", "three word title\n=====",},
-		{27, "space before", "\t    \t   space before\n=====",},
-		{26, "space after", "space after\t    \t   \n=====",},
+		{0, "", "#title\n"},
+		{0, "", "#title"},
+		{0, "", "\ntitle\n====\n\n"},
+		{11, "title", "title\n====\n\n"},
+		{10, "title", "title\n===="},
+		{8, "title", "title\n=="},
+		{11, "title", "title\n====\nother stuff that should not matter"},
+		{22, "three word title", "three word title\n====="},
+		{27, "space before", "\t    \t   space before\n====="},
+		{26, "space after", "space after\t    \t   \n====="},
 	}
 
 	for _, testSet := range isTitleTests {
@@ -122,16 +122,15 @@ func TestIsTwoLineTitle(t *testing.T) {
 	}
 }
 
-
 func TestFindNextLine(t *testing.T) {
-	var isTitleTests = []struct{
+	var isTitleTests = []struct {
 		expected int
-		input string
+		input    string
 	}{
-		{0, "\n#title\n",},
-		{5, "title\n===\n",},
-		{-1, "title===",},
-		{8, "title===\n",},
+		{0, "\n#title\n"},
+		{5, "title\n===\n"},
+		{-1, "title==="},
+		{8, "title===\n"},
 	}
 	for _, testSet := range isTitleTests {
 		pdata := new(PageMetadata)
@@ -143,21 +142,21 @@ func TestFindNextLine(t *testing.T) {
 }
 
 func TestCheckMatch(t *testing.T) {
-	var checkMatchTests = []struct{
-		expected bool
+	var checkMatchTests = []struct {
+		expected      bool
 		expectedMatch string
-		input string
+		input         string
 	}{
-		{true, "a", "topic = a",},
-		{true, "b", "topic= b",},
-		{true, "c", "topic=c",},
-		{true, "c", "topic=c",},
-		{true, "d-e-f", "topic=d-e-f",},
-		{true, "g-h", "topic=g  h",},
-		{true, "i", "topic:i",},
-		{true, "j", "topic: j",},
-		{true, "k", "topic :k",},
-		{true, "l-m-no", "topic : l m   no",},
+		{true, "a", "topic = a"},
+		{true, "b", "topic= b"},
+		{true, "c", "topic=c"},
+		{true, "c", "topic=c"},
+		{true, "d-e-f", "topic=d-e-f"},
+		{true, "g-h", "topic=g  h"},
+		{true, "i", "topic:i"},
+		{true, "j", "topic: j"},
+		{true, "k", "topic :k"},
+		{true, "l-m-no", "topic : l m   no"},
 	}
 
 	for _, testSet := range checkMatchTests {
@@ -174,35 +173,38 @@ func TestCheckMatch(t *testing.T) {
 }
 
 func TestProcessMetadata(t *testing.T) {
-	var checkProcessMetadata = []struct{
+	var checkProcessMetadata = []struct {
 		metaType string
 		expected string
-		input string
+		input    string
 	}{
-		{"topic", "a", "topic = a",},
-		{"topic", "b", "topic= b",},
-		{"topic", "c", "topic=c",},
-		{"topic", "c", "topic=c",},
-		{"topic", "d-e-f", "topic=d-e-f",},
-		{"topic", "g-h", "topic=g  h",},
-		{"topic", "i", "topic:i",},
-		{"topic", "j", "topic: j",},
-		{"topic", "k", "topic :k",},
-		{"topic", "l-m-no", "topic : l m   no",},
-		{"keyword", "pqrstuv", "keyword : pqrstuv",},
-		{"keyword", "lock-box", "keyword:lock             box",},
-		{"author", "bob-dole", "author : Bob Dole",},
+		{"topic", "a", "topic = a"},
+		{"topic", "b", "topic= b"},
+		{"topic", "c", "topic=c"},
+		{"topic", "c", "topic=c"},
+		{"topic", "d-e-f", "topic=d-e-f"},
+		{"topic", "g-h", "topic=g  h"},
+		{"topic", "i", "topic:i"},
+		{"topic", "j", "topic: j"},
+		{"topic", "k", "topic :k"},
+		{"topic", "l-m-no", "topic : l m   no"},
+		{"keyword", "pqrstuv", "keyword : pqrstuv"},
+		{"keyword", "lock-box", "keyword:lock             box"},
+		{"author", "bob-dole", "author : Bob Dole"},
 	}
 
 	for _, testSet := range checkProcessMetadata {
 		pdata := new(PageMetadata)
 		pdata.processMetadata([]byte(testSet.input))
 		switch testSet.metaType {
-			case "topic": assert.True(t, pdata.Topics[testSet.expected],
+		case "topic":
+			assert.True(t, pdata.Topics[testSet.expected],
 				"[%q] - should have seen topic [%q]", testSet.input, testSet.expected)
-			case "keyword": assert.True(t, pdata.Keywords[testSet.expected],
+		case "keyword":
+			assert.True(t, pdata.Keywords[testSet.expected],
 				"[%q] - should have seen topic [%q]", testSet.input, testSet.expected)
-			case "author": assert.True(t, pdata.Authors[testSet.expected],
+		case "author":
+			assert.True(t, pdata.Authors[testSet.expected],
 				"[%q] - should have seen topic [%q]", testSet.input, testSet.expected)
 		}
 	}
@@ -210,14 +212,14 @@ func TestProcessMetadata(t *testing.T) {
 
 func TestLoadPage(t *testing.T) {
 
-	var loadPageTests = []struct{
-		input string
-		expectedOutput string
-		expectedTitle string
+	var loadPageTests = []struct {
+		input            string
+		expectedOutput   string
+		expectedTitle    string
 		expectedKeywords []string
-		expectedTopics []string
-		expectedAuthors []string
-		expectedError string
+		expectedTopics   []string
+		expectedAuthors  []string
+		expectedError    string
 	}{
 		{
 			"Test Page\n=========\nsome test content\nand some more",
@@ -232,12 +234,12 @@ func TestLoadPage(t *testing.T) {
 		{
 			"keyword : junk\nkeyword = other junk\nsome other Page\n=========\nsome test content\nthere should be keywords",
 			"some test content\nthere should be keywords",
-			"some other Page", []string{"junk","other-junk"}, []string{}, []string{}, "",
+			"some other Page", []string{"junk", "other-junk"}, []string{}, []string{}, "",
 		},
 		{
 			"keyword : junk\nkeyword = other junk\n#some other Page\nsome test content\nthere should be keywords",
 			"some test content\nthere should be keywords",
-			"some other Page", []string{"junk","other-junk"}, []string{}, []string{}, "",
+			"some other Page", []string{"junk", "other-junk"}, []string{}, []string{}, "",
 		},
 		{
 			"keyword : junk\nkeyword = other junk\ntopic : very important\ncategory=internal\nsome other Page\n=========\nsome test content\nthere should be keywords",
@@ -268,7 +270,7 @@ func TestLoadPage(t *testing.T) {
 
 		if testSet.expectedError != "" {
 			assert.Error(t, err, "[%q] should have kicked error - %q")
-		} else {	
+		} else {
 			assert.NoError(t, err, "[%q] should not have kicked an error, kicked - %q")
 		}
 
@@ -294,25 +296,25 @@ func TestLoadPage(t *testing.T) {
 }
 
 func TestMatchedTag(t *testing.T) {
-	var matchedTagTests = []struct{
-		inputTopics []string
+	var matchedTagTests = []struct {
+		inputTopics    []string
 		expectedTopics []string
-		falseTopics []string
+		falseTopics    []string
 	}{
 		{
-			[]string{"topic : dog", "topic : baNana", "topic : aPPle", "topic : cat",},
-			[]string{"apple", "banana", "cat", "dog",},
+			[]string{"topic : dog", "topic : baNana", "topic : aPPle", "topic : cat"},
+			[]string{"apple", "banana", "cat", "dog"},
 			[]string{},
 		},
 		{
-			[]string{"topic : tree frog", "topic : eagle", "topic : goat", "topic : hog",},
-			[]string{"eagle", "tree-frog", "goat", "hog",},
-			[]string{"apple", "banana", "cat", "dog",},
+			[]string{"topic : tree frog", "topic : eagle", "topic : goat", "topic : hog"},
+			[]string{"eagle", "tree-frog", "goat", "hog"},
+			[]string{"apple", "banana", "cat", "dog"},
 		},
 		{
-			[]string{"topic : frog", "topic : eagle", "topic : goat", "topic : hog", "topic : iguana",},
+			[]string{"topic : frog", "topic : eagle", "topic : goat", "topic : hog", "topic : iguana"},
 			[]string{},
-			[]string{"jester-and-joker", "kangaroo", "llama",},
+			[]string{"jester-and-joker", "kangaroo", "llama"},
 		},
 	}
 	for _, testSet := range matchedTagTests {
