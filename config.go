@@ -138,6 +138,7 @@ func RenderTemplate(responsePipe http.ResponseWriter, templateName string,
 }
 
 func ParseTemplates(globalConfig GlobalSection) error {
+	log.Printf("Parsing templates in [%q]", globalConfig.TemplateDir)
 	newTemplate, err := template.ParseGlob(globalConfig.TemplateDir + "*")
 	if err != nil {
 		return err
