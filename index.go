@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	// "os"
+	"os"
 	"path"
 	"strings"
 	"time"
@@ -104,7 +104,7 @@ func walkForIndexing(path, filePath, requestPath string, config IndexSection) {
 		log.Fatal(err)
 	}
 	for _, dirEntry := range dirEntries {
-		dirEntryPath := path + dirEntry.Name()
+		dirEntryPath := path + os.PathSeperator + dirEntry.Name()
 		if dirEntry.IsDir() {
 			walkForIndexing(dirEntryPath, filePath, requestPath, config)
 		} else if strings.HasSuffix(dirEntry.Name(), config.WatchExtension) {
