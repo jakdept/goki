@@ -98,7 +98,7 @@ func buildIndexMapping(config IndexSection) *bleve.IndexMapping {
 
 // walks a given path, and runs processUpdate on each File
 func walkForIndexing(path, filePath, requestPath string, config IndexSection) {
-	watcherLoop(path, filePath, requestPath, config)
+	//watcherLoop(path, filePath, requestPath, config)
 	dirEntries, err := ioutil.ReadDir(path)
 	if err != nil {
 		log.Fatal(err)
