@@ -220,7 +220,9 @@ func generateWikiFromFile(filePath, uriPath string, restrictedTopics []string) (
 
 func getURIPath(filePath, filePrefix, uriPrefix string) (uriPath string) {
 	uriPath = strings.TrimPrefix(filePath, filePrefix)
-	uriPath = uriPrefix + uriPath
+	uriPath = strings.TrimPrefix(uriPath, "/")
+	uriPrefix = strings.TrimSuffix(uriPrefix, "/")
+	uriPath = uriPrefix + "/" + uriPath
 	return
 }
 
