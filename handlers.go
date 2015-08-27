@@ -404,6 +404,8 @@ func MakeHandler(handlerConfig ServerSection) http.HandlerFunc {
 			SearchHandler(w, r, handlerConfig)
 		case "fieldlist":
 			FieldListHandler(w, r, handlerConfig)
+		case "fuzzysearch":
+			FuzzySearch(w, r, handlerConfig)
 		default:
 			log.Printf("Bad server type [%s]", handlerConfig.ServerType)
 		}
