@@ -52,7 +52,9 @@ func main() {
 			}
 		}
 
-	gnosis.ParseTemplates(config.Global)
+	if err := gnosis.ParseTemplates(config.Global); err != nil {
+		log.Fatalf("Error parsing templates, %s", err)
+	}
 
 	for _, redirect := range config.Redirects {
 		http.Handle(redirect.Requested, http.RedirectHandler(redirect.Target, redirect.Code))
