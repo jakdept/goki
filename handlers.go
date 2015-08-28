@@ -318,7 +318,7 @@ func FieldListHandler(responsePipe http.ResponseWriter, request *http.Request, s
 			http.Error(responsePipe, err.Error(), 500)
 		}
 		err = allTemplates.ExecuteTemplate(responsePipe, serverConfig.Template,
-			struct{ allFields []string }{allFields: fields})
+			struct{ AllFields []string }{AllFields: fields})
 		if err != nil {
 			http.Error(responsePipe, err.Error(), 500)
 		}
