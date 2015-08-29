@@ -35,46 +35,44 @@ Example Template
 ----------------
 An exmaple template for this handler is provided below:
 
-```nohighlight
+```html
 <html>
-	<head>
-		<title>Search the Wiki</title>
-		<link rel="stylesheet" type="text/css" href="/site/css/search.css">
-	</head>
-	<body>
-		{{with .allFields}}
-			{{range .}}
-				<a href="./{{.}}">{{.}}</a>
-			{{end}}
-		{{else}}
-		<!--
-					Displaying {{ .Total }} hits - best score was {{.MaxScore}} search took {{.Took}} seconds to complete.
-		-->
-			<aside id='resultsArea'>
-			{{range .Hits}}
-				<div class='searchResult'>
-					<div class='meter'>
-						<span style="width:calc(100% * {{.Score}});"></span>
-					</div>
-					<a href="{{.ID}}" class='resultLink' target="pagePreview">
-						<h3>
-						{{.ID}}
-						</h3>
-					</a>
-				</div>
-			{{else}}
-				<h3>
-				No Results found
-				</h3>
-			{{end}}
-		{{else}}
-			<aside id='resultsArea'>
-		{{template "searchBox.html"}}
-	</aside>
-		{{end}}
-		</aside>
-		<iframe id="pagePreview" name='pagePreview'></iframe>
-	</body>
+  <head>
+    <title>Listing Topics</title>
+    <link rel="stylesheet" type="text/css" href="/site/css/search.css">
+  </head>
+  <body>
+    {{with .AllFields}}
+    {{range .}}
+    <a href="./{{.}}">
+      <h2>{{.}}</h2>
+    </a>
+    {{end}}
+    {{else}}
+    <aside id='resultsArea'>
+      {{ with .Results}}
+      {{range .}}
+      <div class='searchResult'>
+        <a href="{{.URIPath}}" class='resultLink' target="pagePreview">
+          <h2>
+	          {{.Title}}
+          </h2>
+        </a>
+      </div>
+      {{else}}
+      <h2>
+      No Results found
+      </h2>
+      {{end}}
+      {{else}}
+      <aside id='resultsArea'>
+          {{template "searchBox.html"}}
+      </aside>
+      {{end}}
+    </aside>
+    {{end}}
+    <iframe id="pagePreview" name='pagePreview'></iframe>
+  </body>
 </html>
 ```
 
@@ -89,11 +87,11 @@ If the request did not feature a field value - it's a list of the values of the 
 
 ```go
 struct {
-	allFields []string
+	AllFields []string
 }
 ```
 
-* `allFields` is an array of strings that simply contains each field
+* `AllFields` is an array of strings that simply contains each field
 
 - - - - - - - - - - - - -
 
@@ -101,6 +99,7 @@ If the request did contain a field value - it's a list of all documents within t
 
 ```go
 type SearchResponse struct {
+	AllFields []string
 	TotalHits int
 	MaxScore float64
 	PageOffset int
@@ -111,6 +110,7 @@ type SearchResponse struct {
 
 Where:
 
+* `AllFields` is empty, allow differentiation
 * `TotalHits` is the number of results that were matched
 * `MaxScore` is the highest result match score
 * `PageOffset` is the number of results skipped before the current page

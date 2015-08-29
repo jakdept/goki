@@ -261,6 +261,7 @@ func ListField(indexPath, field string) ([]string, error) {
 }
 
 type SearchResponse struct {
+	// AllFields []string
 	TotalHits  int
 	MaxScore   float64
 	PageOffset int
@@ -290,38 +291,52 @@ func CreateResponseData(rawResults bleve.SearchResult, pageOffset int) (SearchRe
 
 		newHit.Score = hit.Score
 
-		if str, ok := hit.Fields["title"].(string); ok {
+		if _, isThere := hit.Fields["title"]; !isThere {
+			newHit.Title = ""
+		} else if str, ok := hit.Fields["title"].(string); ok {
 			newHit.Title = str
 		} else {
 			return response, errors.New("returned title was not a string")
 		}
 
-		if str, ok := hit.Fields["path"].(string); ok {
+		if _, isThere := hit.Fields["path"]; !isThere {
+			newHit.URIPath = ""
+		} else if str, ok := hit.Fields["path"].(string); ok {
 			newHit.URIPath = str
 		} else {
 			return response, errors.New("returned path was not a string")
 		}
 
-		if str, ok := hit.Fields["body"].(string); ok {
+		if _, isThere := hit.Fields["body"]; !isThere {
+			newHit.Body = ""
+		} else if str, ok := hit.Fields["body"].(string); ok {
 			newHit.Body = str
 		} else {
 			return response, errors.New("returned body was not a string")
 		}
 
-		if str, ok := hit.Fields["topic"].(string); ok {
+		if _, isThere := hit.Fields["topic"]; !isThere {
+			newHit.Topics = []string{}
+		} else if str, ok := hit.Fields["topic"].(string); ok {
 			newHit.Topics = strings.Split(str, " ")
 		} else {
 			return response, errors.New("returned topics were not a string")
 		}
 
-		if str, ok := hit.Fields["keyword"].(string); ok {
+		if _, isThere := hit.Fields["keyword"]; !isThere {
+			newHit.Keywords = []string{}
+		} else if str, ok := hit.Fields["keyword"].(string); ok {
 			newHit.Keywords = strings.Split(str, " ")
 		} else {
 			return response, errors.New("returned keywords were not a string")
 		}
 
-		if str, ok := hit.Fields["author"].(string); ok {
+		if _, isThere := hit.Fields["author"]; !isThere {
+			newHit.Authors = []string{}
+		} else if str, ok := hit.Fields["author"].(string); ok {
 			newHit.Authors = strings.Split(str, " ")
+		} else {
+			return response, errors.New("returned authors were not a string")
 		}
 
 		response.Results = append(response.Results, newHit)

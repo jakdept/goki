@@ -380,13 +380,20 @@ func FieldListHandler(responsePipe http.ResponseWriter, request *http.Request, s
 			return
 		}
 
-		templateData, err := CreateResponseData(*searchResponse, page*pageSize)
+		standardSearchResponse, err := CreateResponseData(*searchResponse, page*pageSize)
 		if err != nil {
 			log.Printf("Error translating query results: %v", err)
 			http.Error(responsePipe, err.Error(), 500)
 		}
 
-		err = allTemplates.ExecuteTemplate(responsePipe, serverConfig.Template, templateData)
+		modifiedSearchResponse := struct {
+			SearchResponse
+			AllFields []string
+		}{standardSearchResponse, []string{}}
+
+		// err = allTemplates.ExecuteTemplate(responsePipe, serverConfig.Template, templateData)
+		err = allTemplates.ExecuteTemplate(responsePipe, serverConfig.Template, modifiedSearchResponse)
+		// err = allTemplates.ExecuteTemplate(responsePipe, serverConfig.Template, searchResponse)
 		if err != nil {
 			http.Error(responsePipe, err.Error(), 500)
 		}
