@@ -3,8 +3,8 @@ package gnosis
 import (
 	"github.com/stretchr/testify/assert"
 	// "os"
-	"bytes"
-	"encoding/json"
+	// "bytes"
+	// "encoding/json"
 	// "path"
 	"path/filepath"
 	"testing"
@@ -81,6 +81,7 @@ func TestCleanupMarkdownFiles(t *testing.T) {
 	}
 }
 
+/*
 func TestGenerateWikiFromFile(t *testing.T) {
 	var input string
 	defer func() {
@@ -138,3 +139,4 @@ func TestGenerateWikiFromFile(t *testing.T) {
 		}
 	}
 }
+*/

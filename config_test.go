@@ -126,6 +126,7 @@ func TestRenderTemplate(t *testing.T) {
 		expected string
 	}{
 		{"abc", "debug.raw", "abc"},
+		{"other stuff", "debug.raw", "other stuff"},
 	}
 
 	var err error
