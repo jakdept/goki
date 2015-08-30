@@ -7,13 +7,9 @@ import (
 	"path"
 	"path/filepath"
 	"testing"
-	// "bytes"
-	// "io"
 	"strings"
-	// "net/http"
 	"html/template"
 	"net/http/httptest"
-	"time"
 )
 
 func TestSimpleConfig(t *testing.T) {
@@ -109,13 +105,22 @@ func TestGetConfig(t *testing.T) {
 
 	var config *Config
 
+	ch := make(chan *Config)
+
 	go func() {
-		config = GetConfig()
+		ch <- GetConfig()
 	}()
+
+	select {
+		case config = <-ch:
+		default:
+	}
 
 	assert.Nil(t, config, "Config should current be blocked and shoult not have loaded.")
 	configLock.Unlock()
-	time.Sleep(10)
+	select {
+		case config = <-ch:
+	}
 	assert.NotNil(t, config, "Config should have loaded - is no longer blocked.")
 }
 
@@ -144,22 +149,30 @@ func TestRenderTemplate(t *testing.T) {
 			t.Errorf("did not find template [%q] that is needed", testSet.template)
 		}
 
+		ch := make(chan string)
+
 		go func() {
 			err = RenderTemplate(actualContent, testSet.template, testSet.input)
+			ch <- actualContent.Body.String()
 		}()
 
-		if actualContent.Body.String() != "" {
-			t.Errorf("response buffer should currently be empty, but it contains [%q]",
-				actualContent.Body.String())
-		} else {
-			templateLock.Unlock()
-			time.Sleep(10)
+		var testResponse string
 
-			if string(actualContent.Body.String()) != testSet.expected {
-				t.Errorf("\nexpected [%q]\ngot      [%q]", testSet.expected,
-					actualContent.Body.String())
-			}
+		select {
+			case testResponse = <- ch:
+			default:
 		}
+
+		assert.Empty(t, testResponse, "expecte empty testResponse, has [%q]", testResponse)
+
+			templateLock.Unlock()
+		select {
+			case testResponse = <- ch:
+		}
+
+		assert.Equal(t, testSet.expected, testResponse, 
+			"expecte empty testResponse, has [%q]", testResponse)
+
 	}
 }
 
