@@ -1,4 +1,7 @@
 # gnosis
+
+[![Build Status](https://travis-ci.org/JackKnifed/gnosis.svg)](https://travis-ci.org/JackKnifed/gnosis)
+
 Markdown based wiki server
 
 Uses:
