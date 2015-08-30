@@ -183,8 +183,5 @@ func TestParseTemplates(t *testing.T) {
 func TestBadParseTemplates(t *testing.T) {
 	err := ParseTemplates(GlobalSection{TemplateDir: "./notadir/*"})
 	expectedError := errors.New("html/template: pattern matches no files: `./notadir/**`")
-	if err != expectedError {
-		t.Errorf("got the wrong error response\nexpecting [%q]\n      got [%q]",
-			err, expectedError)
-	}
+	assert.Equal(t, err, expectedError, "got the wrong error response")
 }

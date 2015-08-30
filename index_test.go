@@ -24,7 +24,7 @@ func TestGetURIPath(t *testing.T) {
 		{"/wiki.md", "/", "/var/www/", "/var/www/wiki.md"},
 		{"/wiki/page.md", "/wiki/", "/var/www/", "/var/www/page.md"},
 		{"/wiki/page.md", "/wiki/", "/", "/page.md"},
-		{"abcdef", "abc", "xyz", "xyzdef"},
+		{"abcdef", "abc", "xyz", "xyz/def"},
 	}
 
 	for _, testSet := range tests {
