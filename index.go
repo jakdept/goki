@@ -263,7 +263,6 @@ func ListField(indexPath, field string) ([]string, error) {
 type SearchResponse struct {
 	// AllFields []string
 	TotalHits  int
-	MaxScore   float64
 	PageOffset int
 	SearchTime time.Duration
 	Results    []SearchResponseResult
@@ -283,13 +282,12 @@ func CreateResponseData(rawResults bleve.SearchResult, pageOffset int) (SearchRe
 	var response SearchResponse
 
 	response.TotalHits = int(rawResults.Total)
-	response.MaxScore = float64(rawResults.MaxScore)
 	response.PageOffset = pageOffset
 	response.SearchTime = rawResults.Took
 	for _, hit := range rawResults.Hits {
 		var newHit SearchResponseResult
 
-		newHit.Score = hit.Score
+		newHit.Score = float64(hit.Score * 100 / rawResults.MaxScore)
 
 		if _, isThere := hit.Fields["title"]; !isThere {
 			newHit.Title = ""

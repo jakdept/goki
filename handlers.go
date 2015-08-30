@@ -317,8 +317,13 @@ func FieldListHandler(responsePipe http.ResponseWriter, request *http.Request, s
 		if err != nil {
 			http.Error(responsePipe, err.Error(), 500)
 		}
-		err = allTemplates.ExecuteTemplate(responsePipe, serverConfig.Template,
-			struct{ AllFields []string }{AllFields: fields})
+		if len(fields) > 0 {
+			err = allTemplates.ExecuteTemplate(responsePipe, serverConfig.Template,
+				struct{ AllFields []string }{AllFields: fields})
+		} else {
+			err = allTemplates.ExecuteTemplate(responsePipe, serverConfig.Template,
+				struct{ AllFields []string }{AllFields: []string{"none"}})
+		}
 		if err != nil {
 			http.Error(responsePipe, err.Error(), 500)
 		}
