@@ -50,34 +50,47 @@ An exmaple template for this handler is provided below:
 		<script src="/site/js/highlight.pack.js"></script>
 		<script>hljs.initHighlightingOnLoad();</script>
 		{{range .Keywords}}
-		<meta type="keywords" content="{{.}}">
+			<meta name="keywords" content="{{.}}">
 		{{end}}
 	</head>
 	<body>
 		<aside id="sidebar">
-			{{template "searchBox.html"}}
-			<div class="table-of-contents">{{.ToC}}</div>
-			<div class="topics">
-				{{range .Topics}}
-				<div class="topic-display">
-					<a href="/topic/{{.}}/"
-						{{.}}
-					</a>
-				</div>
-				{{end}}
+			<!-- {{template "searchBox.html"}} -->
+			<ul class="nav nav-pills nav-stacked">
+			{{.ToC}}
+			</ul>
+			<div class="panel panel-info">
+			  <div class="panel-heading">
+				  <a href="/topic/">
+				    <h3 class="panel-title">Topics on this page</h3>
+			    </a>
+			  </div>
+			  <div class="panel-body">
+					{{range .Topics}}
+						<a class="btn btn-sm btn-info" href="/topic/{{.}}/">
+							{{.}}
+						</a>
+					{{end}}
+			  </div>
 			</div>
-			<div class="authors">
-				{{range .Authors}}
-				<div class="author-display">
-					<a href="/author/{{.}}/"
-						{{.}}
-					</a>
-				</div>
-				{{end}}
+			<div class="panel panel-success">
+			  <div class="panel-heading">
+				  <a href="/author/">
+				    <h3 class="panel-title">This page written by</h3>
+			    </a>
+			  </div>
+			  <div class="panel-body">
+					{{range .Topics}}
+						<a class="btn btn-sm btn-success" href="/author/{{.}}/">
+							{{.}}
+						</a>
+					{{end}}
+			  </div>
 			</div>
 		</aside>
 		<div id="body" class="markdown-body">
-			{{.Body}}
+		<h1>{{.Title}}</h1>
+		{{.Body}}
 		</div>
 	</body>
 </html>

@@ -1,5 +1,6 @@
-topic:handler
+topic: handler
 topic: index
+topic: config
 keyword: category
 Field List Handler
 ================
@@ -15,7 +16,7 @@ An example config section for this handler:
   "Prefix": "/topic/",
   "Path": "/var/www/wiki/",
   "Default": "readme",
-  "Template": "wiki.html",
+  "Template": "topic.html",
 },
 ```
 
@@ -37,42 +38,42 @@ An exmaple template for this handler is provided below:
 
 ```html
 <html>
-  <head>
-    <title>Listing Topics</title>
-    <link rel="stylesheet" type="text/css" href="/site/css/search.css">
-  </head>
-  <body>
-    {{with .AllFields}}
-    {{range .}}
-    <a href="./{{.}}">
-      <h2>{{.}}</h2>
-    </a>
-    {{end}}
-    {{else}}
-    <aside id='resultsArea'>
-      {{ with .Results}}
-      {{range .}}
-      <div class='searchResult'>
-        <a href="{{.URIPath}}" class='resultLink' target="pagePreview">
-          <h2>
-	          {{.Title}}
-          </h2>
+    <head>
+        <title>Listing Topics</title>
+        <link rel="stylesheet" type="text/css" href="/site/css/search.css">
+    </head>
+    <body>
+        {{with .AllFields}}
+        {{range .}}
+        <a href="/topic/{{.}}/">
+            <h2>{{.}}</h2>
         </a>
-      </div>
-      {{else}}
-      <h2>
-      No Results found
-      </h2>
-      {{end}}
-      {{else}}
-      <aside id='resultsArea'>
-          {{template "searchBox.html"}}
-      </aside>
-      {{end}}
-    </aside>
-    {{end}}
-    <iframe id="pagePreview" name='pagePreview'></iframe>
-  </body>
+        {{end}}
+        {{else}}
+        <aside id='resultsArea'>
+            {{ with .Results}}
+            {{range .}}
+            <div class='searchResult'>
+                <a href="/{{.URIPath}}" class='resultLink' target="pagePreview">
+                    <h2>
+                    {{.Title}}
+                    </h2>
+                </a>
+            </div>
+            {{else}}
+            <h2>
+            No Results found
+            </h2>
+            {{end}}
+            {{else}}
+            <aside id='resultsArea'>
+                {{template "searchBox.html"}}
+            </aside>
+            {{end}}
+        </aside>
+        {{end}}
+        <iframe id="pagePreview" name='pagePreview'></iframe>
+    </body>
 </html>
 ```
 
@@ -101,7 +102,6 @@ If the request did contain a field value - it's a list of all documents within t
 type SearchResponse struct {
 	AllFields []string
 	TotalHits int
-	MaxScore float64
 	PageOffset int
 	SearchTime time.Duration
 	Results []SearchResponseResult
@@ -112,7 +112,6 @@ Where:
 
 * `AllFields` is empty, allow differentiation
 * `TotalHits` is the number of results that were matched
-* `MaxScore` is the highest result match score
 * `PageOffset` is the number of results skipped before the current page
 * `SearchTime` is the amount of time the search took
 * `Results` is an array of hits - structure explained later
@@ -135,7 +134,7 @@ Of note in here:
 
 * `Title` - the page title
 * `URIPath` - URI path pointing to the page
-* `Score` contains the score of the match - the higher the closer the match to the search query
+* `Score` contains the score of the match - a percentage
 * `Topics` - all of the topics for the page
 * `Keywords` - all of the keywords associated with the page
 * `Author` - all of the authors for the page
