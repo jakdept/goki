@@ -110,7 +110,7 @@ func RawHandler(responsePipe http.ResponseWriter, request *http.Request, serverC
 	return
 }
 
-func SearchHandler(responsePipe http.ResponseWriter, request *http.Request, serverConfig ServerSection) {
+func QuerySearchHandler(responsePipe http.ResponseWriter, request *http.Request, serverConfig ServerSection) {
 
 	var err error
 	var ok bool
@@ -162,13 +162,12 @@ func SearchHandler(responsePipe http.ResponseWriter, request *http.Request, serv
 	index, err := bleve.Open(serverConfig.Path)
 	defer index.Close()
 	if index == nil {
-		log.Printf("no such index '%s'", serverConfig.Default)
+		log.Printf("no such index '%s'", serverConfig.Path)
 		http.Error(responsePipe, err.Error(), 404)
 		return
 	} else if err != nil {
-		log.Printf("no such index '%s'", serverConfig.Path)
-		http.Error(responsePipe, err.Error(), 404)
 		log.Printf("problem opening index '%s' - %v", serverConfig.Path, err)
+		http.Error(responsePipe, err.Error(), 404)
 		return
 	}
 
@@ -192,7 +191,7 @@ func SearchHandler(responsePipe http.ResponseWriter, request *http.Request, serv
 	}
 }
 
-func FuzzySearch(responsePipe http.ResponseWriter, request *http.Request, serverConfig ServerSection) {
+func FuzzySearchHandler(responsePipe http.ResponseWriter, request *http.Request, serverConfig ServerSection) {
 
 	var err error
 	var ok bool
@@ -411,12 +410,12 @@ func MakeHandler(handlerConfig ServerSection) http.HandlerFunc {
 			MarkdownHandler(w, r, handlerConfig)
 		case "raw":
 			RawHandler(w, r, handlerConfig)
-		case "simplesearch":
-			SearchHandler(w, r, handlerConfig)
+		case "querysearch":
+			QuerySearchHandler(w, r, handlerConfig)
 		case "fieldlist":
 			FieldListHandler(w, r, handlerConfig)
 		case "fuzzysearch":
-			FuzzySearch(w, r, handlerConfig)
+			FuzzySearchHandler(w, r, handlerConfig)
 		default:
 			log.Printf("Bad server type [%s]", handlerConfig.ServerType)
 		}
