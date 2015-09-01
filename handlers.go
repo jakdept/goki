@@ -210,8 +210,7 @@ func FuzzySearch(responsePipe http.ResponseWriter, request *http.Request, server
 	}
 
 	// start with a string query
-	var multiQuery []bleve.Query
-	multiQuery[0] = bleve.NewFuzzyQuery(queryArgs["s"][0])
+	multiQuery := []bleve.Query{bleve.NewFuzzyQuery(queryArgs.Get("s"))}
 
 	// add in the required topics to the query
 	var topics []bleve.Query
