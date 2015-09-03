@@ -24,3 +24,28 @@ type mxRec struct {
 type txtRec struct {
 	dnsRec
 }
+
+type nsRec struct {
+	cnameRec
+}
+
+type ptrRec struct {
+	aRec
+}
+
+type soaRec struct {
+
+}
+
+type fqdn struct {
+	parentPart string
+	localPart string
+	records []dnsRec
+	subdomains []fqdn
+}
+
+type zone struct {
+	soa soaRec
+	defaultTTL int
+	tld fqdn
+}
