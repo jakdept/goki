@@ -265,6 +265,8 @@ type SearchResponse struct {
 	TotalHits  int
 	PageOffset int
 	SearchTime time.Duration
+	Topics     []string
+	Authors    []string
 	Results    []SearchResponseResult
 }
 
@@ -278,12 +280,14 @@ type SearchResponseResult struct {
 	Body     string
 }
 
-func CreateResponseData(rawResults bleve.SearchResult, pageOffset int) (SearchResponse, error) {
+func CreateResponseData(rawResults bleve.SearchResult, pageOffset int, topics []string, authors []string) (SearchResponse, error) {
 	var response SearchResponse
 
 	response.TotalHits = int(rawResults.Total)
 	response.PageOffset = pageOffset
 	response.SearchTime = rawResults.Took
+	response.Topics = topics
+	response.Authors = authors
 	for _, hit := range rawResults.Hits {
 		var newHit SearchResponseResult
 

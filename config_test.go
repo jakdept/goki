@@ -3,13 +3,13 @@ package gnosis
 import (
 	"errors"
 	"github.com/stretchr/testify/assert"
+	"html/template"
+	"net/http/httptest"
 	"os"
 	"path"
 	"path/filepath"
-	"testing"
 	"strings"
-	"html/template"
-	"net/http/httptest"
+	"testing"
 )
 
 func TestSimpleConfig(t *testing.T) {
@@ -112,14 +112,14 @@ func TestGetConfig(t *testing.T) {
 	}()
 
 	select {
-		case config = <-ch:
-		default:
+	case config = <-ch:
+	default:
 	}
 
 	assert.Nil(t, config, "Config should current be blocked and shoult not have loaded.")
 	configLock.Unlock()
 	select {
-		case config = <-ch:
+	case config = <-ch:
 	}
 	assert.NotNil(t, config, "Config should have loaded - is no longer blocked.")
 }
@@ -159,18 +159,18 @@ func TestRenderTemplate(t *testing.T) {
 		var testResponse string
 
 		select {
-			case testResponse = <- ch:
-			default:
+		case testResponse = <-ch:
+		default:
 		}
 
 		assert.Empty(t, testResponse, "expecte empty testResponse, has [%q]", testResponse)
 
-			templateLock.Unlock()
+		templateLock.Unlock()
 		select {
-			case testResponse = <- ch:
+		case testResponse = <-ch:
 		}
 
-		assert.Equal(t, testSet.expected, testResponse, 
+		assert.Equal(t, testSet.expected, testResponse,
 			"expecte empty testResponse, has [%q]", testResponse)
 
 	}

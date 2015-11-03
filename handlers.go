@@ -151,6 +151,20 @@ func QuerySearchHandler(responsePipe http.ResponseWriter, request *http.Request,
 	searchRequest.Size = pageSize
 	searchRequest.From = pageSize * page
 
+	allTopics, err := ListField(serverConfig.Path, "topic")
+	if err != nil {
+		log.Printf("failed to list the topics for a search page: %v", err)
+		http.Error(responsePipe, "Internal Server Error", 500)
+		return
+	}
+
+	allAuthors, err := ListField(serverConfig.Path, "author")
+	if err != nil {
+		log.Printf("failed to list the authors for a search page: %v", err)
+		http.Error(responsePipe, "Internal Server Error", 500)
+		return
+	}
+
 	// validate the query
 	err = searchRequest.Query.Validate()
 	if err != nil {
@@ -179,7 +193,7 @@ func QuerySearchHandler(responsePipe http.ResponseWriter, request *http.Request,
 		return
 	}
 
-	templateData, err := CreateResponseData(*searchResponse, page*pageSize)
+	templateData, err := CreateResponseData(*searchResponse, page*pageSize, allTopics, allAuthors)
 	if err != nil {
 		log.Printf("Error translating query results: %v", err)
 		http.Error(responsePipe, err.Error(), 500)
@@ -191,7 +205,7 @@ func QuerySearchHandler(responsePipe http.ResponseWriter, request *http.Request,
 	}
 }
 
-func FuzzySearchHandler(responsePipe http.ResponseWriter, request *http.Request, serverConfig ServerSection) {
+func SearchHandler(responsePipe http.ResponseWriter, request *http.Request, serverConfig ServerSection) {
 
 	var err error
 	var ok bool
@@ -200,8 +214,24 @@ func FuzzySearchHandler(responsePipe http.ResponseWriter, request *http.Request,
 
 	queryArgs := request.URL.Query()
 
+	allTopics, err := ListField(serverConfig.Path, "topic")
+	if err != nil {
+		log.Printf("failed to list the topics for a search page: %v", err)
+		http.Error(responsePipe, "Internal Server Error", 500)
+		return
+	}
+
+	allAuthors, err := ListField(serverConfig.Path, "author")
+	if err != nil {
+		log.Printf("failed to list the authors for a search page: %v", err)
+		http.Error(responsePipe, "Internal Server Error", 500)
+		return
+	}
+
 	if _, ok = queryArgs["s"]; !ok {
-		err = allTemplates.ExecuteTemplate(responsePipe, serverConfig.Template, make([]bleve.SearchResult, 0))
+
+		err = allTemplates.ExecuteTemplate(responsePipe, serverConfig.Template, SearchResponse{
+			Topics: allTopics, Authors: allAuthors})
 		if err != nil {
 			http.Error(responsePipe, err.Error(), 500)
 		}
@@ -281,7 +311,7 @@ func FuzzySearchHandler(responsePipe http.ResponseWriter, request *http.Request,
 		return
 	}
 
-	templateData, err := CreateResponseData(*searchResponse, page*pageSize)
+	templateData, err := CreateResponseData(*searchResponse, page*pageSize, allTopics, allAuthors)
 	if err != nil {
 		log.Printf("Error translating query results: %v", err)
 		http.Error(responsePipe, err.Error(), 500)
@@ -361,6 +391,19 @@ func FieldListHandler(responsePipe http.ResponseWriter, request *http.Request, s
 			return
 		}
 
+		allTopics, err := ListField(serverConfig.Path, "topic")
+		if err != nil {
+			log.Printf("failed to list the topics for a search page: %v", err)
+			http.Error(responsePipe, "Internal Server Error", 500)
+			return
+		}
+
+		allAuthors, err := ListField(serverConfig.Path, "author")
+		if err != nil {
+			log.Printf("failed to list the authors for a search page: %v", err)
+			http.Error(responsePipe, "Internal Server Error", 500)
+			return
+		}
 		// Open the index
 		index, err := bleve.Open(serverConfig.Path)
 		defer index.Close()
@@ -383,7 +426,7 @@ func FieldListHandler(responsePipe http.ResponseWriter, request *http.Request, s
 			return
 		}
 
-		standardSearchResponse, err := CreateResponseData(*searchResponse, page*pageSize)
+		standardSearchResponse, err := CreateResponseData(*searchResponse, page*pageSize, allTopics, allAuthors)
 		if err != nil {
 			log.Printf("Error translating query results: %v", err)
 			http.Error(responsePipe, err.Error(), 500)
@@ -411,11 +454,13 @@ func MakeHandler(handlerConfig ServerSection) http.HandlerFunc {
 		case "raw":
 			RawHandler(w, r, handlerConfig)
 		case "querysearch":
+			log.Printf("serving a Query String Search on [%s] with the template [%s]", handlerConfig.Prefix, handlerConfig.Template)
 			QuerySearchHandler(w, r, handlerConfig)
 		case "fieldlist":
 			FieldListHandler(w, r, handlerConfig)
-		case "fuzzysearch":
-			FuzzySearchHandler(w, r, handlerConfig)
+		case "search":
+			log.Printf("serving a Search on [%s] with the template [%s]", handlerConfig.Prefix, handlerConfig.Template)
+			SearchHandler(w, r, handlerConfig)
 		default:
 			log.Printf("Bad server type [%s]", handlerConfig.ServerType)
 		}
