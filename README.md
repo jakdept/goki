@@ -1,6 +1,6 @@
-# gnosis
+# goki
 
-[![Build Status](https://travis-ci.org/JackKnifed/gnosis.svg)](https://travis-ci.org/JackKnifed/gnosis)
+[![Build Status](https://travis-ci.org/JackKnifed/goki.svg)](https://travis-ci.org/JackKnifed/goki)
 
 Markdown based wiki server
 

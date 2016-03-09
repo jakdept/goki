@@ -1,6 +1,6 @@
 // this file contains a pre-processor to pull some stuff out of the markdown file before parsing it
 
-package gnosis
+package goki
 
 import (
 	"bufio"

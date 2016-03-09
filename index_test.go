@@ -1,4 +1,4 @@
-package gnosis
+package goki
 
 import (
 	"github.com/stretchr/testify/assert"
