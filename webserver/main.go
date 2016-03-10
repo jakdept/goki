@@ -63,6 +63,14 @@ func main() {
 		http.HandleFunc(individualServer.Prefix, goki.MakeHandler(individualServer))
 	}
 
-	log.Println(http.ListenAndServe(":"+config.Global.Port, nil))
+	if len(config.Global.CertFile) == 0 && len(config.Global.KeyFile) == 0 {
+		log.Println(http.ListenAndServeTLS(
+			config.Global.Address+":"+config.Global.Port,
+			config.Global.CertFile,
+			config.Global.KeyFile,
+			nil))
+
+	}
+	log.Println(http.ListenAndServe(config.Global.Address+":"+config.Global.Port, nil))
 
 }

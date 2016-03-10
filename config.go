@@ -27,9 +27,12 @@ var allTemplates = template.New("allTemplates")
 var templateLock = new(sync.RWMutex)
 
 type GlobalSection struct {
+	Address     string
 	Port        string
 	Hostname    string
 	TemplateDir string
+	CertFile    string
+	KeyFile     string
 }
 
 type RedirectSection struct {
