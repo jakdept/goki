@@ -148,7 +148,7 @@ func (pdata *PageMetadata) LoadPage(pageName string) error {
 	for err != io.EOF {
 		// check the first line you read
 		if err != nil {
-			return Error{Code: ErrPageRead, innerError: err}
+			return &Error{Code: ErrPageRead, innerError: err}
 		}
 		bytesDone := pdata.isTitle(lineBuffer)
 		if bytesDone == len(lineBuffer) {

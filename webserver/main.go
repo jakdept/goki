@@ -35,7 +35,7 @@ func main() {
 	flag.Parse()
 
 	// ##TODO## check for false returnear- if null, the config could not be loaded
-	if success := goki.LoadConfig(*configFile); success == false {
+	if err := goki.LoadConfig(*configFile); err != nil {
 		log.Fatal("Could not parse the config, abandoning")
 	}
 

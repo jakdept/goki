@@ -144,7 +144,7 @@ func ParseTemplates(globalConfig GlobalSection) error {
 		return err
 	}
 
-	loadedTemplates := newTemplate.Templates()
+	// loadedTemplates := newTemplate.Templates()
 	// for _, individualTemplate := range loadedTemplates {
 	// 	log.Printf("Loaded template %s ", individualTemplate.Name())
 	// }

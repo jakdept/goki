@@ -2,7 +2,6 @@ package goki
 
 import (
 	"errors"
-	"github.com/stretchr/testify/assert"
 	"html/template"
 	"net/http/httptest"
 	"os"
@@ -10,6 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestSimpleConfig(t *testing.T) {
@@ -45,7 +46,7 @@ func TestSimpleConfig(t *testing.T) {
 
 	success := LoadConfig(filepath)
 
-	assert.True(t, success, "Default configuration should load without error.")
+	assert.NoError(t, success, "Default configuration should load without error.")
 
 	config := GetConfig()
 
