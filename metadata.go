@@ -126,9 +126,8 @@ func (pdata *PageMetadata) readRestOfPage(r *bufio.Reader) error {
 
 	if err == io.EOF {
 		return nil
-	} else {
-		return err
 	}
+	return err
 }
 
 func (pdata *PageMetadata) LoadPage(pageName string) error {
