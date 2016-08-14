@@ -59,6 +59,7 @@ const (
 	ErrParseConfig
 	ErrPageRead
 	ErrPageNoTitle
+	ErrParseTemplates
 )
 
 // specify the error message for each error
@@ -71,4 +72,5 @@ var errMsg = map[int]string{
 	ErrParseConfig:         "parse config error %v - contents %#v",
 	ErrPageRead:            "error reading from file - %v",
 	ErrPageNoTitle:         "read no titles on the Page",
+	ErrParseTemplates:      "problem parsing templates - %v",
 }

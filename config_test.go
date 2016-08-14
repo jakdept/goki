@@ -1,7 +1,6 @@
 package goki
 
 import (
-	"errors"
 	"html/template"
 	"net/http/httptest"
 	"os"
@@ -197,6 +196,7 @@ func TestParseTemplates(t *testing.T) {
 
 func TestBadParseTemplates(t *testing.T) {
 	err := ParseTemplates(GlobalSection{TemplateDir: "./notadir/*"})
-	expectedError := errors.New("html/template: pattern matches no files: `./notadir/**`")
-	assert.Equal(t, err, expectedError, "got the wrong error response")
+	localError, ok := err.(*Error)
+	assert.True(t, ok, "did not get back my type of error")
+	assert.Equal(t, localError.Code, ErrParseTemplates, "got the wrong error response - %#v")
 }

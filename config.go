@@ -141,7 +141,7 @@ func ParseTemplates(globalConfig GlobalSection) error {
 	// log.Printf("Parsing templates in [%q]", globalConfig.TemplateDir)
 	newTemplate, err := template.ParseGlob(globalConfig.TemplateDir + "*")
 	if err != nil {
-		return err
+		return &Error{Code: ErrParseTemplates, innerError: err}
 	}
 
 	// loadedTemplates := newTemplate.Templates()
