@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"html/template"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -66,10 +65,10 @@ func GetConfig() *Config {
 	return staticConfig
 }
 
-func LoadConfig(configFile string) bool {
+func LoadConfig(configFile string) error {
 
 	if configFile == "" {
-		log.Println("no configuration file specified, using ./config.json")
+		// log.Println("no configuration file specified, using ./config.json")
 		// return an empty config file
 		configFile = "config.json"
 	}
@@ -77,7 +76,7 @@ func LoadConfig(configFile string) bool {
 	// have to read in the line into a byte[] array
 	fileContents, err := ioutil.ReadFile(configFile)
 	if err != nil {
-		log.Printf("Problem loading config file: %s", err.Error())
+		return &Error{Code: ErrReadConfig, innerError: err, value: configFile}
 	}
 
 	// UnMarshal the config file that was read in
@@ -86,20 +85,18 @@ func LoadConfig(configFile string) bool {
 	err = json.Unmarshal(fileContents, temp)
 	//Make sure you were able to read it in
 	if err != nil {
-		log.Printf("parse config error: %s", err.Error())
-		log.Print(temp)
-		return false
+		return &Error{Code: ErrParseConfig, value: temp, innerError: err}
 	}
 
 	CleanConfig(temp)
 
-	log.Println(temp.Indexes)
+	// log.Println(temp.Indexes)
 
 	configLock.Lock()
 	staticConfig = temp
 	configLock.Unlock()
 
-	return true
+	return nil
 }
 
 func CleanConfig(config *Config) {
@@ -141,16 +138,16 @@ func RenderTemplate(responsePipe http.ResponseWriter, templateName string,
 }
 
 func ParseTemplates(globalConfig GlobalSection) error {
-	log.Printf("Parsing templates in [%q]", globalConfig.TemplateDir)
+	// log.Printf("Parsing templates in [%q]", globalConfig.TemplateDir)
 	newTemplate, err := template.ParseGlob(globalConfig.TemplateDir + "*")
 	if err != nil {
 		return err
 	}
 
 	loadedTemplates := newTemplate.Templates()
-	for _, individualTemplate := range loadedTemplates {
-		log.Printf("Loaded template %s ", individualTemplate.Name())
-	}
+	// for _, individualTemplate := range loadedTemplates {
+	// 	log.Printf("Loaded template %s ", individualTemplate.Name())
+	// }
 
 	templateLock.Lock()
 	defer templateLock.Unlock()

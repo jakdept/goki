@@ -55,6 +55,8 @@ const (
 	ErrBadType
 	ErrBadAddressStructure
 	ErrBadAddressIndex
+	ErrReadConfig
+	ErrParseConfig
 )
 
 // specify the error message for each error
@@ -63,4 +65,6 @@ var errMsg = map[int]string{
 	ErrBadType:             "value at address [%s] is of the wrong type [%s]",
 	ErrBadAddressStructure: "got an address mapping that does not match the formatting",
 	ErrBadAddressIndex:     "got address mapping that does not exist",
+	ErrReadConfig:          "error reading config [%s] - %v",
+	ErrParseConfig:         "parse config error %v - contents %#v",
 }
