@@ -57,6 +57,8 @@ const (
 	ErrBadAddressIndex
 	ErrReadConfig
 	ErrParseConfig
+	ErrPageRead
+	ErrPageNoTitle
 )
 
 // specify the error message for each error
@@ -67,4 +69,6 @@ var errMsg = map[int]string{
 	ErrBadAddressIndex:     "got address mapping that does not exist",
 	ErrReadConfig:          "error reading config [%s] - %v",
 	ErrParseConfig:         "parse config error %v - contents %#v",
+	ErrPageRead:            "error reading from file - %v",
+	ErrPageNoTitle:         "read no titles on the Page",
 }
