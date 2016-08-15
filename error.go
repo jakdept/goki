@@ -1,4 +1,4 @@
-package goki
+package main
 
 import "fmt"
 
