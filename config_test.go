@@ -1,8 +1,6 @@
 package goki
 
 import (
-	"errors"
-	"github.com/stretchr/testify/assert"
 	"html/template"
 	"net/http/httptest"
 	"os"
@@ -10,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestSimpleConfig(t *testing.T) {
@@ -45,7 +45,7 @@ func TestSimpleConfig(t *testing.T) {
 
 	success := LoadConfig(filepath)
 
-	assert.True(t, success, "Default configuration should load without error.")
+	assert.NoError(t, success, "Default configuration should load without error.")
 
 	config := GetConfig()
 
@@ -196,6 +196,7 @@ func TestParseTemplates(t *testing.T) {
 
 func TestBadParseTemplates(t *testing.T) {
 	err := ParseTemplates(GlobalSection{TemplateDir: "./notadir/*"})
-	expectedError := errors.New("html/template: pattern matches no files: `./notadir/**`")
-	assert.Equal(t, err, expectedError, "got the wrong error response")
+	localError, ok := err.(*Error)
+	assert.True(t, ok, "did not get back my type of error")
+	assert.Equal(t, localError.Code, ErrParseTemplates, "got the wrong error response - %#v")
 }

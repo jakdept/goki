@@ -5,14 +5,11 @@ package goki
 import (
 	"bufio"
 	"bytes"
-	"errors"
-	// "html/template"
 	"io"
-	"sort"
-	// "strings"
-	// "log"
-	"github.com/JackKnifed/blackfriday"
 	"os"
+	"sort"
+
+	"github.com/JackKnifed/blackfriday"
 )
 
 type PageMetadata struct {
@@ -74,7 +71,8 @@ func (pdata *PageMetadata) processMetadata(line []byte) {
 	pdata.checkMatch(line, []byte("maintainer"), &pdata.Authors)
 }
 
-func (pdata *PageMetadata) checkMatch(input []byte, looking []byte, tracker *map[string]bool) {
+func (pdata *PageMetadata) checkMatch(
+	input []byte, looking []byte, tracker *map[string]bool) {
 	// trim off any blank spaces at the start of the line
 	input = bytes.ToLower(bytes.TrimSpace(input))
 	looking = bytes.ToLower(bytes.TrimSpace(looking))
@@ -128,9 +126,8 @@ func (pdata *PageMetadata) readRestOfPage(r *bufio.Reader) error {
 
 	if err == io.EOF {
 		return nil
-	} else {
-		return err
 	}
+	return err
 }
 
 func (pdata *PageMetadata) LoadPage(pageName string) error {
@@ -150,7 +147,7 @@ func (pdata *PageMetadata) LoadPage(pageName string) error {
 	for err != io.EOF {
 		// check the first line you read
 		if err != nil {
-			return errors.New("error reading from file - " + err.Error())
+			return &Error{Code: ErrPageRead, innerError: err}
 		}
 		bytesDone := pdata.isTitle(lineBuffer)
 		if bytesDone == len(lineBuffer) {
@@ -162,7 +159,7 @@ func (pdata *PageMetadata) LoadPage(pageName string) error {
 			lineBuffer = append(lineBuffer, newLine...)
 		}
 	}
-	return errors.New("need to hit a title in the file")
+	return &Error{Code: ErrPageNoTitle}
 }
 
 // determines if the next two lines contain a title line
@@ -275,7 +272,8 @@ func (pdata *PageMetadata) MatchedTopic(checkTags []string) bool {
 }
 
 // returns all the tags within a list as an array of strings
-func (pdata *PageMetadata) ListMeta() (topics []string, keywords []string, authors []string) {
+func (pdata *PageMetadata) ListMeta() (
+	topics []string, keywords []string, authors []string) {
 	for oneTag, _ := range pdata.Topics {
 		topics = append(topics[:], oneTag)
 	}
