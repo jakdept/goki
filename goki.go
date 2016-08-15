@@ -4,6 +4,7 @@ import (
 	//"html/template"
 	//"io/ioutil"
 	"log"
+
 	//"regexp"
 	"os"
 
@@ -11,9 +12,8 @@ import (
 	"net/http"
 
 	"flag"
-
 	//"github.com/JackKnifed/blackfriday"
-	"github.com/JackKnifed/goki"
+	//"github.com/JackKnifed/goki"
 	//"github.com/russross/blackfriday"
 )
 
@@ -35,11 +35,11 @@ func main() {
 	flag.Parse()
 
 	// ##TODO## check for false returnear- if null, the config could not be loaded
-	if err := goki.LoadConfig(*configFile); err != nil {
+	if err := LoadConfig(*configFile); err != nil {
 		log.Fatal("Could not parse the config, abandoning")
 	}
 
-	config := goki.GetConfig()
+	config := GetConfig()
 
 	// set up my interrupt channel and go routine
 	// signal.Notify(quitChan, os.Interrupt)
@@ -47,12 +47,12 @@ func main() {
 
 	for _, individualIndex := range config.Indexes {
 		// #TODO change this?
-		if !goki.EnableIndex(individualIndex) {
+		if !EnableIndex(individualIndex) {
 			log.Fatalf("Failed opening index %s, abandoning", individualIndex.IndexPath)
 		}
 	}
 
-	if err := goki.ParseTemplates(config.Global); err != nil {
+	if err := ParseTemplates(config.Global); err != nil {
 		log.Fatalf("Error parsing templates, %s", err)
 	}
 
@@ -60,7 +60,7 @@ func main() {
 		http.Handle(redirect.Requested, http.RedirectHandler(redirect.Target, redirect.Code))
 	}
 	for _, individualServer := range config.Server {
-		http.HandleFunc(individualServer.Prefix, goki.MakeHandler(individualServer))
+		http.HandleFunc(individualServer.Prefix, MakeHandler(individualServer))
 	}
 
 	if len(config.Global.CertFile) == 0 && len(config.Global.KeyFile) == 0 {

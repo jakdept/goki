@@ -1,16 +1,17 @@
 // contains the tests for the metadata tests
 
-package goki
+package main
 
 import (
 	"bytes"
-	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func stringKeyExistsInMap(itemMap map[string]bool, key string) bool {
