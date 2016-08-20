@@ -18,16 +18,6 @@ import (
 
 var openWatchers []fsnotify.Watcher
 
-type indexedPage struct {
-	Title    string    `json:"title"`
-	URIPath  string    `json:"path"`
-	Body     string    `json:"body"`
-	Topics   string    `json:"topic"`
-	Keywords string    `json:"keyword"`
-	Authors  string    `json: "author"`
-	Modified time.Time `json:"modified"`
-}
-
 func createIndex(config IndexSection) bool {
 	newIndex, err := bleve.Open(path.Clean(config.IndexPath))
 	if err == nil {

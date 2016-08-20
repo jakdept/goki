@@ -60,6 +60,10 @@ const (
 	ErrPageRead
 	ErrPageNoTitle
 	ErrParseTemplates
+	ErrPageRestricted
+	ErrIndexError
+	ErrWatcherCreate
+	ErrWatcherAdd
 )
 
 // specify the error message for each error
@@ -73,4 +77,8 @@ var errMsg = map[int]string{
 	ErrPageRead:            "error reading from file - %v",
 	ErrPageNoTitle:         "read no titles on the Page",
 	ErrParseTemplates:      "problem parsing templates - %v",
+	ErrPageRestricted:      "hit a restricted page - %s",
+	ErrIndexError:          "problem with index at [%s] - %v",
+	ErrWatcherCreate:       "problem creating a watcher - %v",
+	ErrWatcherAdd:          "problem watching a directory %s - %v",
 }
