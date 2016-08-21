@@ -1,7 +1,11 @@
 package main
 
 import (
+	"io/ioutil"
 	"log"
+	"os"
+	"path"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -9,8 +13,8 @@ import (
 	"gopkg.in/fsnotify.v1"
 
 	"github.com/JackKnifed/blackfriday"
+	"github.com/JackKnifed/blackfriday-text"
 	"github.com/blevesearch/bleve"
-	"github.com/mschoch/blackfriday-text"
 )
 
 type indexedPage struct {
@@ -28,20 +32,112 @@ type Index struct {
 	lock       sync.RWMutex
 	updateChan chan indexedPage
 	config     IndexSection
-	log        log.Logger
+	log        *log.Logger
 	threads    sync.WaitGroup
 	closer     chan struct{}
 }
 
-func OpenIndex(config IndexSection) (*Index, error) {
+func OpenIndex(c IndexSection, l *log.Logger) (*Index, error) {
+	i := &Index{config: c, log: l}
+	index, err := bleve.Open(path.Clean(i.config.IndexPath))
+	if err == nil {
+		i.index = index
+	} else if err == bleve.ErrorIndexPathDoesNotExist {
+		indexMapping := i.buildIndexMapping()
+		index, err = bleve.New(path.Clean(i.config.IndexPath), indexMapping)
+		if err != nil {
+			return &Index{}, &Error{Code: ErrIndexCreate, value: c.IndexPath, innerError: err}
+		}
 
+		i.index = index
+	}
+
+	// i am confused how the filepath -> uriPaths line up
+	// start watchers
+	for each, _ := range i.config.WatchDirs {
+		go i.WatchDir(filepath.Clean(each))
+		go i.CrawlDir(filepath.Clean(each))
+	}
+
+	// prime the closing channel
+	go func() {
+		<-i.closer
+	}()
+	i.closer <- struct{}{}
+
+	return i, nil
+}
+
+func (i *Index) buildIndexMapping() *bleve.IndexMapping {
+
+	// create a text field type
+	enTextFieldMapping := bleve.NewTextFieldMapping()
+	enTextFieldMapping.Analyzer = i.config.IndexType
+
+	// create a date field type
+	dateTimeMapping := bleve.NewDateTimeFieldMapping()
+
+	// map out the wiki page
+	wikiMapping := bleve.NewDocumentMapping()
+	wikiMapping.AddFieldMappingsAt("title", enTextFieldMapping)
+	wikiMapping.AddFieldMappingsAt("path", enTextFieldMapping)
+	wikiMapping.AddFieldMappingsAt("body", enTextFieldMapping)
+	wikiMapping.AddFieldMappingsAt("topic", enTextFieldMapping)
+	wikiMapping.AddFieldMappingsAt("keyword", enTextFieldMapping)
+	wikiMapping.AddFieldMappingsAt("author", enTextFieldMapping)
+	wikiMapping.AddFieldMappingsAt("modified", dateTimeMapping)
+
+	// add the wiki page mapping to a new index
+	indexMapping := bleve.NewIndexMapping()
+	indexMapping.AddDocumentMapping(i.config.IndexName, wikiMapping)
+	indexMapping.DefaultAnalyzer = i.config.IndexType
+
+	return indexMapping
+}
+
+func (i *Index) Close() error {
+	// dump something into the channel incase it's currently nil
+	i.closer <- struct{}{}
+	close(i.closer)
+
+	i.threads.Wait()
+
+	if err := i.index.Close(); err != nil {
+		return &Error{Code: ErrIndexClose, innerError: err}
+	}
+	return nil
+}
+
+func (i *Index) Wipe() error {
+	i.lock.Lock()
+	if err := i.index.Close(); err != nil {
+		i.lock.Unlock()
+		return &Error{Code: ErrIndexClose, innerError: err}
+	}
+
+	if err := os.RemoveAll(i.config.IndexPath); err != nil {
+		return &Error{Code: ErrIndexRemove, value: i.config.IndexPath, innerError: err}
+	}
+
+	// TODO not sure if needed
+	if err := os.Mkdir(i.config.IndexPath, 644); err != nil {
+		return &Error{Code: ErrIndexCreate, value: i.config, innerError: err}
+	}
+	// remove index
+
+	indexMapping := i.buildIndexMapping()
+	index, err := bleve.New(path.Clean(i.config.IndexPath), indexMapping)
+	if err != nil {
+		close(i.closer)
+		return &Error{Code: ErrIndexCreate, value: i.config, innerError: err}
+	}
+
+	i.index = index
+	i.lock.Unlock()
+	return nil
 }
 
 func (i *Index) WatchDir(watchPath string) error {
-	if !strings.HasSuffix(watchPath, "/") {
-		watchPath = watchPath + "/"
-	}
-
 	i.log.Printf("watching '%s' for changes...", watchPath)
 
 	i.threads.Add(1)
@@ -91,8 +187,19 @@ func (i *Index) WatchDir(watchPath string) error {
 	return nil
 }
 
-func (i *Index) CrawlDir(globPath string) error {
-
+func (i *Index) CrawlDir(path string) error {
+	if dirEntries, err := ioutil.ReadDir(path); err != nil {
+		return &Error{Code: ErrFileRead, value: path, innerError: err}
+	}
+	for _, dirEntry := range dirEntries {
+		dirEntryPath := path + string(os.PathSeparator) + dirEntry.Name()
+		if dirEntry.IsDir() {
+			i.CrawlDir(dirEntryPath)
+		} else if strings.HasSuffix(dirEntry.Name(), config.WatchExtension) {
+			// pretty sure path down below is wrong....
+			i.UpdateURI(dirEntryPath, i.getURI(dirEntryPath, path))
+		}
+	}
 }
 
 func (i *Index) DeleteURI(uriPath string) error {
@@ -121,8 +228,8 @@ func (i *Index) UpdateURI(filePath, uriPath string) error {
 	return nil
 }
 
-func (i *Index) Query(bleve.SearchRequest) (bleve.SearchResponse, error) {
-
+func (i *Index) Query(bleve.SearchRequest) (bleve.SearchResult, error) {
+	return bleve.SearchResult{}, nil
 }
 
 func (i *Index) ListField(field string) ([]string, error) {
@@ -161,9 +268,9 @@ func (i *Index) cleanupMarkdown(input []byte) string {
 	return string(output)
 }
 
-func (i *Index) getURI(filePath, filePrefix) (uriPath string) {
+func (i *Index) getURI(filePath, filePrefix string) (uriPath string) {
 	uriPath = strings.TrimPrefix(filePath, filePrefix)
 	uriPath = strings.TrimPrefix(uriPath, "/")
-	uriPrefix = strings.TrimSuffix(uriPrefix, "/")
+	uriPrefix := strings.TrimSuffix(i.config.IndexPath, "/")
 	uriPath = uriPrefix + "/" + uriPath
 }

@@ -64,6 +64,10 @@ const (
 	ErrIndexError
 	ErrWatcherCreate
 	ErrWatcherAdd
+	ErrIndexCreate
+	ErrIndexClose
+	ErrIndexRemove
+	ErrFileRead
 )
 
 // specify the error message for each error
@@ -81,4 +85,8 @@ var errMsg = map[int]string{
 	ErrIndexError:          "problem with index at [%s] - %v",
 	ErrWatcherCreate:       "problem creating a watcher - %v",
 	ErrWatcherAdd:          "problem watching a directory %s - %v",
+	ErrIndexCreate:         "problem creating index at [%s] - %v",
+	ErrIndexClose:          "failed to close index - %v",
+	ErrIndexRemove:         "failed to remove index at %s - %v",
+	ErrFileRead:            "failed to read directory - %s - %v",
 }
