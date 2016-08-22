@@ -68,6 +68,7 @@ const (
 	ErrIndexClose
 	ErrIndexRemove
 	ErrFileRead
+	ErrInvalidQuery
 )
 
 // specify the error message for each error
@@ -89,4 +90,5 @@ var errMsg = map[int]string{
 	ErrIndexClose:          "failed to close index - %v",
 	ErrIndexRemove:         "failed to remove index at %s - %v",
 	ErrFileRead:            "failed to read directory - %s - %v",
+	ErrInvalidQuery:        "bad query passed - %v",
 }

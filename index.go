@@ -1,7 +1,6 @@
 package main
 
 import (
-	"io/ioutil"
 	"log"
 	"os"
 	"path"
@@ -55,8 +54,9 @@ func OpenIndex(c IndexSection, l *log.Logger) (*Index, error) {
 	// i am confused how the filepath -> uriPaths line up
 	// start watchers
 	for each, _ := range i.config.WatchDirs {
-		go i.WatchDir(filepath.Clean(each))
-		go i.CrawlDir(filepath.Clean(each))
+		path := filepath.Clean(each)
+		go i.WatchDir(path)
+		go i.CrawlDir(path, path)
 	}
 
 	// prime the closing channel
@@ -187,19 +187,17 @@ func (i *Index) WatchDir(watchPath string) error {
 	return nil
 }
 
-func (i *Index) CrawlDir(path string) error {
-	if dirEntries, err := ioutil.ReadDir(path); err != nil {
-		return &Error{Code: ErrFileRead, value: path, innerError: err}
-	}
-	for _, dirEntry := range dirEntries {
-		dirEntryPath := path + string(os.PathSeparator) + dirEntry.Name()
-		if dirEntry.IsDir() {
-			i.CrawlDir(dirEntryPath)
-		} else if strings.HasSuffix(dirEntry.Name(), config.WatchExtension) {
-			// pretty sure path down below is wrong....
-			i.UpdateURI(dirEntryPath, i.getURI(dirEntryPath, path))
+func (i *Index) indexFileFunc(rootPath string) filepath.WalkFunc {
+	return func(path string, info os.FileInfo, err error) error {
+		if !info.IsDir() {
+			i.log.Println(i.UpdateURI(path, i.getURI(path, rootPath)))
 		}
+		return nil
 	}
+}
+
+func (i *Index) CrawlDir(path string) {
+	filepath.Walk(path, i.indexFileFunc(path))
 }
 
 func (i *Index) DeleteURI(uriPath string) error {
@@ -228,12 +226,16 @@ func (i *Index) UpdateURI(filePath, uriPath string) error {
 	return nil
 }
 
-func (i *Index) Query(bleve.SearchRequest) (bleve.SearchResult, error) {
+func (i *Index) Query(request *bleve.SearchRequest) (bleve.SearchResult, error) {
+	i.lock.RLock()
+	defer i.lock.RUnlock()
+
+	searchResults, err := i.index.Search(request)
+	if err != nil {
+		return nil, &Error{Code: ErrInvalidQuery, innerError: err}
+	}
+
 	return bleve.SearchResult{}, nil
-}
-
-func (i *Index) ListField(field string) ([]string, error) {
-
 }
 
 func (i *Index) generateWikiFromFile(filePath, uriPath string) (*indexedPage, error) {
