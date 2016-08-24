@@ -5,7 +5,6 @@ import "fmt"
 type Error struct {
 	Code       int
 	path       string
-	valType    string
 	value      interface{}
 	innerError error
 }
@@ -17,36 +16,24 @@ func UpgradeError(e error) Error {
 
 // the function `Error` to make my custom errors work
 func (e *Error) Error() string {
-	switch {
-	case e.Code == ErrUpgradedError:
-		return e.innerError.Error()
-	case e.path != "" && e.valType != "" && e.value != nil && e.innerError != nil:
-		return fmt.Sprintf(errMsg[e.Code], e.path, e.valType, e.value, e.innerError)
-	case e.path != "" && e.valType != "" && e.value != nil:
-		return fmt.Sprintf(errMsg[e.Code], e.path, e.valType, e.value)
-	case e.path != "" && e.valType != "" && e.innerError != nil:
-		return fmt.Sprintf(errMsg[e.Code], e.path, e.valType, e.innerError)
-	case e.path != "" && e.value != nil && e.innerError != nil:
-		return fmt.Sprintf(errMsg[e.Code], e.path, e.value, e.innerError)
-	case e.valType != "" && e.value != nil && e.innerError != nil:
-		return fmt.Sprintf(errMsg[e.Code], e.valType, e.value, e.innerError)
-	case e.path != "" && e.valType != "":
-		return fmt.Sprintf(errMsg[e.Code], e.path, e.valType)
-	case e.path != "" && e.value != nil:
-		return fmt.Sprintf(errMsg[e.Code], e.path, e.value)
-	case e.valType != "" && e.value != nil:
-		return fmt.Sprintf(errMsg[e.Code], e.valType, e.value)
-	case e.innerError != nil:
-		return fmt.Sprintf(errMsg[e.Code], e.innerError)
-	case e.value != nil:
-		return fmt.Sprintf(errMsg[e.Code], e.value)
-	case e.valType != "":
-		return fmt.Sprintf(errMsg[e.Code], e.valType)
-	case e.path != "":
-		return fmt.Sprintf(errMsg[e.Code], e.path)
-	default:
+	var args []interface{}
+
+	if e.path != "" {
+		args = append(args, e.path)
+	}
+
+	if e.value != nil {
+		args = append(args, e.value)
+	}
+
+	if e.innerError != nil {
+		args = append(args, e.innerError)
+	}
+
+	if len(args) < 1 {
 		return errMsg[e.Code]
 	}
+	return fmt.Sprintf(errMsg[e.Code], args...)
 }
 
 // assign a unique id to each error

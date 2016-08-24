@@ -7,6 +7,82 @@ import (
 	"github.com/blevesearch/bleve"
 )
 
+type SearchResponse struct {
+	// AllFields []string
+	TotalHits  int
+	PageOffset int
+	SearchTime time.Duration
+	Topics     []string
+	Authors    []string
+	Results    []SearchResponseResult
+}
+
+type SearchResponseResult struct {
+	Title    string
+	URIPath  string
+	Score    float64
+	Topics   []string
+	Keywords []string
+	Authors  []string
+	Body     string
+}
+
+func (i *Index) CreateResponseData(rawResults bleve.SearchResult, pageOffset int) (
+	SearchResponse, error) {
+
+	topics, err := i.ListField("topics")
+	if err != nil {
+		return SearchResponse{}, err
+	}
+
+	authors, err := i.ListField("authors")
+	if err != nil {
+		return SearchResponse{}, err
+	}
+
+	response := SearchResponse{
+		TotalHits:  int(rawResults.Total),
+		PageOffset: pageOffset,
+		SearchTime: rawResults.Took,
+		Topics:     topics,
+		Authors:    authors,
+	}
+
+	for _, hit := range rawResults.Hits {
+		var newHit SearchResponseResult
+
+		newHit.Score = float64(hit.Score * 100 / rawResults.MaxScore)
+
+		for _, field := range []string{"title", "path", "body"} {
+			if _, isThere := hit.Fields[field]; isThere {
+				if str, ok := hit.Fields["title"].(string); ok {
+					switch field {
+					case "title":
+						newHit.Title = str
+					case "path":
+						newHit.Path = str
+					case "body":
+						newHit.Body = str
+					case "topic":
+						newHit.Topics = strings.Split(str, " ")
+					case "keyword":
+						newHit.Keywords = strings.Split(str, " ")
+					case "author":
+						newHit.Authors = strings.Split(str, " ")
+					}
+				} else {
+					return SearchResponse{}, &Error{
+						Code:  ErrResultsFormatType,
+						path:  field,
+						value: hit.Fields[field]}
+				}
+			}
+		}
+		response.Results = append(response.Results, newHit)
+	}
+	return response, nil
+}
+
 // lists all unique values for that field in index
 func (i *Index) ListField(field string) ([]string, error) {
 	searchRequest := bleve.NewSearchRequest(bleve.NewMatchAllQuery())
@@ -50,121 +126,4 @@ func (i *Index) FieldValueList(field, match string, pageSize, page int) (
 
 	return result, nil
 
-}
-
-type SearchResponse struct {
-	// AllFields []string
-	TotalHits  int
-	PageOffset int
-	SearchTime time.Duration
-	Topics     []string
-	Authors    []string
-	Results    []SearchResponseResult
-}
-
-type SearchResponseResult struct {
-	Title    string
-	URIPath  string
-	Score    float64
-	Topics   []string
-	Keywords []string
-	Authors  []string
-	Body     string
-}
-
-func (i *Index) CreateResponseData(rawResults bleve.SearchResult, pageOffset int) (
-	SearchResponse, error) {
-
-	var response SearchResponse
-
-	response.TotalHits = int(rawResults.Total)
-	response.PageOffset = pageOffset
-	response.SearchTime = rawResults.Took
-
-	topics, err := i.ListField("topics")
-	if err != nil {
-		return SearchResponse{}, err
-	}
-	response.Topics = topics
-	authors, err := i.ListField("authors")
-	if err != nil {
-		return SearchResponse{}, err
-	}
-	response.Authors = authors
-
-	for _, hit := range rawResults.Hits {
-		var newHit SearchResponseResult
-
-		newHit.Score = float64(hit.Score * 100 / rawResults.MaxScore)
-
-		if _, isThere := hit.Fields["title"]; !isThere {
-			newHit.Title = ""
-		} else if str, ok := hit.Fields["title"].(string); ok {
-			newHit.Title = str
-		} else {
-			return SearchResponse{}, &Error{
-				Code:  ErrResultsFormatType,
-				path:  "title",
-				value: hit.Fields["title"]}
-		}
-
-		if _, isThere := hit.Fields["path"]; !isThere {
-			newHit.URIPath = ""
-		} else if str, ok := hit.Fields["path"].(string); ok {
-			newHit.URIPath = str
-		} else {
-			return SearchResponse{}, &Error{
-				Code:  ErrResultsFormatType,
-				path:  "path",
-				value: hit.Fields["path"]}
-		}
-
-		if _, isThere := hit.Fields["body"]; !isThere {
-			newHit.Body = ""
-		} else if str, ok := hit.Fields["body"].(string); ok {
-			newHit.Body = str
-		} else {
-			return SearchResponse{}, &Error{
-				Code:  ErrResultsFormatType,
-				path:  "body",
-				value: hit.Fields["body"]}
-		}
-
-		if _, isThere := hit.Fields["topic"]; !isThere {
-			newHit.Topics = []string{}
-		} else if str, ok := hit.Fields["topic"].(string); ok {
-			newHit.Topics = strings.Split(str, " ")
-		} else {
-			return SearchResponse{}, &Error{
-				Code:  ErrResultsFormatType,
-				path:  "topic",
-				value: hit.Fields["topic"]}
-		}
-
-		if _, isThere := hit.Fields["keyword"]; !isThere {
-			newHit.Keywords = []string{}
-		} else if str, ok := hit.Fields["keyword"].(string); ok {
-			newHit.Keywords = strings.Split(str, " ")
-		} else {
-			return SearchResponse{}, &Error{
-				Code:  ErrResultsFormatType,
-				path:  "keyword",
-				value: hit.Fields["keyword"]}
-		}
-
-		if _, isThere := hit.Fields["author"]; !isThere {
-			newHit.Authors = []string{}
-		} else if str, ok := hit.Fields["author"].(string); ok {
-			newHit.Authors = strings.Split(str, " ")
-		} else {
-			return SearchResponse{}, &Error{
-				Code:  ErrResultsFormatType,
-				path:  "author",
-				value: hit.Fields["author"]}
-		}
-
-		response.Results = append(response.Results, newHit)
-	}
-
-	return response, nil
 }
