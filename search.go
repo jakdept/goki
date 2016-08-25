@@ -101,7 +101,7 @@ func (i *Index) ListField(field string) ([]string, error) {
 	return results, nil
 }
 
-func (i *Index) FieldValueList(field, match string, pageSize, page int) (
+func (i *Index) ListFieldValues(field, match string, pageSize, page int) (
 	SearchResponse, error) {
 
 	query := bleve.NewTermQuery(match).SetField(field)
