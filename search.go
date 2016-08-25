@@ -170,3 +170,29 @@ func (i *Index) FuzzySearch(term string, topics, authors []string,
 
 	return SearchResponse, nil
 }
+
+func (i *Index) QuerySearch(terms string, page, pageSize int) (SearchResponse, error) {
+	query := bleve.NewQueryStringQuery(terms)
+	searchRequest := bleve.NewSearchRequest(query)
+	searchRequest := bleve.NewSearchRequest(query)
+	searchRequest.Fields = []string{"path", "title", "topic", "author", "modified"}
+	searchRequest.Size = pageSize
+	searchRequest.From = pageSize * page
+
+	err := searchRequest.Query.Validate()
+	if err != nil {
+		return SearchResponse{}, &Error{Code: ErrInvalidQuery, value: searchRequest.Query}
+	}
+
+	searchResult, err := i.Query(searchRequest)
+	if err != nil {
+		return SearchResponse{}, err
+	}
+
+	searchResponse, err := i.CreateResponseData(searchResult, page)
+	if err != nil {
+		return SearchResponse{}, err
+	}
+
+	return SearchResponse, nil
+}
