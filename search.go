@@ -174,7 +174,6 @@ func (i *Index) FuzzySearch(term string, topics, authors []string,
 func (i *Index) QuerySearch(terms string, page, pageSize int) (SearchResponse, error) {
 	query := bleve.NewQueryStringQuery(terms)
 	searchRequest := bleve.NewSearchRequest(query)
-	searchRequest := bleve.NewSearchRequest(query)
 	searchRequest.Fields = []string{"path", "title", "topic", "author", "modified"}
 	searchRequest.Size = pageSize
 	searchRequest.From = pageSize * page
