@@ -4,6 +4,7 @@ import (
 	"github.com/ajg/form"
 	"net/http"
 	"strings"
+	"path"
 )
 
 type fieldListHandler struct {
@@ -124,5 +125,51 @@ func (h *querySearchHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	err = allTemplates.ExecuteTemplate(w, h.config.Template, results)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+type parsedHandler struct {
+	config ServerSection
+}
+
+func (h *parsedHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// If the request is empty, set it to the default.
+	if requestPath == "/" {
+		requestPath = path.Clean(serverConfig.Default)
+	}
+
+	// If the request doesn't end in .md, add that
+	if path.Ext(requestPath) != "md" {
+		requestPath = requestPath + ".md"
+	}
+
+	pdata := new(PageMetadata)
+	err := pdata.LoadPage(serverConfig.Path + requestPath)
+	if err != nil {
+		log.Printf("request [ %s ] points to an bad file target [ %s ] sent to server %s",
+			request.URL.Path, requestPath, serverConfig.Prefix)
+		http.Error(responsePipe, "Page not Found", http.StatusNotFound)
+		return
+	}
+
+	if pdata.MatchedTopic(serverConfig.Restricted) {
+		log.Printf("request [ %s ] was against a page [ %s ] with a restricted tag",
+			request.URL.Path, requestPath)
+		http.Error(responsePipe, "Restricted Page", http.StatusNotFound)
+		//http.Error(responsePipe, err.Error(), http.StatusForbidden)
+		return
+	}
+
+	// parse any markdown in the input
+	body := template.HTML(bodyParseMarkdown(pdata.Page))
+	toc := template.HTML(tocParseMarkdown(pdata.Page))
+	topics, keywords, authors := pdata.ListMeta()
+
+	// ##TODO## put this template right in the function call
+	// Then remove the Page Struct above
+	response := Page{Title: pdata.Title, ToC: toc, Body: body, Keywords: keywords, Topics: topics, Authors: authors}
+	err = allTemplates.ExecuteTemplate(responsePipe, serverConfig.Template, response)
+	if err != nil {
+		http.Error(responsePipe, err.Error(), 500)
 	}
 }
