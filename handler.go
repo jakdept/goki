@@ -136,6 +136,15 @@ type parsedHandler struct {
 	config ServerSection
 }
 
+type Page struct {
+	Title    string
+	ToC      template.HTML
+	Body     template.HTML
+	Topics   []string
+	Keywords []string
+	Authors  []string
+}
+
 func (h *parsedHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// If the request is empty, set it to the default.
 	if requestPath == "/" {
