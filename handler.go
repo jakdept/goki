@@ -1,10 +1,16 @@
 package main
 
 import (
-	"github.com/ajg/form"
+	"html/template"
+	"io"
+	"log"
 	"net/http"
-	"strings"
+	"os"
 	"path"
+	"strings"
+
+	"github.com/ajg/form"
+	"github.com/blevesearch/bleve"
 )
 
 type fieldListHandler struct {
@@ -59,12 +65,12 @@ type fuzzySearchHandler struct {
 
 func (h *fuzzySearchHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	values := struct {
-		s string `form:"s"`
-		topics []string `form:"topic"`
-		authors []string `form:"author"`
-		page int `form:"page"`
-		pageSize int `form:"pageSize"`
-	}
+		s        string   `form:"s"`
+		topics   []string `form:"topic"`
+		authors  []string `form:"author"`
+		page     int      `form:"page"`
+		pageSize int      `form:"pageSize"`
+	}{}
 
 	err := form.Decode(&values, request.URL.Values)
 	if err != nil {
@@ -78,8 +84,7 @@ func (h *fuzzySearchHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	searchRequest.Size = values.pageSize
 	searchRequest.From = values.pageSize + values.page
 
-	
-	results, err  := h.index.Query(searchRequest)
+	results, err := h.index.Query(searchRequest)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -98,10 +103,10 @@ type querySearchHandler struct {
 
 func (h *querySearchHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	values := struct {
-		s string `form:"s"`
-		page int `form:"page"`
-		pageSize int `form:"pageSize"`
-	}
+		s        string `form:"s"`
+		page     int    `form:"page"`
+		pageSize int    `form:"pageSize"`
+	}{}
 
 	err := form.Decode(&values, request.URL.Values)
 	if err != nil {
@@ -115,8 +120,7 @@ func (h *querySearchHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	searchRequest.Size = values.pageSize
 	searchRequest.From = values.pageSize + values.page
 
-	
-	results, err  := h.index.Query(searchRequest)
+	results, err := h.index.Query(searchRequest)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -135,7 +139,7 @@ type parsedHandler struct {
 func (h *parsedHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// If the request is empty, set it to the default.
 	if requestPath == "/" {
-		requestPath = path.Clean(serverConfig.Default)
+		requestPath = path.Clean(h.serverConfig.Default)
 	}
 
 	// If the request doesn't end in .md, add that
@@ -167,9 +171,48 @@ func (h *parsedHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// ##TODO## put this template right in the function call
 	// Then remove the Page Struct above
-	response := Page{Title: pdata.Title, ToC: toc, Body: body, Keywords: keywords, Topics: topics, Authors: authors}
+	response := Page{
+		Title:    pdata.Title,
+		ToC:      toc,
+		Body:     body,
+		Keywords: keywords,
+		Topics:   topics,
+		Authors:  authors,
+	}
 	err = allTemplates.ExecuteTemplate(responsePipe, serverConfig.Template, response)
 	if err != nil {
 		http.Error(responsePipe, err.Error(), 500)
+	}
+}
+
+type rawHandler struct {
+	config ServerSection
+}
+
+func (h *parsedHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// If the request is empty, set it to the default.
+	if requestPath == "/" {
+		requestPath = path.Clean(h.serverConfig.Default)
+	}
+
+	for _, restricted := range h.config.Restricted {
+		if path.Ext(requestPath) == restricted {
+			log.Printf("request %s was improperly routed to the file handler with an disallowed extension %s", request.URL.Path, restricted)
+			http.Error(responsePipe, "Request not allowed", 403)
+			return
+		}
+	}
+
+	f, err := os.Open(filePath.Join(h.config.Path, requestPath))
+	if err != nil {
+		http.Error(w, err.Error, http.StatusForbidden)
+		log.Print(err)
+		return
+	}
+
+	_, err = io.Copy(w, f)
+	if err != nil {
+		http.Error(w, err.Error, http.StatusInternalServerError)
+		log.Print(err)
 	}
 }
