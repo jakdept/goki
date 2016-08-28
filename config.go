@@ -13,13 +13,6 @@ import (
 var staticConfig *Config
 var configLock = new(sync.RWMutex)
 
-type Config struct {
-	Global    GlobalSection
-	Redirects []RedirectSection
-	Server    []ServerSection
-	Indexes   []IndexSection
-}
-
 //var templates = template.Must(template.ParseFiles("/var/wiki-backend/wiki.html"))
 //template.New("allTemplates")
 var allTemplates = template.New("allTemplates")
@@ -32,6 +25,7 @@ type GlobalSection struct {
 	TemplateDir string
 	CertFile    string
 	KeyFile     string
+	Indexes     []IndexSection
 }
 
 type RedirectSection struct {
@@ -47,6 +41,8 @@ type IndexSection struct {
 	IndexType      string            // type of index - likely "en"
 	IndexName      string            // name of the index
 	Restricted     []string          // Tags to restrict indexing on
+	Handlers       []ServerSection
+	Redirects      []RedirectSection
 }
 
 type ServerSection struct {
@@ -118,13 +114,13 @@ func CleanConfig(config *Config) {
 				indexSection.WatchDirs[newDirPath] = newWebPath
 			}
 		}
-	}
-	for _, serverSection := range config.Server {
-		if serverSection.Path != string(os.PathSeparator) {
-			serverSection.Path = strings.TrimSuffix(serverSection.Path, string(os.PathSeparator))
-		}
-		if serverSection.Prefix != "/" {
-			serverSection.Prefix = strings.TrimSuffix(serverSection.Prefix, "/")
+		for _, serverSection := range config.Server {
+			if serverSection.Path != string(os.PathSeparator) {
+				serverSection.Path = strings.TrimSuffix(serverSection.Path, string(os.PathSeparator))
+			}
+			if serverSection.Prefix != "/" {
+				serverSection.Prefix = strings.TrimSuffix(serverSection.Prefix, "/")
+			}
 		}
 	}
 }
@@ -143,11 +139,6 @@ func ParseTemplates(globalConfig GlobalSection) error {
 	if err != nil {
 		return &Error{Code: ErrParseTemplates, innerError: err}
 	}
-
-	// loadedTemplates := newTemplate.Templates()
-	// for _, individualTemplate := range loadedTemplates {
-	// 	log.Printf("Loaded template %s ", individualTemplate.Name())
-	// }
 
 	templateLock.Lock()
 	defer templateLock.Unlock()
