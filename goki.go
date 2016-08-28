@@ -69,7 +69,6 @@ func main() {
 			config.Global.CertFile,
 			config.Global.KeyFile,
 			nil))
-
 	}
 	log.Println(http.ListenAndServe(config.Global.Address+":"+config.Global.Port, nil))
 
