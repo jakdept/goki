@@ -13,50 +13,57 @@ import (
 	"github.com/blevesearch/bleve"
 )
 
-func FieldHandler(c ServerSection, i *Index) http.Handler {
-	return func(w http.ResponseWriter, r *http.Request) {
-		fields := strings.SplitN(r.URL.Path, "/", 2)
+type FieldHandler struct {
+	c ServerSection
+	i *Index
+}
 
-		if fields[0] == "" {
-			// to do if a field was not given
-			response, err := i.ListField(h.config.Default)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
+func (h *FieldHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	fields := strings.SplitN(r.URL.Path, "/", 2)
 
-			err = allTemplates.ExecuteTemplate(w, c.Template,
-				struct{ AllFields []string }{AllFields: response})
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-		} else {
-			// to be done if a field was given
-			response, err := i.ListFieldValues(c.Default, fields[0], 100, 1)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
+	if fields[0] == "" {
+		// to do if a field was not given
+		response, err := h.i.ListField(h.c.Default)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 
-			modifiedSearchResponse := struct {
-				SearchResponse
-				AllFields []string
-			}{
-				SearchResponse: response,
-				AllFields:      []string{},
-			}
+		err = allTemplates.ExecuteTemplate(w, h.c.Template,
+			struct{ AllFields []string }{AllFields: response})
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	} else {
+		// to be done if a field was given
+		response, err := h.i.ListFieldValues(h.c.Default, fields[0], 100, 1)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 
-			err = allTemplates.ExecuteTemplate(w, c.Template, modifiedSearchResponse)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-			}
+		modifiedSearchResponse := struct {
+			SearchResponse
+			AllFields []string
+		}{
+			SearchResponse: response,
+			AllFields:      []string{},
+		}
+
+		err = allTemplates.ExecuteTemplate(w, h.c.Template, modifiedSearchResponse)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 	}
 }
 
-func FuzzySearchHandler(c ServerSection, i *Index) http.Handler {
-	return func(w http.ResponseWriter, r *http.Request) {
+type FuzzySearch struct {
+	c ServerSection
+	i Index
+}
+
+func (h *FuzzySearch) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		values := struct {
 			s        string   `form:"s"`
 			topics   []string `form:"topic"`
@@ -65,7 +72,7 @@ func FuzzySearchHandler(c ServerSection, i *Index) http.Handler {
 			pageSize int      `form:"pageSize"`
 		}{}
 
-		err := form.Decode(&values, request.URL.Values)
+		err := form.Decode(&values, r.URL.Values)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -83,22 +90,26 @@ func FuzzySearchHandler(c ServerSection, i *Index) http.Handler {
 			return
 		}
 
-		err = allTemplates.ExecuteTemplate(w, c.Template, results)
+		err = allTemplates.ExecuteTemplate(w, h.c.Template, results)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 	}
 }
 
-func QuerySearchHandler(c ServerSection, index *Index) http.Handler {
-	return func(w http.ResponseWriter, r *http.Request) {
+type QuerySearch struct {
+	c ServerSection
+	i *Index
+}
+
+func (h *QuerySearch) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		values := struct {
 			s        string `form:"s"`
 			page     int    `form:"page"`
 			pageSize int    `form:"pageSize"`
 		}{}
 
-		err := form.Decode(&values, request.URL.Values)
+		err := form.Decode(&values, r.URL.Values)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -116,7 +127,7 @@ func QuerySearchHandler(c ServerSection, index *Index) http.Handler {
 			return
 		}
 
-		err = allTemplates.ExecuteTemplate(w, c.Template, results)
+		err = allTemplates.ExecuteTemplate(w, h.c.Template, results)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
@@ -132,11 +143,14 @@ type Page struct {
 	Authors  []string
 }
 
-func ParsedHandler(c ServerSection) http.Handler {
-	return func(w http.ResponseWriter, r *http.Request) {
+type Markdown struct {
+	c ServerSection
+}
+
+func (h *Markdown) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// If the request is empty, set it to the default.
 		if requestPath == "/" {
-			requestPath = path.Clean(h.serverConfig.Default)
+			requestPath = path.Clean(h.c.Default)
 		}
 
 		// If the request doesn't end in .md, add that
@@ -145,17 +159,17 @@ func ParsedHandler(c ServerSection) http.Handler {
 		}
 
 		pdata := new(PageMetadata)
-		err := pdata.LoadPage(serverConfig.Path + requestPath)
+		err := pdata.LoadPage(h.c.Path + requestPath)
 		if err != nil {
 			log.Printf("request [ %s ] points to an bad file target [ %s ] sent to server %s",
-				request.URL.Path, requestPath, serverConfig.Prefix)
+				r.URL.Path, requestPath, h.c.Path)
 			http.Error(responsePipe, "Page not Found", http.StatusNotFound)
 			return
 		}
 
-		if pdata.MatchedTopic(serverConfig.Restricted) {
+		if pdata.MatchedTopic(h.c.Restricted) {
 			log.Printf("request [ %s ] was against a page [ %s ] with a restricted tag",
-				request.URL.Path, requestPath)
+				r.URL.Path, requestPath)
 			http.Error(responsePipe, "Restricted Page", http.StatusNotFound)
 			//http.Error(responsePipe, err.Error(), http.StatusForbidden)
 			return
@@ -176,22 +190,25 @@ func ParsedHandler(c ServerSection) http.Handler {
 			Topics:   topics,
 			Authors:  authors,
 		}
-		err = allTemplates.ExecuteTemplate(responsePipe, serverConfig.Template, response)
+		err = allTemplates.ExecuteTemplate(responsePipe, h.c.Template, response)
 		if err != nil {
 			http.Error(responsePipe, err.Error(), 500)
 		}
 	}
 }
 
-func RawHandler(config ServerSection) http.Handler {
-	return func(w http.ResponseWriter, r *http.Request) {
+type RawFile struct {
+	c ServerSection
+}
+
+func (h *RawFile) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		// If the request is empty, set it to the default.
 		if requestPath == "/" {
-			requestPath = path.Clean(h.serverConfig.Default)
+			requestPath = path.Clean(h.c.Default)
 		}
 
-		for _, restricted := range h.config.Restricted {
+		for _, restricted := range h.c.Restricted {
 			if path.Ext(requestPath) == restricted {
 				log.Printf("request %s was improperly routed to the file handler with an disallowed extension %s", request.URL.Path, restricted)
 				http.Error(responsePipe, "Request not allowed", 403)
@@ -199,7 +216,7 @@ func RawHandler(config ServerSection) http.Handler {
 			}
 		}
 
-		f, err := os.Open(filePath.Join(h.config.Path, requestPath))
+		f, err := os.Open(filePath.Join(h.c.Path, requestPath))
 		if err != nil {
 			http.Error(w, err.Error, http.StatusForbidden)
 			log.Print(err)
