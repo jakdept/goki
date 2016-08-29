@@ -56,7 +56,7 @@ func OpenIndex(c IndexSection, l *log.Logger) (*Index, error) {
 	for each, _ := range i.config.WatchDirs {
 		path := filepath.Clean(each)
 		go i.WatchDir(path)
-		go i.CrawlDir(path, path)
+		go i.CrawlDir(path)
 	}
 
 	// prime the closing channel
@@ -208,6 +208,7 @@ func (i *Index) DeleteURI(uriPath string) error {
 	if err != nil {
 		return &Error{Code: ErrIndexError, value: uriPath, innerError: err}
 	}
+	return nil
 }
 
 func (i *Index) UpdateURI(filePath, uriPath string) error {
@@ -226,16 +227,16 @@ func (i *Index) UpdateURI(filePath, uriPath string) error {
 	return nil
 }
 
-func (i *Index) Query(request *bleve.SearchRequest) (bleve.SearchResult, error) {
+func (i *Index) Query(request *bleve.SearchRequest) (*bleve.SearchResult, error) {
 	i.lock.RLock()
 	defer i.lock.RUnlock()
 
 	searchResults, err := i.index.Search(request)
 	if err != nil {
-		return nil, &Error{Code: ErrInvalidQuery, innerError: err}
+		return &bleve.SearchResult{}, &Error{Code: ErrInvalidQuery, innerError: err}
 	}
 
-	return bleve.SearchResult{}, nil
+	return searchResults, nil
 }
 
 func (i *Index) generateWikiFromFile(filePath, uriPath string) (*indexedPage, error) {
@@ -275,4 +276,5 @@ func (i *Index) getURI(filePath, filePrefix string) (uriPath string) {
 	uriPath = strings.TrimPrefix(uriPath, "/")
 	uriPrefix := strings.TrimSuffix(i.config.IndexPath, "/")
 	uriPath = uriPrefix + "/" + uriPath
+	return
 }

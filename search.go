@@ -27,7 +27,7 @@ type SearchResponseResult struct {
 	Body     string
 }
 
-func (i *Index) CreateResponseData(rawResults bleve.SearchResult, pageOffset int) (
+func (i *Index) CreateResponseData(rawResults *bleve.SearchResult, pageOffset int) (
 	SearchResponse, error) {
 
 	topics, err := i.ListField("topics")
@@ -53,14 +53,14 @@ func (i *Index) CreateResponseData(rawResults bleve.SearchResult, pageOffset int
 
 		newHit.Score = float64(hit.Score * 100 / rawResults.MaxScore)
 
-		for _, field := range []string{"title", "path", "body"} {
+		for _, field := range []string{"title", "path", "body", "topic", "keyword", "author"} {
 			if _, isThere := hit.Fields[field]; isThere {
 				if str, ok := hit.Fields["title"].(string); ok {
 					switch field {
 					case "title":
 						newHit.Title = str
 					case "path":
-						newHit.Path = str
+						newHit.URIPath = str
 					case "body":
 						newHit.Body = str
 					case "topic":
@@ -95,7 +95,7 @@ func (i *Index) ListField(field string) ([]string, error) {
 	}
 
 	results := *new([]string)
-	for _, oneTerm := range searchResults.Facets["allValues"].Terms {
+	for _, oneTerm := range searchResult.Facets["allValues"].Terms {
 		results = append(results, oneTerm.Term)
 	}
 	return results, nil
@@ -111,17 +111,17 @@ func (i *Index) ListFieldValues(field, match string, pageSize, page int) (
 
 	err := searchRequest.Query.Validate()
 	if err != nil {
-		return FieldValueList{}, &Error{Code: ErrInvalidQuery, innerError: err}
+		return SearchResponse{}, &Error{Code: ErrInvalidQuery, innerError: err}
 	}
 
-	rawResult, err = i.Query(searchRequest)
+	rawResult, err := i.Query(searchRequest)
 	if err != nil {
-		return FieldValueList{}, &Error{Code: ErrBadQuery, innerError: err}
+		return SearchResponse{}, &Error{Code: ErrInvalidQuery, innerError: err}
 	}
 
-	result, err := CreateResponseData(*rawResult, page*pageSize, allTopics, allAuthors)
+	result, err := i.CreateResponseData(rawResult, page*pageSize)
 	if err != nil {
-		return SearchResponse, &Error{Code: ErrFormatSearchResponse, innerError: err}
+		return SearchResponse{}, &Error{Code: ErrFormatSearchResponse, innerError: err}
 	}
 
 	return result, nil
@@ -158,17 +158,17 @@ func (i *Index) FuzzySearch(term string, topics, authors []string,
 		return SearchResponse{}, &Error{Code: ErrInvalidQuery, value: searchRequest.Query}
 	}
 
-	searchResult, err := i.Query(searchRequest)
+	rawResult, err := i.Query(searchRequest)
 	if err != nil {
 		return SearchResponse{}, err
 	}
 
-	searchResponse, err := i.CreateResponseData(searchResult, page)
+	searchResult, err := i.CreateResponseData(rawResult, page)
 	if err != nil {
 		return SearchResponse{}, err
 	}
 
-	return SearchResponse, nil
+	return searchResult, nil
 }
 
 func (i *Index) QuerySearch(terms string, page, pageSize int) (SearchResponse, error) {
@@ -183,15 +183,15 @@ func (i *Index) QuerySearch(terms string, page, pageSize int) (SearchResponse, e
 		return SearchResponse{}, &Error{Code: ErrInvalidQuery, value: searchRequest.Query}
 	}
 
-	searchResult, err := i.Query(searchRequest)
+	rawResult, err := i.Query(searchRequest)
 	if err != nil {
 		return SearchResponse{}, err
 	}
 
-	searchResponse, err := i.CreateResponseData(searchResult, page)
+	searchResult, err := i.CreateResponseData(rawResult, page)
 	if err != nil {
 		return SearchResponse{}, err
 	}
 
-	return SearchResponse, nil
+	return searchResult, nil
 }

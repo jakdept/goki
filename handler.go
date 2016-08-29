@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/ajg/form"
@@ -18,7 +19,7 @@ type Fields struct {
 	i *Index
 }
 
-func (h *Fields) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h Fields) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	fields := strings.SplitN(r.URL.Path, "/", 2)
 
 	if fields[0] == "" {
@@ -60,10 +61,10 @@ func (h *Fields) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 type FuzzySearch struct {
 	c ServerSection
-	i Index
+	i *Index
 }
 
-func (h *FuzzySearch) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h FuzzySearch) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	values := struct {
 		s        string   `form:"s"`
 		topics   []string `form:"topic"`
@@ -72,7 +73,12 @@ func (h *FuzzySearch) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		pageSize int      `form:"pageSize"`
 	}{}
 
-	err := form.Decode(&values, r.URL.Values)
+	err := r.ParseForm()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	}
+
+	err = form.DecodeValues(&values, r.Form)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -84,7 +90,7 @@ func (h *FuzzySearch) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	searchRequest.Size = values.pageSize
 	searchRequest.From = values.pageSize + values.page
 
-	results, err := i.Query(searchRequest)
+	results, err := h.i.Query(searchRequest)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -101,14 +107,20 @@ type QuerySearch struct {
 	i *Index
 }
 
-func (h *QuerySearch) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h QuerySearch) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	values := struct {
 		s        string `form:"s"`
 		page     int    `form:"page"`
 		pageSize int    `form:"pageSize"`
 	}{}
 
-	err := form.Decode(&values, r.URL.Values)
+	err := r.ParseForm()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	err = form.DecodeValues(&values, r.Form)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -120,7 +132,7 @@ func (h *QuerySearch) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	searchRequest.Size = values.pageSize
 	searchRequest.From = values.pageSize + values.page
 
-	results, err := i.Query(searchRequest)
+	results, err := h.i.Query(searchRequest)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -145,31 +157,31 @@ type Markdown struct {
 	c ServerSection
 }
 
-func (h *Markdown) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h Markdown) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// If the request is empty, set it to the default.
-	if requestPath == "/" {
-		requestPath = path.Clean(h.c.Default)
+	if r.URL.Path == "/" {
+		r.URL.Path = path.Clean(h.c.Default)
 	}
 
 	// If the request doesn't end in .md, add that
-	if path.Ext(requestPath) != "md" {
-		requestPath = requestPath + ".md"
+	if path.Ext(r.URL.Path) != "md" {
+		r.URL.Path = r.URL.Path + ".md"
 	}
 
 	pdata := new(PageMetadata)
-	err := pdata.LoadPage(h.c.Path + requestPath)
+	err := pdata.LoadPage(h.c.Path + r.URL.Path)
 	if err != nil {
-		log.Printf("request [ %s ] points to an bad file target [ %s ] sent to server %s",
-			r.URL.Path, requestPath, h.c.Path)
-		http.Error(responsePipe, "Page not Found", http.StatusNotFound)
+		log.Printf("request [ %s ] points to an bad file target [ %s ] sent to server",
+			r.URL.Path, h.c.Path)
+		http.Error(w, "Page not Found", http.StatusNotFound)
 		return
 	}
 
 	if pdata.MatchedTopic(h.c.Restricted) {
 		log.Printf("request [ %s ] was against a page [ %s ] with a restricted tag",
-			r.URL.Path, requestPath)
-		http.Error(responsePipe, "Restricted Page", http.StatusNotFound)
-		//http.Error(responsePipe, err.Error(), http.StatusForbidden)
+			r.URL.Path, h.c.Path+r.URL.Path)
+		http.Error(w, "Page not Found", http.StatusNotFound)
+		//http.Error(w, err.Error(), http.StatusForbidden)
 		return
 	}
 
@@ -188,9 +200,9 @@ func (h *Markdown) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Topics:   topics,
 		Authors:  authors,
 	}
-	err = allTemplates.ExecuteTemplate(responsePipe, h.c.Template, response)
+	err = allTemplates.ExecuteTemplate(w, h.c.Template, response)
 	if err != nil {
-		http.Error(responsePipe, err.Error(), 500)
+		http.Error(w, err.Error(), 500)
 	}
 }
 
@@ -198,31 +210,32 @@ type RawFile struct {
 	c ServerSection
 }
 
-func (h *RawFile) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h RawFile) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// If the request is empty, set it to the default.
-	if requestPath == "/" {
-		requestPath = path.Clean(h.c.Default)
+	if r.URL.Path == "/" {
+		r.URL.Path = path.Clean(h.c.Default)
 	}
 
 	for _, restricted := range h.c.Restricted {
-		if path.Ext(requestPath) == restricted {
-			log.Printf("request %s was improperly routed to the file handler with an disallowed extension %s", request.URL.Path, restricted)
-			http.Error(responsePipe, "Request not allowed", 403)
+		if path.Ext(r.URL.Path) == restricted {
+			log.Printf("request %s was has a disallowed extension %s",
+				r.URL.Path, restricted)
+			http.Error(w, "Request not allowed", 403)
 			return
 		}
 	}
 
-	f, err := os.Open(filePath.Join(h.c.Path, requestPath))
+	f, err := os.Open(filepath.Join(h.c.Path, r.URL.Path))
 	if err != nil {
-		http.Error(w, err.Error, http.StatusForbidden)
+		http.Error(w, err.Error(), http.StatusForbidden)
 		log.Print(err)
 		return
 	}
 
 	_, err = io.Copy(w, f)
 	if err != nil {
-		http.Error(w, err.Error, http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		log.Print(err)
 	}
 }

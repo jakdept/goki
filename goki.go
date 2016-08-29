@@ -4,6 +4,7 @@ import (
 	//"html/template"
 	//"io/ioutil"
 	"log"
+	"os/signal"
 
 	//"regexp"
 	"os"
@@ -40,36 +41,24 @@ func main() {
 	}
 
 	config := GetConfig()
+	closer := make(chan struct{})
 
 	// set up my interrupt channel and go routine
-	// signal.Notify(quitChan, os.Interrupt)
-	// go cleanup()
+	signal.Notify(quitChan, os.Interrupt)
+	go func() {
+		<-closer
+		<-quitChan
+		close(closer)
+	}()
 
-	for _, individualIndex := range config.Indexes {
-		// #TODO change this?
-		if !EnableIndex(individualIndex) {
-			log.Fatalf("Failed opening index %s, abandoning", individualIndex.IndexPath)
-		}
-	}
-
-	if err := ParseTemplates(config.Global); err != nil {
+	if err := ParseTemplates(*config); err != nil {
 		log.Fatalf("Error parsing templates, %s", err)
 	}
 
-	for _, redirect := range config.Redirects {
-		http.Handle(redirect.Requested, http.RedirectHandler(redirect.Target, redirect.Code))
-	}
-	for _, individualServer := range config.Server {
-		http.HandleFunc(individualServer.Prefix, MakeHandler(individualServer))
+	mux, err := BuildMuxer(*config, closer, log.New(os.Stdout, "", 0))
+	if err != nil {
+
 	}
 
-	if len(config.Global.CertFile) == 0 && len(config.Global.KeyFile) == 0 {
-		log.Println(http.ListenAndServeTLS(
-			config.Global.Address+":"+config.Global.Port,
-			config.Global.CertFile,
-			config.Global.KeyFile,
-			nil))
-	}
-	log.Println(http.ListenAndServe(config.Global.Address+":"+config.Global.Port, nil))
-
+	log.Println(http.ListenAndServe(config.Address+":"+config.Port, mux))
 }

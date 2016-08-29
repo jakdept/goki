@@ -5,12 +5,12 @@ import (
 	"html/template"
 	"io/ioutil"
 	"net/http"
-	"os"
-	"strings"
+	"path"
+	"path/filepath"
 	"sync"
 )
 
-var staticConfig *Config
+var staticConfig *GlobalSection
 var configLock = new(sync.RWMutex)
 
 //var templates = template.Must(template.ParseFiles("/var/wiki-backend/wiki.html"))
@@ -55,7 +55,7 @@ type ServerSection struct {
 	Restricted []string // list of restricts - extensions for raw, topics for markdown
 }
 
-func GetConfig() *Config {
+func GetConfig() *GlobalSection {
 	configLock.RLock()
 	defer configLock.RUnlock()
 	return staticConfig
@@ -76,7 +76,7 @@ func LoadConfig(configFile string) error {
 	}
 
 	// UnMarshal the config file that was read in
-	temp := new(Config)
+	temp := new(GlobalSection)
 
 	err = json.Unmarshal(fileContents, temp)
 	//Make sure you were able to read it in
@@ -95,32 +95,28 @@ func LoadConfig(configFile string) error {
 	return nil
 }
 
-func CleanConfig(config *Config) {
-	if !strings.HasSuffix(config.Global.TemplateDir, string(os.PathSeparator)) {
-		config.Global.TemplateDir = config.Global.TemplateDir + string(os.PathSeparator)
-	}
+// ## TODO ##
+func CleanConfig(config *GlobalSection) {
+	config.TemplateDir = filepath.Clean(config.TemplateDir)
 	for _, indexSection := range config.Indexes {
 		for origDirPath, origWebPath := range indexSection.WatchDirs {
-			newDirPath := strings.TrimSuffix(origDirPath, string(os.PathSeparator))
-			newWebPath := strings.TrimSuffix(origWebPath, "/")
-			if newDirPath == "" {
-				newDirPath = string(os.PathSeparator)
-			}
-			if newWebPath == "" {
-				newWebPath = "/"
-			}
-			if newDirPath != origDirPath || newWebPath != origWebPath {
-				delete(indexSection.WatchDirs, origDirPath)
-				indexSection.WatchDirs[newDirPath] = newWebPath
+			delete(indexSection.WatchDirs, origDirPath)
+			indexSection.WatchDirs[filepath.Clean(origDirPath)] = path.Clean(origWebPath)
+		}
+
+		for i := range indexSection.Redirects {
+			indexSection.Redirects[i].Requested = path.Clean(indexSection.Redirects[i].Requested)
+			indexSection.Redirects[i].Target = path.Clean(indexSection.Redirects[i].Target)
+			if indexSection.Redirects[i].Code == 0 {
+				indexSection.Redirects[i].Code = 301
 			}
 		}
-		for _, serverSection := range config.Server {
-			if serverSection.Path != string(os.PathSeparator) {
-				serverSection.Path = strings.TrimSuffix(serverSection.Path, string(os.PathSeparator))
-			}
-			if serverSection.Prefix != "/" {
-				serverSection.Prefix = strings.TrimSuffix(serverSection.Prefix, "/")
-			}
+
+		for i := range indexSection.Handlers {
+			indexSection.Handlers[i].Path = filepath.Clean(indexSection.Handlers[i].Path)
+			indexSection.Handlers[i].Prefix = path.Clean(indexSection.Handlers[i].Prefix)
+			indexSection.Handlers[i].Default = path.Clean(indexSection.Handlers[i].Default)
+			indexSection.Handlers[i].TopicURL = path.Clean(indexSection.Handlers[i].TopicURL)
 		}
 	}
 }

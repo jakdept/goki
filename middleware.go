@@ -3,10 +3,9 @@ package main
 import (
 	"log"
 	"net/http"
-	"path"
-	"strings"
 )
 
+/*
 type trimPrefixHandler struct {
 	prefix  string
 	handler http.Handler
@@ -19,7 +18,9 @@ func (h *trimPrefixHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	r.URL.Path = path.Clean(strings.TrimPrefix(r.URL.Path, path.Clean(h.prefix)))
 	h.handler(w, r)
 }
+*/
 
+/*
 // this is the old way of setting up things #TODO#
 func MakeHandler(handlerConfig ServerSection) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -41,9 +42,10 @@ func MakeHandler(handlerConfig ServerSection) http.HandlerFunc {
 		}
 	}
 }
+*/
 
 func BuildMuxer(c GlobalSection, closer <-chan struct{},
-	logs log.Logger) (*http.ServeMux, error) {
+	logs *log.Logger) (*http.ServeMux, error) {
 	m := http.NewServeMux()
 	// ## TODO ## return an error instead of panic if overlapping muxes
 	for _, i := range c.Indexes {
@@ -61,20 +63,20 @@ func BuildMuxer(c GlobalSection, closer <-chan struct{},
 			for _, h := range i.Handlers {
 				switch h.ServerType {
 				case "markdown":
-					m.Handle(http.StripPrefix(h.Prefix, Markdown{c: h}))
+					m.Handle(h.Prefix, http.StripPrefix(h.Prefix, Markdown{c: h}))
 				case "raw":
-					m.Handle(http.StripPrefix(h.Prefix, RawFile{c: h}))
+					m.Handle(h.Prefix, http.StripPrefix(h.Prefix, RawFile{c: h}))
 				case "query":
-					m.Handle(http.StripPrefix(h.Prefix, QuerySearch{c: h, i: index}))
+					m.Handle(h.Prefix, http.StripPrefix(h.Prefix, QuerySearch{c: h, i: index}))
 				case "field":
-					m.Handle(http.StripPrefix(h.Prefix, Fields{c: h, i: index}))
+					m.Handle(h.Prefix, http.StripPrefix(h.Prefix, Fields{c: h, i: index}))
 				case "fuzzy":
-					m.Handle(http.StripPrefix(h.Prefix, FuzzySearch{c: h, i: index}))
+					m.Handle(h.Prefix, http.StripPrefix(h.Prefix, FuzzySearch{c: h, i: index}))
 				}
 			}
 			for _, r := range i.Redirects {
-				m.Handle(redirect.Requested,
-					http.RedirectHandler(redirect.Target, redirect.Code))
+				m.Handle(r.Requested,
+					http.RedirectHandler(r.Target, r.Code))
 			}
 		}
 	}
