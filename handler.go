@@ -20,22 +20,14 @@ type Fields struct {
 }
 
 func (h Fields) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	fields := strings.SplitN(r.URL.Path, "/", 2)
+	fields := strings.SplitN(r.URL.Path, "/", 3)
 
-	if fields[0] == "" {
+	if len(fields) < 3 || fields[1] == "" {
 		// to do if a field was not given
-		response, err := h.i.ListField(h.c.Default)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
+		if err := h.i.FallbackSearchResponse(w, h.c.FallbackTemplate) err != nil {
+			log.Println(err)
 		}
-
-		err = allTemplates.ExecuteTemplate(w, h.c.Template,
-			struct{ AllFields []string }{AllFields: response})
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
+		return
 	} else {
 		// to be done if a field was given
 		response, err := h.i.ListFieldValues(h.c.Default, fields[0], 100, 1)
