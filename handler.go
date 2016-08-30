@@ -171,14 +171,14 @@ func (h Markdown) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	pdata := new(PageMetadata)
 	err := pdata.LoadPage(h.c.Path + r.URL.Path)
 	if err != nil {
-		log.Printf("request [ %s ] points to an bad file target [ %s ] sent to server",
+		log.Printf("request [ %s ] points bad file target [ %s ] sent to server",
 			r.URL.Path, h.c.Path)
 		http.Error(w, "Page not Found", http.StatusNotFound)
 		return
 	}
 
 	if pdata.MatchedTopic(h.c.Restricted) {
-		log.Printf("request [ %s ] was against a page [ %s ] with a restricted tag",
+		log.Printf("request [ %s ] was a page [ %s ] with a restricted tag",
 			r.URL.Path, h.c.Path+r.URL.Path)
 		http.Error(w, "Page not Found", http.StatusNotFound)
 		//http.Error(w, err.Error(), http.StatusForbidden)
@@ -240,7 +240,8 @@ func (h RawFile) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (i *Index) FallbackSearchResponse(w http.ResponseWriter, template string) error {
+func (i *Index) FallbackSearchResponse(w http.ResponseWriter,
+	template string) error {
 	authors, err := i.ListField("author")
 	if err != nil {
 		http.Error(w, "failed to list authors", http.StatusInternalServerError)

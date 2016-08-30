@@ -52,7 +52,14 @@ func (i *Index) CreateResponseData(rawResults *bleve.SearchResult, pageOffset in
 
 		newHit.Score = float64(hit.Score * 100 / rawResults.MaxScore)
 
-		for _, field := range []string{"title", "path", "body", "topic", "keyword", "author"} {
+		for _, field := range []string{
+			"title",
+			"path",
+			"body",
+			"topic",
+			"keyword",
+			"author",
+		} {
 			if _, isThere := hit.Fields[field]; isThere {
 				if str, ok := hit.Fields["title"].(string); ok {
 					switch field {
