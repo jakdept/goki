@@ -8,7 +8,6 @@ import (
 )
 
 type SearchResponse struct {
-	// AllFields []string
 	TotalHits  int
 	PageOffset int
 	SearchTime time.Duration

@@ -239,3 +239,25 @@ func (h RawFile) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		log.Print(err)
 	}
 }
+
+func (i *Index) FallbackSearchResponse(w http.ResponseWriter, template string) error {
+	authors, err := i.ListField("author")
+	if err != nil {
+		http.Error(w, "failed to list authors", http.StatusInternalServerError)
+		return err
+	}
+	topics, err := i.ListField("topic")
+	if err != nil {
+		http.Error(w, "failed to list topics", http.StatusInternalServerError)
+		return err
+	}
+
+	fields := SearchResponse{Topics: topics, Authors: authors}
+
+	err = allTemplates.ExecuteTemplate(w, template, fields)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return err
+	}
+	return nil
+}

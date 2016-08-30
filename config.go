@@ -46,13 +46,14 @@ type IndexSection struct {
 }
 
 type ServerSection struct {
-	Path       string   // filesystem path to serve out
-	Prefix     string   // Web URL Prefix - alternatively the prefix for a search handler
-	Default    string   // Default page to serve if empty URI - alternatively the facet to list against
-	Template   string   // Template file to build the response from
-	ServerType string   // markdown, raw, search, or facet to denote the type of Server handle
-	TopicURL   string   // URI prefix to redirect to topic pages
-	Restricted []string // list of restricts - extensions for raw, topics for markdown
+	Path             string   // filesystem path to serve out
+	Prefix           string   // Web URL Prefix - alternatively the prefix for a search handler
+	Default          string   // Default page to serve if empty URI - alternatively the facet to list against
+	Template         string   // Template file to build the response from
+	FallbackTemplate string   // template to fall back to for each handlers
+	ServerType       string   // markdown, raw, search, or facet to denote the type of Server handle
+	TopicURL         string   // URI prefix to redirect to topic pages
+	Restricted       []string // list of restricts - extensions for raw, topics for markdown
 }
 
 func GetConfig() *GlobalSection {
