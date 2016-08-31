@@ -24,9 +24,7 @@ func (h Fields) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if len(fields) < 3 || fields[1] == "" {
 		// to do if a field was not given
-		if err := h.i.FallbackSearchResponse(w, h.c.FallbackTemplate) err != nil {
-			log.Println(err)
-		}
+		h.i.FallbackSearchResponse(w, h.c.FallbackTemplate)
 		return
 	} else {
 		// to be done if a field was given
@@ -65,9 +63,16 @@ func (h FuzzySearch) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		pageSize int      `form:"pageSize"`
 	}{}
 
+	if r.Method != http.MethodPost {
+		// to do if a field was not given
+		h.i.FallbackSearchResponse(w, h.c.FallbackTemplate)
+		return
+	}
+
 	err := r.ParseForm()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 
 	err = form.DecodeValues(&values, r.Form)
@@ -106,6 +111,12 @@ func (h QuerySearch) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		pageSize int    `form:"pageSize"`
 	}{}
 
+	if r.Method != http.MethodPost {
+		// to do if a field was not given
+		h.i.FallbackSearchResponse(w, h.c.FallbackTemplate)
+		return
+	}
+
 	err := r.ParseForm()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -115,6 +126,11 @@ func (h QuerySearch) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	err = form.DecodeValues(&values, r.Form)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if values.s == "" {
+		// to do if a field was not given
+		h.i.FallbackSearchResponse(w, h.c.FallbackTemplate)
 		return
 	}
 
@@ -233,16 +249,18 @@ func (h RawFile) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *Index) FallbackSearchResponse(w http.ResponseWriter,
-	template string) error {
+	template string) {
 	authors, err := i.ListField("author")
 	if err != nil {
 		http.Error(w, "failed to list authors", http.StatusInternalServerError)
-		return err
+		i.log.Println(err)
+		return
 	}
 	topics, err := i.ListField("topic")
 	if err != nil {
 		http.Error(w, "failed to list topics", http.StatusInternalServerError)
-		return err
+		i.log.Println(err)
+		return
 	}
 
 	fields := SearchResponse{Topics: topics, Authors: authors}
@@ -250,7 +268,8 @@ func (i *Index) FallbackSearchResponse(w http.ResponseWriter,
 	err = allTemplates.ExecuteTemplate(w, template, fields)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return err
+		i.log.Println(err)
+		return
 	}
 	return nil
 }
