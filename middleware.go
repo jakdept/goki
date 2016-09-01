@@ -3,6 +3,8 @@ package main
 import (
 	"log"
 	"net/http"
+
+	"github.com/gorilla/handlers"
 )
 
 /*
@@ -80,5 +82,8 @@ func BuildMuxer(c GlobalSection, closer <-chan struct{},
 			}
 		}
 	}
+
+	m = handlers.CompressHandler(m)
+	m = handlers.LoggingHandler(logs, m)
 	return m, nil
 }

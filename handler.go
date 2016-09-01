@@ -219,7 +219,6 @@ type RawFile struct {
 }
 
 func (h RawFile) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-
 	// If the request is empty, set it to the default.
 	if r.URL.Path == "/" {
 		r.URL.Path = path.Clean(h.c.Default)
@@ -239,6 +238,21 @@ func (h RawFile) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusForbidden)
 		log.Print(err)
 		return
+	}
+
+	switch path.Ext(r.URL.Path) {
+	case "js":
+		w.Header().Set("Content-Type", "text/javascript")
+	case "css":
+		w.Header().Set("Content-Type", "text/css")
+	case "gif":
+		w.Header().Set("Content-Type", "image/gif")
+	case "png":
+		w.Header().Set("Content-Type", "image/png")
+	case "jpg":
+		w.Header().Set("Content-Type", "image/jpeg")
+	case "jpeg":
+		w.Header().Set("Content-Type", "image/jpeg")
 	}
 
 	_, err = io.Copy(w, f)
