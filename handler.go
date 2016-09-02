@@ -285,5 +285,5 @@ func (i *Index) FallbackSearchResponse(w http.ResponseWriter,
 		i.log.Println(err)
 		return
 	}
-	return nil
+	return
 }

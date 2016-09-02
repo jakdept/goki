@@ -13,6 +13,8 @@ import (
 	"net/http"
 
 	"flag"
+
+	"github.com/gorilla/handlers"
 	//"github.com/JackKnifed/blackfriday"
 	//"github.com/JackKnifed/goki"
 	//"github.com/russross/blackfriday"
@@ -57,8 +59,11 @@ func main() {
 
 	mux, err := BuildMuxer(*config, closer, log.New(os.Stdout, "", 0))
 	if err != nil {
-
+		log.Fatal("failed to load muxer")
 	}
 
-	log.Println(http.ListenAndServe(config.Address+":"+config.Port, mux))
+	mux = handlers.LoggingHandler(os.Stdout, mux)
+	canonical := handlers.CanonicalHost(config.Hostname, http.StatusMovedPermanently)
+
+	log.Println(http.ListenAndServe(config.Address+":"+config.Port, canonical(mux)))
 }

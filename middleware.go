@@ -47,7 +47,7 @@ func MakeHandler(handlerConfig ServerSection) http.HandlerFunc {
 */
 
 func BuildMuxer(c GlobalSection, closer <-chan struct{},
-	logs *log.Logger) (*http.ServeMux, error) {
+	logs *log.Logger) (http.Handler, error) {
 	m := http.NewServeMux()
 	// ## TODO ## return an error instead of panic if overlapping muxes
 	for _, i := range c.Indexes {
@@ -83,7 +83,6 @@ func BuildMuxer(c GlobalSection, closer <-chan struct{},
 		}
 	}
 
-	m = handlers.CompressHandler(m)
-	m = handlers.LoggingHandler(logs, m)
-	return m, nil
+	h := handlers.CompressHandler(m)
+	return h, nil
 }
