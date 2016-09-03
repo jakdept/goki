@@ -26,9 +26,11 @@ func TestGetURIPath(t *testing.T) {
 		{"/wiki/page.md", "/wiki/", "/", "/page.md"},
 		{"abcdef", "abc", "xyz", "xyz/def"},
 	}
+	i := &Index{}
 
 	for _, testSet := range tests {
-		assert.Equal(t, testSet.output, getURIPath(testSet.input, testSet.trim, testSet.add),
+		i.config.IndexPath = testSet.add
+		assert.Equal(t, testSet.output, i.getURI(testSet.input, testSet.trim),
 			"[%q] trimmed [%q] added [%q] but got the wrong result",
 			testSet.input, testSet.trim, testSet.add)
 	}
@@ -41,6 +43,7 @@ func TestCleanupMarkdownFiles(t *testing.T) {
 			t.Errorf("\npanic while processing [%#v]\n", input)
 		}
 	}()
+	i := &Index{}
 
 	inputFiles, err := filepath.Glob("./testfiles/*.md")
 	if err != nil {
@@ -63,7 +66,7 @@ func TestCleanupMarkdownFiles(t *testing.T) {
 			return
 		}
 
-		cleanData := cleanupMarkdown(rawData)
+		cleanData := i.cleanupMarkdown(rawData)
 		if cleanData != string(expectedData) {
 			f, err := ioutil.TempFile("", "cleanupMarkdown.")
 			if err != nil {

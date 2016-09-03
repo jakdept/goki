@@ -26,6 +26,7 @@ type GlobalSection struct {
 	CertFile    string
 	KeyFile     string
 	Indexes     []IndexSection
+	Redirects   []RedirectSection
 }
 
 type RedirectSection struct {
@@ -42,7 +43,6 @@ type IndexSection struct {
 	IndexName      string            // name of the index
 	Restricted     []string          // Tags to restrict indexing on
 	Handlers       []ServerSection
-	Redirects      []RedirectSection
 }
 
 type ServerSection struct {
@@ -99,18 +99,18 @@ func LoadConfig(configFile string) error {
 // ## TODO ##
 func CleanConfig(config *GlobalSection) {
 	config.TemplateDir = filepath.Clean(config.TemplateDir)
+	for r := range config.Redirects {
+		config.Redirects[r].Requested = path.Clean(config.Redirects[r].Requested)
+		config.Redirects[r].Target = path.Clean(config.Redirects[r].Target)
+		if config.Redirects[r].Code == 0 {
+			config.Redirects[r].Code = 301
+		}
+	}
+
 	for _, indexSection := range config.Indexes {
 		for origDirPath, origWebPath := range indexSection.WatchDirs {
 			delete(indexSection.WatchDirs, origDirPath)
 			indexSection.WatchDirs[filepath.Clean(origDirPath)] = path.Clean(origWebPath)
-		}
-
-		for i := range indexSection.Redirects {
-			indexSection.Redirects[i].Requested = path.Clean(indexSection.Redirects[i].Requested)
-			indexSection.Redirects[i].Target = path.Clean(indexSection.Redirects[i].Target)
-			if indexSection.Redirects[i].Code == 0 {
-				indexSection.Redirects[i].Code = 301
-			}
 		}
 
 		for i := range indexSection.Handlers {

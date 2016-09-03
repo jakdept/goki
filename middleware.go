@@ -50,6 +50,11 @@ func BuildMuxer(c GlobalSection, closer <-chan struct{},
 	logs *log.Logger) (http.Handler, error) {
 	m := http.NewServeMux()
 	// ## TODO ## return an error instead of panic if overlapping muxes
+	for _, r := range c.Redirects {
+		m.Handle(r.Requested,
+			http.RedirectHandler(r.Target, r.Code))
+	}
+
 	for _, i := range c.Indexes {
 		if i.IndexPath != "" {
 			index, err := OpenIndex(i, logs)
@@ -75,10 +80,6 @@ func BuildMuxer(c GlobalSection, closer <-chan struct{},
 				case "fuzzy":
 					m.Handle(h.Prefix, http.StripPrefix(h.Prefix, FuzzySearch{c: h, i: index}))
 				}
-			}
-			for _, r := range i.Redirects {
-				m.Handle(r.Requested,
-					http.RedirectHandler(r.Target, r.Code))
 			}
 		}
 	}

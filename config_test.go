@@ -14,21 +14,25 @@ import (
 
 func TestSimpleConfig(t *testing.T) {
 
-	defaultConfig := `{
-  "Global": {
-    "Port": "8080",
-    "Hostname": "localhost"
-  },
-  "Server": [
-	  {
-      "Path": "/var/www/wiki/",
-      "Prefix": "/",
-      "Default": "index",
-      "ServerType": "markdown",
-      "Restricted": []
-    }
-  ]
-}`
+	defaultConfig := `
+{
+	"Port": "8080",
+	"Hostname": "localhost",
+	"IndexSection": [
+		{
+			"Handlers": [
+				{
+					"Path": "/var/www/wiki/",
+					"Prefix": "/",
+					"Default": "index",
+					"ServerType": "markdown",
+					"Restricted": []
+				}
+			]
+		}
+	]
+}
+`
 
 	filepath := path.Join(os.TempDir(), "simpleini.txt")
 	f, err := os.Create(filepath)
@@ -51,40 +55,28 @@ func TestSimpleConfig(t *testing.T) {
 
 	//assert.Nil(t, config, "Config file could not be accessed")
 
-	assert.Equal(t, config.Global.Port, "8080", "read Port value incorrectly")
-	assert.Equal(t, config.Global.Hostname, "localhost", "read Hostname value incorrectly")
+	assert.Equal(t, config.Port, "8080", "read Port value incorrectly")
+	assert.Equal(t, config.Hostname, "localhost", "read Hostname value incorrectly")
 
-	assert.Equal(t, config.Server[0].Path, "/var/www/wiki/", "read Path value incorrectly")
-	assert.Equal(t, config.Server[0].Prefix, "/", "read Prefix value incorrectly")
-	assert.Equal(t, config.Server[0].Default, "index", "read Default page value incorrectly")
-	assert.Equal(t, config.Server[0].ServerType, "markdown", "read ServerType value incorrectly")
+	assert.Equal(t, config.Indexes[0].Handlers[0].Path, "/var/www/wiki/", "read Path value incorrectly")
+	assert.Equal(t, config.Indexes[0].Handlers[0].Prefix, "/", "read Prefix value incorrectly")
+	assert.Equal(t, config.Indexes[0].Handlers[0].Default, "index", "read Default page value incorrectly")
+	assert.Equal(t, config.Indexes[0].Handlers[0].ServerType, "markdown", "read ServerType value incorrectly")
 
-	assert.Equal(t, len(config.Server[0].Restricted), 0, "incorrect number of restricted elements") // putting this comment here so sublime stops freaking out about a line with one character
+	assert.Equal(t, len(config.Indexes[0].Handlers[0].Restricted), 0, "incorrect number of restricted elements") // putting this comment here so sublime stops freaking out about a line with one character
 }
 
 func TestGetConfig(t *testing.T) {
 	// directly put a config in the spot
-	staticConfig = &Config{
-		Global: GlobalSection{
-			Port:        "8080",
-			Hostname:    "localhost",
-			TemplateDir: "/templates/",
-		},
+	staticConfig = &GlobalSection{
+		Port:        "8080",
+		Hostname:    "localhost",
+		TemplateDir: "/templates/",
 		Redirects: []RedirectSection{
 			RedirectSection{
 				Requested: "source",
 				Target:    "dest",
 				Code:      302,
-			},
-		},
-		Server: []ServerSection{
-			ServerSection{
-				ServerType: "markdown",
-				Prefix:     "/",
-				Path:       "/var/www/",
-				Default:    "readme",
-				Template:   "wiki.html",
-				Restricted: []string{},
 			},
 		},
 		Indexes: []IndexSection{
@@ -97,15 +89,25 @@ func TestGetConfig(t *testing.T) {
 				IndexType:      "en",
 				IndexName:      "wiki",
 				Restricted:     []string{},
+				Handlers: []ServerSection{
+					ServerSection{
+						ServerType: "markdown",
+						Prefix:     "/",
+						Path:       "/var/www/",
+						Default:    "readme",
+						Template:   "wiki.html",
+						Restricted: []string{},
+					},
+				},
 			},
 		},
 	}
 
 	configLock.Lock()
 
-	var config *Config
+	var config *GlobalSection
 
-	ch := make(chan *Config)
+	ch := make(chan *GlobalSection)
 
 	go func() {
 		ch <- GetConfig()
