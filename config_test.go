@@ -58,6 +58,13 @@ func TestSimpleConfig(t *testing.T) {
 	assert.Equal(t, config.Port, "8080", "read Port value incorrectly")
 	assert.Equal(t, config.Hostname, "localhost", "read Hostname value incorrectly")
 
+	if len(config.Indexes) < 1 {
+		t.Fatal("did not have enough indexes")
+	}
+	if len(config.Indexes[0].Handlers) < 1 {
+		t.Fatal("did not have enough handlers")
+	}
+
 	assert.Equal(t, config.Indexes[0].Handlers[0].Path, "/var/www/wiki/", "read Path value incorrectly")
 	assert.Equal(t, config.Indexes[0].Handlers[0].Prefix, "/", "read Prefix value incorrectly")
 	assert.Equal(t, config.Indexes[0].Handlers[0].Default, "index", "read Default page value incorrectly")
