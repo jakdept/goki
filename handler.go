@@ -59,15 +59,6 @@ type FuzzySearch struct {
 	i *Index
 }
 
-//FuzzySearchValues gives a standard structure to decode and pass to FuzzySearch
-type FuzzySearchValues struct {
-	s        string   `form:"s"`
-	topics   []string `form:"topic"`
-	authors  []string `form:"author"`
-	page     int      `form:"page"`
-	pageSize int      `form:"pageSize"`
-}
-
 func (h FuzzySearch) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		// to do if a field was not given

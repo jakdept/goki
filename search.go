@@ -134,6 +134,17 @@ func (i *Index) ListFieldValues(field, match string, pageSize, page int) (
 
 }
 
+//FuzzySearchValues gives a standard structure to decode and pass to FuzzySearch
+type FuzzySearchValues struct {
+	s        string   `form:"s"`
+	topics   []string `form:"topic"`
+	authors  []string `form:"author"`
+	page     int      `form:"page"`
+	pageSize int      `form:"pageSize"`
+}
+
+// Index.FuzzySearch runs a fuzzy search with the given input parameters against
+//  the given query
 func (i *Index) FuzzySearch(v FuzzySearchValues) (SearchResponse, error) {
 	var topicQuery, authorQuery []bleve.Query
 	for _, eachTopic := range v.topics {
