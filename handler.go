@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	"github.com/ajg/form"
-	"github.com/blevesearch/bleve"
 )
 
 // Fields is a standard handler that pulls the first folder of the response, and
@@ -31,21 +30,13 @@ func (h Fields) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	} else {
 		// to be done if a field was given
-		response, err := h.i.ListFieldValues(h.c.Default, fields[0], 100, 1)
+		results, err := h.i.ListAllField(h.c.Default, fields[0], 100, 1)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		modifiedSearchResponse := struct {
-			SearchResponse
-			AllFields []string
-		}{
-			SearchResponse: response,
-			AllFields:      []string{},
-		}
-
-		err = allTemplates.ExecuteTemplate(w, h.c.Template, modifiedSearchResponse)
+		err = allTemplates.ExecuteTemplate(w, h.c.Template, results)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
@@ -127,13 +118,7 @@ func (h QuerySearch) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	query := bleve.NewQueryStringQuery(values.s)
-	searchRequest := bleve.NewSearchRequest(query)
-	searchRequest.Fields = []string{"path", "title", "topic", "author", "modified"}
-	searchRequest.Size = values.pageSize
-	searchRequest.From = values.pageSize + values.page
-
-	results, err := h.i.Query(searchRequest)
+	results, err := h.i.QuerySearch(values.s, values.page, values.pageSize)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

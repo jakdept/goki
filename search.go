@@ -107,7 +107,7 @@ func (i *Index) ListField(field string) ([]string, error) {
 	return results, nil
 }
 
-func (i *Index) ListFieldValues(field, match string, pageSize, page int) (
+func (i *Index) ListAllField(field, match string, pageSize, page int) (
 	SearchResponse, error) {
 
 	query := bleve.NewTermQuery(match).SetField(field)
@@ -143,7 +143,7 @@ type FuzzySearchValues struct {
 	pageSize int      `form:"pageSize"`
 }
 
-// Index.FuzzySearch runs a fuzzy search with the given input parameters against
+// FuzzySearch runs a fuzzy search with the given input parameters against
 //  the given query
 func (i *Index) FuzzySearch(v FuzzySearchValues) (SearchResponse, error) {
 	var topicQuery, authorQuery []bleve.Query
@@ -186,6 +186,8 @@ func (i *Index) FuzzySearch(v FuzzySearchValues) (SearchResponse, error) {
 	return searchResult, nil
 }
 
+// QuerySearch runs a given query search and returns a SearchResponse against
+//  the given index
 func (i *Index) QuerySearch(terms string, page, pageSize int) (SearchResponse, error) {
 	query := bleve.NewQueryStringQuery(terms)
 	searchRequest := bleve.NewSearchRequest(query)
