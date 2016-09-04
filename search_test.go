@@ -1,17 +1,12 @@
 package main
 
 import (
-	"github.com/stretchr/testify/assert"
-	// "os"
-	// "bytes"
-	// "encoding/json"
-	// "path"
-	"path/filepath"
-	"testing"
-	// "log"
-	// "time"
 	"io/ioutil"
+	"path/filepath"
 	"strings"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestGetURIPath(t *testing.T) {

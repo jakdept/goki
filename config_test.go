@@ -13,12 +13,11 @@ import (
 )
 
 func TestSimpleConfig(t *testing.T) {
-
 	defaultConfig := `
 {
 	"Port": "8080",
 	"Hostname": "localhost",
-	"IndexSection": [
+	"Indexes": [
 		{
 			"Handlers": [
 				{
@@ -33,6 +32,24 @@ func TestSimpleConfig(t *testing.T) {
 	]
 }
 `
+
+	expected := struct {
+		Port          string
+		Hostname      string
+		Path          string
+		Prefix        string
+		Default       string
+		ServerType    string
+		RestrictedLen int
+	}{
+		Port:          "8080",
+		Hostname:      "localhost",
+		Path:          "/var/www/wiki",
+		Prefix:        "/",
+		Default:       "index",
+		ServerType:    "markdown",
+		RestrictedLen: 0,
+	}
 
 	filepath := path.Join(os.TempDir(), "simpleini.txt")
 	f, err := os.Create(filepath)
@@ -55,8 +72,8 @@ func TestSimpleConfig(t *testing.T) {
 
 	//assert.Nil(t, config, "Config file could not be accessed")
 
-	assert.Equal(t, config.Port, "8080", "read Port value incorrectly")
-	assert.Equal(t, config.Hostname, "localhost", "read Hostname value incorrectly")
+	assert.Equal(t, expected.Port, config.Port, "read Port value incorrectly")
+	assert.Equal(t, expected.Hostname, config.Hostname, "read Hostname value incorrectly")
 
 	if len(config.Indexes) < 1 {
 		t.Fatal("did not have enough indexes")
@@ -65,12 +82,12 @@ func TestSimpleConfig(t *testing.T) {
 		t.Fatal("did not have enough handlers")
 	}
 
-	assert.Equal(t, config.Indexes[0].Handlers[0].Path, "/var/www/wiki/", "read Path value incorrectly")
-	assert.Equal(t, config.Indexes[0].Handlers[0].Prefix, "/", "read Prefix value incorrectly")
-	assert.Equal(t, config.Indexes[0].Handlers[0].Default, "index", "read Default page value incorrectly")
-	assert.Equal(t, config.Indexes[0].Handlers[0].ServerType, "markdown", "read ServerType value incorrectly")
+	assert.Equal(t, expected.Path, config.Indexes[0].Handlers[0].Path, "read Path value incorrectly")
+	assert.Equal(t, expected.Prefix, config.Indexes[0].Handlers[0].Prefix, "read Prefix value incorrectly")
+	assert.Equal(t, expected.Default, config.Indexes[0].Handlers[0].Default, "read Default page value incorrectly")
+	assert.Equal(t, expected.ServerType, config.Indexes[0].Handlers[0].ServerType, "read ServerType value incorrectly")
 
-	assert.Equal(t, len(config.Indexes[0].Handlers[0].Restricted), 0, "incorrect number of restricted elements") // putting this comment here so sublime stops freaking out about a line with one character
+	assert.Equal(t, expected.RestrictedLen, len(config.Indexes[0].Handlers[0].Restricted), "incorrect number of restricted elements") // putting this comment here so sublime stops freaking out about a line with one character
 }
 
 func TestGetConfig(t *testing.T) {

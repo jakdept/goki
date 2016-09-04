@@ -63,7 +63,6 @@ func GetConfig() *GlobalSection {
 }
 
 func LoadConfig(configFile string) error {
-
 	if configFile == "" {
 		// log.Println("no configuration file specified, using ./config.json")
 		// return an empty config file
@@ -86,8 +85,6 @@ func LoadConfig(configFile string) error {
 	}
 
 	CleanConfig(temp)
-
-	// log.Println(temp.Indexes)
 
 	configLock.Lock()
 	staticConfig = temp

@@ -56,6 +56,7 @@ func BuildMuxer(c GlobalSection, closer <-chan struct{},
 	}
 
 	for _, i := range c.Indexes {
+		var index *Index
 		if i.IndexPath != "" {
 			index, err := OpenIndex(i, logs)
 			if err != nil {
@@ -66,20 +67,20 @@ func BuildMuxer(c GlobalSection, closer <-chan struct{},
 				<-closer
 				logs.Println(index.Close())
 			}()
+		}
 
-			for _, h := range i.Handlers {
-				switch h.ServerType {
-				case "markdown":
-					m.Handle(h.Prefix, http.StripPrefix(h.Prefix, Markdown{c: h}))
-				case "raw":
-					m.Handle(h.Prefix, http.StripPrefix(h.Prefix, RawFile{c: h}))
-				case "query":
-					m.Handle(h.Prefix, http.StripPrefix(h.Prefix, QuerySearch{c: h, i: index}))
-				case "field":
-					m.Handle(h.Prefix, http.StripPrefix(h.Prefix, Fields{c: h, i: index}))
-				case "fuzzy":
-					m.Handle(h.Prefix, http.StripPrefix(h.Prefix, FuzzySearch{c: h, i: index}))
-				}
+		for _, h := range i.Handlers {
+			switch h.ServerType {
+			case "markdown":
+				m.Handle(h.Prefix, http.StripPrefix(h.Prefix, Markdown{c: h}))
+			case "raw":
+				m.Handle(h.Prefix, http.StripPrefix(h.Prefix, RawFile{c: h}))
+			case "query":
+				m.Handle(h.Prefix, http.StripPrefix(h.Prefix, QuerySearch{c: h, i: index}))
+			case "field":
+				m.Handle(h.Prefix, http.StripPrefix(h.Prefix, Fields{c: h, i: index}))
+			case "fuzzy":
+				m.Handle(h.Prefix, http.StripPrefix(h.Prefix, FuzzySearch{c: h, i: index}))
 			}
 		}
 	}
