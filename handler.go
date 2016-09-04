@@ -59,15 +59,16 @@ type FuzzySearch struct {
 	i *Index
 }
 
-func (h FuzzySearch) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	values := struct {
-		s        string   `form:"s"`
-		topics   []string `form:"topic"`
-		authors  []string `form:"author"`
-		page     int      `form:"page"`
-		pageSize int      `form:"pageSize"`
-	}{}
+//FuzzySearchValues gives a standard structure to decode and pass to FuzzySearch
+type FuzzySearchValues struct {
+	s        string   `form:"s"`
+	topics   []string `form:"topic"`
+	authors  []string `form:"author"`
+	page     int      `form:"page"`
+	pageSize int      `form:"pageSize"`
+}
 
+func (h FuzzySearch) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		// to do if a field was not given
 		h.i.FallbackSearchResponse(w, h.c.FallbackTemplate)
@@ -80,19 +81,14 @@ func (h FuzzySearch) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var values FuzzySearchValues
 	err = form.DecodeValues(&values, r.Form)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	query := bleve.NewQueryStringQuery(values.s)
-	searchRequest := bleve.NewSearchRequest(query)
-	searchRequest.Fields = []string{"path", "title", "topic", "author", "modified"}
-	searchRequest.Size = values.pageSize
-	searchRequest.From = values.pageSize + values.page
-
-	results, err := h.i.Query(searchRequest)
+	results, err := h.i.FuzzySearch(values)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

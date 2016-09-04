@@ -134,18 +134,16 @@ func (i *Index) ListFieldValues(field, match string, pageSize, page int) (
 
 }
 
-func (i *Index) FuzzySearch(term string, topics, authors []string,
-	page, pageSize int) (SearchResponse, error) {
-
+func (i *Index) FuzzySearch(v FuzzySearchValues) (SearchResponse, error) {
 	var topicQuery, authorQuery []bleve.Query
-	for _, eachTopic := range topics {
+	for _, eachTopic := range v.topics {
 		topicQuery = append(topicQuery, bleve.NewTermQuery(eachTopic))
 	}
-	for _, eachAuthor := range authors {
+	for _, eachAuthor := range v.authors {
 		authorQuery = append(authorQuery, bleve.NewTermQuery(eachAuthor))
 	}
 
-	multiQuery := []bleve.Query{bleve.NewFuzzyQuery(term)}
+	multiQuery := []bleve.Query{bleve.NewFuzzyQuery(v.s)}
 	if len(topicQuery) > 0 {
 		multiQuery = append(multiQuery, bleve.NewDisjunctionQuery(topicQuery))
 	}
@@ -156,8 +154,8 @@ func (i *Index) FuzzySearch(term string, topics, authors []string,
 	query := bleve.NewConjunctionQuery(multiQuery)
 	searchRequest := bleve.NewSearchRequest(query)
 	searchRequest.Fields = []string{"path", "title", "topic", "author", "modified"}
-	searchRequest.Size = pageSize
-	searchRequest.From = pageSize * page
+	searchRequest.Size = v.pageSize
+	searchRequest.From = v.pageSize * v.page
 
 	err := searchRequest.Query.Validate()
 	if err != nil {
@@ -169,7 +167,7 @@ func (i *Index) FuzzySearch(term string, topics, authors []string,
 		return SearchResponse{}, err
 	}
 
-	searchResult, err := i.CreateResponseData(rawResult, page)
+	searchResult, err := i.CreateResponseData(rawResult, v.page)
 	if err != nil {
 		return SearchResponse{}, err
 	}
