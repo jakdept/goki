@@ -28,18 +28,17 @@ func (h Fields) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// to do if a field was not given
 		h.i.FallbackSearchResponse(w, h.c.FallbackTemplate)
 		return
-	} else {
-		// to be done if a field was given
-		results, err := h.i.ListAllField(h.c.Default, fields[0], 100, 1)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
+	}
+	// to be done if a field was given
+	results, err := h.i.ListAllField(h.c.Default, fields[0], 100, 1)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
-		err = allTemplates.ExecuteTemplate(w, h.c.Template, results)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
+	err = allTemplates.ExecuteTemplate(w, h.c.Template, results)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
 
