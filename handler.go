@@ -14,6 +14,9 @@ import (
 	"github.com/blevesearch/bleve"
 )
 
+// Fields is a standard handler that pulls the first folder of the response, and
+//  lists that topic or author. If there is none, it falls back to listing all
+//  topics or authors with the fallback template.
 type Fields struct {
 	c ServerSection
 	i *Index
@@ -49,6 +52,8 @@ func (h Fields) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// FuzzySearch is a normal search format - it should provide a point and click
+//  interface to allow searching.
 type FuzzySearch struct {
 	c ServerSection
 	i *Index
@@ -99,6 +104,7 @@ func (h FuzzySearch) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// QuerySearch is a handler that uses a custom search format to do custom queries.
 type QuerySearch struct {
 	c ServerSection
 	i *Index
@@ -152,6 +158,7 @@ func (h QuerySearch) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Page is a standard data structure used to render markdown pages.
 type Page struct {
 	Title    string
 	ToC      template.HTML
@@ -161,6 +168,9 @@ type Page struct {
 	Authors  []string
 }
 
+// Markdown is an http.Handler that renders a markdown file and serves it back.
+//  Author and Topic tags before the first major title are parsed and displayed.
+//  It is possible to restrict access to a page based on topic tag.
 type Markdown struct {
 	c ServerSection
 }
@@ -214,6 +224,8 @@ func (h Markdown) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// RawFile is a http.Handler that serves a raw file back, restricting by file
+//  extension if necessary and adding appropiate mime-types.
 type RawFile struct {
 	c ServerSection
 }
@@ -262,6 +274,7 @@ func (h RawFile) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// FallbackSearchResponse is a function that writes a "bailout" template
 func (i *Index) FallbackSearchResponse(w http.ResponseWriter,
 	template string) {
 	authors, err := i.ListField("author")

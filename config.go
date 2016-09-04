@@ -13,11 +13,12 @@ import (
 var staticConfig *GlobalSection
 var configLock = new(sync.RWMutex)
 
-//var templates = template.Must(template.ParseFiles("/var/wiki-backend/wiki.html"))
-//template.New("allTemplates")
 var allTemplates = template.New("allTemplates")
 var templateLock = new(sync.RWMutex)
 
+// GlobalSection is the top level section of a config
+//  * Indexes is a child section - it's an array of IndexSection
+//  * Redirects is a child section - it's an array of RedirectSection
 type GlobalSection struct {
 	Address     string
 	Port        string
@@ -29,12 +30,16 @@ type GlobalSection struct {
 	Redirects   []RedirectSection
 }
 
+// RedirectSection details each redirect to serve
 type RedirectSection struct {
 	Requested string
 	Target    string
 	Code      int
 }
 
+// IndexSection details each index to open. If IndexPath is nil, no index is
+//  used but handlers underneath are still processed.
+//  * Handlers is a child section - array of ServerSections
 type IndexSection struct {
 	WatchDirs      map[string]string // physical -> URI Location that we will be watching for updates
 	WatchExtension string            // file extensions that we will watch for within that dir
@@ -45,6 +50,7 @@ type IndexSection struct {
 	Handlers       []ServerSection
 }
 
+// ServerSection details a handler to lay out
 type ServerSection struct {
 	Path             string   // filesystem path to serve out
 	Prefix           string   // Web URL Prefix - alternatively the prefix for a search handler
@@ -56,16 +62,17 @@ type ServerSection struct {
 	Restricted       []string // list of restricts - extensions for raw, topics for markdown
 }
 
+// GetConfig safely returns the config file
 func GetConfig() *GlobalSection {
 	configLock.RLock()
 	defer configLock.RUnlock()
 	return staticConfig
 }
 
+// LoadConfig reads in a config file, cleans it up, and sets it to the global
 func LoadConfig(configFile string) error {
+	// set a default file
 	if configFile == "" {
-		// log.Println("no configuration file specified, using ./config.json")
-		// return an empty config file
 		configFile = "config.json"
 	}
 
@@ -93,7 +100,7 @@ func LoadConfig(configFile string) error {
 	return nil
 }
 
-// ## TODO ##
+// CleanConfig takes a given config struct, and makes sure values are valid
 func CleanConfig(config *GlobalSection) {
 	config.TemplateDir = filepath.Clean(config.TemplateDir)
 	for r := range config.Redirects {
@@ -119,6 +126,10 @@ func CleanConfig(config *GlobalSection) {
 	}
 }
 
+// RenderTemplate runs a given template as you would expect - it needs:
+// * a http.ResponseWrtier for output
+// * a template to render
+// * a chunk of data
 func RenderTemplate(responsePipe http.ResponseWriter, templateName string,
 	data interface{}) error {
 	templateLock.RLock()
@@ -127,8 +138,8 @@ func RenderTemplate(responsePipe http.ResponseWriter, templateName string,
 	return allTemplates.ExecuteTemplate(responsePipe, templateName, data)
 }
 
+// ParseTemplates parses all templates in a folder into one global template
 func ParseTemplates(globalConfig GlobalSection) error {
-	// log.Printf("Parsing templates in [%q]", globalConfig.TemplateDir)
 	newTemplate, err := template.ParseGlob(globalConfig.TemplateDir + "*")
 	if err != nil {
 		return &Error{Code: ErrParseTemplates, innerError: err}
