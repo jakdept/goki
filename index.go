@@ -22,7 +22,7 @@ type indexedPage struct {
 	Body     string    `json:"body"`
 	Topics   string    `json:"topic"`
 	Keywords string    `json:"keyword"`
-	Authors  string    `json: "author"`
+	Authors  string    `json:"author"`
 	Modified time.Time `json:"modified"`
 }
 
