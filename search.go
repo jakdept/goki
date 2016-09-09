@@ -7,6 +7,8 @@ import (
 	"github.com/blevesearch/bleve"
 )
 
+// SearchResponse is the parent type structure that will come back to all
+//  requests. []Results will contain child results.
 type SearchResponse struct {
 	TotalHits  int
 	PageOffset int
@@ -16,6 +18,7 @@ type SearchResponse struct {
 	Results    []SearchResponseResult
 }
 
+// SearchResponseResult is the child type that will come back to all responses
 type SearchResponseResult struct {
 	Title    string
 	URIPath  string
@@ -26,6 +29,8 @@ type SearchResponseResult struct {
 	Body     string
 }
 
+// CreateResponseData takes a search result, and produces a SearchResponse
+//  suitable for passing to a template.
 func (i *Index) CreateResponseData(rawResults *bleve.SearchResult, pageOffset int) (
 	SearchResponse, error) {
 
@@ -89,7 +94,7 @@ func (i *Index) CreateResponseData(rawResults *bleve.SearchResult, pageOffset in
 	return response, nil
 }
 
-// lists all unique values for that field in index
+// ListField lists all unique values for that field in index
 func (i *Index) ListField(field string) ([]string, error) {
 	searchRequest := bleve.NewSearchRequest(bleve.NewMatchAllQuery())
 	facet := bleve.NewFacetRequest(field, 1)

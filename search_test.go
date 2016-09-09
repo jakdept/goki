@@ -5,9 +5,66 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/blevesearch/bleve"
+	"github.com/blevesearch/bleve/search"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestCreateResponseData(t *testing.T) {
+	testData := []struct {
+		rawResult  *bleve.SearchResult
+		pageOffset int
+		out        SearchResponse
+		expErr     error
+	}{
+		{
+			bleve.SearchResult{
+				Total:    1,
+				MaxScore: 1,
+				Took:     time.Microsecond * 5,
+				Hits: search.DocumentMatchCollection{
+					&search.DocumentMatch{
+						Score: .87,
+						Fields: map[string]string{
+							"title":   "test page",
+							"path":    "/test_page.md",
+							"body":    "test page body",
+							"topic":   "a few topics",
+							"keyword": "a few keywords",
+							"author":  "a few authors",
+						},
+					},
+					&search.DocumentMatch{
+						Score: .63,
+						Fields: map[string]string{
+							"title":   "other page",
+							"path":    "/other_page.md",
+							"body":    "other page body",
+							"topic":   "a few topics",
+							"keyword": "a few keywords",
+							"author":  "a few authors",
+						},
+					},
+				},
+				pageOffset: 0,
+				out: SearchResponse{
+					TotalHits:  2,
+					PageOffset: 0,
+					SearchTimetime.Microsecond * 5,
+					Topics:  []string{"a", "few", "topics"},
+					Authors: []string{"a", "few", "authors"},
+					Results: []SearchResponseResult{
+						{},
+					},
+				},
+				expErr: nil,
+			},
+		},
+	}
+
+}
 
 func TestGetURIPath(t *testing.T) {
 	var tests = []struct {
