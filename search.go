@@ -1,6 +1,8 @@
 package main
 
 import (
+	"log"
+	"net/http"
 	"strings"
 	"time"
 
@@ -31,15 +33,15 @@ type SearchResponseResult struct {
 
 // CreateResponseData takes a search result, and produces a SearchResponse
 //  suitable for passing to a template.
-func (i *Index) CreateResponseData(rawResults *bleve.SearchResult, pageOffset int) (
+func CreateResponseData(i Index, rawResults *bleve.SearchResult, pageOffset int) (
 	SearchResponse, error) {
 
-	topics, err := i.ListField("topics")
+	topics, err := ListField(i, "topics")
 	if err != nil {
 		return SearchResponse{}, err
 	}
 
-	authors, err := i.ListField("authors")
+	authors, err := ListField(i, "authors")
 	if err != nil {
 		return SearchResponse{}, err
 	}
@@ -95,7 +97,7 @@ func (i *Index) CreateResponseData(rawResults *bleve.SearchResult, pageOffset in
 }
 
 // ListField lists all unique values for that field in index
-func (i *Index) ListField(field string) ([]string, error) {
+func ListField(i Index, field string) ([]string, error) {
 	searchRequest := bleve.NewSearchRequest(bleve.NewMatchAllQuery())
 	facet := bleve.NewFacetRequest(field, 1)
 	searchRequest.AddFacet("allValues", facet)
@@ -112,7 +114,7 @@ func (i *Index) ListField(field string) ([]string, error) {
 	return results, nil
 }
 
-func (i *Index) ListAllField(field, match string, pageSize, page int) (
+func ListAllField(i Index, field, match string, pageSize, page int) (
 	SearchResponse, error) {
 
 	query := bleve.NewTermQuery(match).SetField(field)
@@ -130,7 +132,7 @@ func (i *Index) ListAllField(field, match string, pageSize, page int) (
 		return SearchResponse{}, &Error{Code: ErrInvalidQuery, innerError: err}
 	}
 
-	result, err := i.CreateResponseData(rawResult, page*pageSize)
+	result, err := CreateResponseData(i, rawResult, page*pageSize)
 	if err != nil {
 		return SearchResponse{}, &Error{Code: ErrFormatSearchResponse, innerError: err}
 	}
@@ -150,7 +152,7 @@ type FuzzySearchValues struct {
 
 // FuzzySearch runs a fuzzy search with the given input parameters against
 //  the given query
-func (i *Index) FuzzySearch(v FuzzySearchValues) (SearchResponse, error) {
+func FuzzySearch(i Index, v FuzzySearchValues) (SearchResponse, error) {
 	var topicQuery, authorQuery []bleve.Query
 	for _, eachTopic := range v.topics {
 		topicQuery = append(topicQuery, bleve.NewTermQuery(eachTopic))
@@ -183,7 +185,7 @@ func (i *Index) FuzzySearch(v FuzzySearchValues) (SearchResponse, error) {
 		return SearchResponse{}, err
 	}
 
-	searchResult, err := i.CreateResponseData(rawResult, v.page)
+	searchResult, err := CreateResponseData(i, rawResult, v.page)
 	if err != nil {
 		return SearchResponse{}, err
 	}
@@ -193,7 +195,7 @@ func (i *Index) FuzzySearch(v FuzzySearchValues) (SearchResponse, error) {
 
 // QuerySearch runs a given query search and returns a SearchResponse against
 //  the given index
-func (i *Index) QuerySearch(terms string, page, pageSize int) (SearchResponse, error) {
+func QuerySearch(i Index, terms string, page, pageSize int) (SearchResponse, error) {
 	query := bleve.NewQueryStringQuery(terms)
 	searchRequest := bleve.NewSearchRequest(query)
 	searchRequest.Fields = []string{"path", "title", "topic", "author", "modified"}
@@ -210,10 +212,37 @@ func (i *Index) QuerySearch(terms string, page, pageSize int) (SearchResponse, e
 		return SearchResponse{}, err
 	}
 
-	searchResult, err := i.CreateResponseData(rawResult, page)
+	searchResult, err := CreateResponseData(i, rawResult, page)
 	if err != nil {
 		return SearchResponse{}, err
 	}
 
 	return searchResult, nil
+}
+
+// FallbackSearchResponse is a function that writes a "bailout" template
+func FallbackSearchResponse(i Index, w http.ResponseWriter,
+	template string) {
+	authors, err := ListField(i, "author")
+	if err != nil {
+		http.Error(w, "failed to list authors", http.StatusInternalServerError)
+		log.Println(err)
+		return
+	}
+	topics, err := ListField(i, "topic")
+	if err != nil {
+		http.Error(w, "failed to list topics", http.StatusInternalServerError)
+		log.Println(err)
+		return
+	}
+
+	fields := SearchResponse{Topics: topics, Authors: authors}
+
+	err = allTemplates.ExecuteTemplate(w, template, fields)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Println(err)
+		return
+	}
+	return
 }

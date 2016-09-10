@@ -16,21 +16,21 @@ import (
 // Fields is a standard handler that pulls the first folder of the response, and
 //  lists that topic or author. If there is none, it falls back to listing all
 //  topics or authors with the fallback template.
-type Fields struct {
+type FieldsHandler struct {
 	c ServerSection
-	i *Index
+	i Index
 }
 
-func (h Fields) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h FieldsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	fields := strings.SplitN(r.URL.Path, "/", 3)
 
 	if len(fields) < 3 || fields[1] == "" {
 		// to do if a field was not given
-		h.i.FallbackSearchResponse(w, h.c.FallbackTemplate)
+		FallbackSearchResponse(h.i, w, h.c.FallbackTemplate)
 		return
 	}
 	// to be done if a field was given
-	results, err := h.i.ListAllField(h.c.Default, fields[0], 100, 1)
+	results, err := ListAllField(h.i, h.c.Default, fields[0], 100, 1)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -44,15 +44,15 @@ func (h Fields) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // FuzzySearch is a normal search format - it should provide a point and click
 //  interface to allow searching.
-type FuzzySearch struct {
+type FuzzyHandler struct {
 	c ServerSection
-	i *Index
+	i Index
 }
 
-func (h FuzzySearch) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h FuzzyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		// to do if a field was not given
-		h.i.FallbackSearchResponse(w, h.c.FallbackTemplate)
+		FallbackSearchResponse(h.i, w, h.c.FallbackTemplate)
 		return
 	}
 
@@ -69,7 +69,7 @@ func (h FuzzySearch) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	results, err := h.i.FuzzySearch(values)
+	results, err := FuzzySearch(h.i, values)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -82,12 +82,12 @@ func (h FuzzySearch) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // QuerySearch is a handler that uses a custom search format to do custom queries.
-type QuerySearch struct {
+type QueryHandler struct {
 	c ServerSection
-	i *Index
+	i Index
 }
 
-func (h QuerySearch) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h QueryHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	values := struct {
 		s        string `form:"s"`
 		page     int    `form:"page"`
@@ -96,7 +96,7 @@ func (h QuerySearch) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method != http.MethodPost {
 		// to do if a field was not given
-		h.i.FallbackSearchResponse(w, h.c.FallbackTemplate)
+		FallbackSearchResponse(h.i, w, h.c.FallbackTemplate)
 		return
 	}
 
@@ -113,11 +113,11 @@ func (h QuerySearch) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	if values.s == "" {
 		// to do if a field was not given
-		h.i.FallbackSearchResponse(w, h.c.FallbackTemplate)
+		FallbackSearchResponse(h.i, w, h.c.FallbackTemplate)
 		return
 	}
 
-	results, err := h.i.QuerySearch(values.s, values.page, values.pageSize)
+	results, err := QuerySearch(h.i, values.s, values.page, values.pageSize)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -243,31 +243,4 @@ func (h RawFile) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		log.Print(err)
 	}
-}
-
-// FallbackSearchResponse is a function that writes a "bailout" template
-func (i *Index) FallbackSearchResponse(w http.ResponseWriter,
-	template string) {
-	authors, err := i.ListField("author")
-	if err != nil {
-		http.Error(w, "failed to list authors", http.StatusInternalServerError)
-		i.log.Println(err)
-		return
-	}
-	topics, err := i.ListField("topic")
-	if err != nil {
-		http.Error(w, "failed to list topics", http.StatusInternalServerError)
-		i.log.Println(err)
-		return
-	}
-
-	fields := SearchResponse{Topics: topics, Authors: authors}
-
-	err = allTemplates.ExecuteTemplate(w, template, fields)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		i.log.Println(err)
-		return
-	}
-	return
 }

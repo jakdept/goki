@@ -9,11 +9,10 @@ import (
 	"sync"
 	"time"
 
-	"gopkg.in/fsnotify.v1"
-
 	"github.com/JackKnifed/blackfriday"
-	"github.com/JackKnifed/blackfriday-text"
+	blackfridaytext "github.com/JackKnifed/blackfriday-text"
 	"github.com/blevesearch/bleve"
+	fsnotify "gopkg.in/fsnotify.v1"
 )
 
 type indexedPage struct {
@@ -26,7 +25,20 @@ type indexedPage struct {
 	Modified time.Time `json:"modified"`
 }
 
-type Index struct {
+type Index interface {
+	Close() error
+	Wipe() error
+	CrawlDir(string) error
+	Query(*bleve.SearchRequest) (*bleve.SearchResult, error)
+	// CreateResponseData(*bleve.SearchResult, int) (SearchResponse, error)
+	// ListField(string) ([]string, error)
+	// ListAllField(string, string, int, int) (SearchResponse, error)
+	// FuzzySearch(FuzzySearchValues) (SearchResponse, error)
+	// QuerySearch(string, int, int) (SearchResponse, error)
+	// FallbackSearchResponse(http.ResponseWriter, string)
+}
+
+type indexObject struct {
 	index      bleve.Index
 	lock       sync.RWMutex
 	updateChan chan indexedPage
@@ -36,8 +48,8 @@ type Index struct {
 	closer     chan struct{}
 }
 
-func OpenIndex(c IndexSection, l *log.Logger) (*Index, error) {
-	i := &Index{config: c, log: l}
+func OpenIndex(c IndexSection, l *log.Logger) (Index, error) {
+	i := &indexObject{config: c, log: l}
 	index, err := bleve.Open(path.Clean(i.config.IndexPath))
 	if err == nil {
 		i.index = index
@@ -45,7 +57,7 @@ func OpenIndex(c IndexSection, l *log.Logger) (*Index, error) {
 		indexMapping := i.buildIndexMapping()
 		index, err = bleve.New(path.Clean(i.config.IndexPath), indexMapping)
 		if err != nil {
-			return &Index{}, &Error{Code: ErrIndexCreate, value: c.IndexPath, innerError: err}
+			return nil, &Error{Code: ErrIndexCreate, value: c.IndexPath, innerError: err}
 		}
 
 		i.index = index
@@ -68,7 +80,7 @@ func OpenIndex(c IndexSection, l *log.Logger) (*Index, error) {
 	return i, nil
 }
 
-func (i *Index) buildIndexMapping() *bleve.IndexMapping {
+func (i *indexObject) buildIndexMapping() *bleve.IndexMapping {
 
 	// create a text field type
 	enTextFieldMapping := bleve.NewTextFieldMapping()
@@ -95,7 +107,7 @@ func (i *Index) buildIndexMapping() *bleve.IndexMapping {
 	return indexMapping
 }
 
-func (i *Index) Close() error {
+func (i *indexObject) Close() error {
 	// dump something into the channel incase it's currently nil
 	i.closer <- struct{}{}
 	close(i.closer)
@@ -108,7 +120,7 @@ func (i *Index) Close() error {
 	return nil
 }
 
-func (i *Index) Wipe() error {
+func (i *indexObject) Wipe() error {
 	i.lock.Lock()
 	if err := i.index.Close(); err != nil {
 		i.lock.Unlock()
@@ -137,7 +149,7 @@ func (i *Index) Wipe() error {
 	return nil
 }
 
-func (i *Index) WatchDir(watchPath string) error {
+func (i *indexObject) WatchDir(watchPath string) error {
 	i.log.Printf("watching '%s' for changes...", watchPath)
 
 	i.threads.Add(1)
@@ -187,7 +199,7 @@ func (i *Index) WatchDir(watchPath string) error {
 	return nil
 }
 
-func (i *Index) indexFileFunc(rootPath string) filepath.WalkFunc {
+func (i *indexObject) indexFileFunc(rootPath string) filepath.WalkFunc {
 	return func(path string, info os.FileInfo, err error) error {
 		if !info.IsDir() {
 			i.log.Println(i.UpdateURI(path, i.getURI(path, rootPath)))
@@ -196,11 +208,15 @@ func (i *Index) indexFileFunc(rootPath string) filepath.WalkFunc {
 	}
 }
 
-func (i *Index) CrawlDir(path string) {
-	filepath.Walk(path, i.indexFileFunc(path))
+func (i *indexObject) CrawlDir(path string) error {
+	err := filepath.Walk(path, i.indexFileFunc(path))
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
-func (i *Index) DeleteURI(uriPath string) error {
+func (i *indexObject) DeleteURI(uriPath string) error {
 	i.lock.Lock()
 	defer i.lock.Unlock()
 	i.log.Printf("removing %s", uriPath)
@@ -211,7 +227,7 @@ func (i *Index) DeleteURI(uriPath string) error {
 	return nil
 }
 
-func (i *Index) UpdateURI(filePath, uriPath string) error {
+func (i *indexObject) UpdateURI(filePath, uriPath string) error {
 	page, err := i.generateWikiFromFile(filePath, uriPath)
 	if err != nil {
 		return err
@@ -227,7 +243,7 @@ func (i *Index) UpdateURI(filePath, uriPath string) error {
 	return nil
 }
 
-func (i *Index) Query(request *bleve.SearchRequest) (*bleve.SearchResult, error) {
+func (i *indexObject) Query(request *bleve.SearchRequest) (*bleve.SearchResult, error) {
 	i.lock.RLock()
 	defer i.lock.RUnlock()
 
@@ -239,7 +255,7 @@ func (i *Index) Query(request *bleve.SearchRequest) (*bleve.SearchResult, error)
 	return searchResults, nil
 }
 
-func (i *Index) generateWikiFromFile(filePath, uriPath string) (*indexedPage, error) {
+func (i *indexObject) generateWikiFromFile(filePath, uriPath string) (*indexedPage, error) {
 	pdata := new(PageMetadata)
 	err := pdata.LoadPage(filePath)
 	if err != nil {
@@ -264,14 +280,14 @@ func (i *Index) generateWikiFromFile(filePath, uriPath string) (*indexedPage, er
 	return &rv, nil
 }
 
-func (i *Index) cleanupMarkdown(input []byte) string {
+func (i *indexObject) cleanupMarkdown(input []byte) string {
 	extensions := 0 | blackfriday.EXTENSION_ALERT_BOXES
 	renderer := blackfridaytext.TextRenderer()
 	output := blackfriday.Markdown(input, renderer, extensions)
 	return string(output)
 }
 
-func (i *Index) getURI(filePath, filePrefix string) (uriPath string) {
+func (i *indexObject) getURI(filePath, filePrefix string) (uriPath string) {
 	uriPath = strings.TrimPrefix(filePath, filePrefix)
 	uriPath = strings.TrimPrefix(uriPath, "/")
 	uriPrefix := strings.TrimSuffix(i.config.IndexPath, "/")

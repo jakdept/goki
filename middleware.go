@@ -22,9 +22,10 @@ func BuildMuxer(c GlobalSection, closer <-chan struct{},
 
 	for _, i := range c.Indexes {
 
-		var index *Index
+		var index Index
+		var err error
 		if i.IndexPath != "" {
-			index, err := OpenIndex(i, logs)
+			index, err = OpenIndex(i, logs)
 			if err != nil {
 				return nil, err
 			}
@@ -42,11 +43,11 @@ func BuildMuxer(c GlobalSection, closer <-chan struct{},
 			case "raw":
 				m.Handle(h.Prefix, http.StripPrefix(h.Prefix, RawFile{c: h}))
 			case "query":
-				m.Handle(h.Prefix, http.StripPrefix(h.Prefix, QuerySearch{c: h, i: index}))
+				m.Handle(h.Prefix, http.StripPrefix(h.Prefix, QueryHandler{c: h, i: index}))
 			case "field":
-				m.Handle(h.Prefix, http.StripPrefix(h.Prefix, Fields{c: h, i: index}))
+				m.Handle(h.Prefix, http.StripPrefix(h.Prefix, FieldsHandler{c: h, i: index}))
 			case "fuzzy":
-				m.Handle(h.Prefix, http.StripPrefix(h.Prefix, FuzzySearch{c: h, i: index}))
+				m.Handle(h.Prefix, http.StripPrefix(h.Prefix, FuzzyHandler{c: h, i: index}))
 			}
 		}
 	}
