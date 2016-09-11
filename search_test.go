@@ -13,54 +13,59 @@ import (
 )
 
 func TestCreateResponseData(t *testing.T) {
+	documentMatch := []search.DocumentMatch{
+		search.DocumentMatch{
+			Score: .87,
+			Fields: map[string]string{
+				"title":   "test page",
+				"path":    "/test_page.md",
+				"body":    "test page body",
+				"topic":   "a few topics",
+				"keyword": "a few keywords",
+				"author":  "a few authors",
+			},
+		},
+		search.DocumentMatch{
+			Score: .63,
+			Fields: map[string]string{
+				"title":   "other page",
+				"path":    "/other_page.md",
+				"body":    "other page body",
+				"topic":   "a few topics",
+				"keyword": "a few keywords",
+				"author":  "a few authors",
+			},
+		},
+	}
+
 	testData := []struct {
-		rawResult  *bleve.SearchResult
+		rawResult  bleve.SearchResult
 		pageOffset int
 		out        SearchResponse
 		expErr     error
 	}{
 		{
-			bleve.SearchResult{
-				Total:    1,
-				MaxScore: 1,
+			rawResult: bleve.SearchResult{
+				Total:    2,
+				MaxScore: .87,
 				Took:     time.Microsecond * 5,
 				Hits: search.DocumentMatchCollection{
-					&search.DocumentMatch{
-						Score: .87,
-						Fields: map[string]string{
-							"title":   "test page",
-							"path":    "/test_page.md",
-							"body":    "test page body",
-							"topic":   "a few topics",
-							"keyword": "a few keywords",
-							"author":  "a few authors",
-						},
-					},
-					&search.DocumentMatch{
-						Score: .63,
-						Fields: map[string]string{
-							"title":   "other page",
-							"path":    "/other_page.md",
-							"body":    "other page body",
-							"topic":   "a few topics",
-							"keyword": "a few keywords",
-							"author":  "a few authors",
-						},
-					},
+					&documentMatch[0],
+					&documentMatch[1],
 				},
-				pageOffset: 0,
-				out: SearchResponse{
-					TotalHits:  2,
-					PageOffset: 0,
-					SearchTimetime.Microsecond * 5,
-					Topics:  []string{"a", "few", "topics"},
-					Authors: []string{"a", "few", "authors"},
-					Results: []SearchResponseResult{
-						{},
-					},
-				},
-				expErr: nil,
 			},
+			pageOffset: 0,
+			out: SearchResponse{
+				TotalHits:  2,
+				PageOffset: 0,
+				SearchTime: time.Microsecond * 5,
+				Topics:     []string{"a", "few", "topics"},
+				Authors:    []string{"a", "few", "authors"},
+				Results: []SearchResponseResult{
+					{},
+				},
+			},
+			expErr: nil,
 		},
 	}
 
@@ -78,7 +83,7 @@ func TestGetURIPath(t *testing.T) {
 		{"/wiki/page.md", "/wiki/", "/", "/page.md"},
 		{"abcdef", "abc", "xyz", "xyz/def"},
 	}
-	i := &Index{}
+	i := &indexObject{}
 
 	for _, testSet := range tests {
 		i.config.IndexPath = testSet.add
@@ -95,7 +100,7 @@ func TestCleanupMarkdownFiles(t *testing.T) {
 			t.Errorf("\npanic while processing [%#v]\n", input)
 		}
 	}()
-	i := &Index{}
+	i := &indexObject{}
 
 	inputFiles, err := filepath.Glob("./testfiles/*.md")
 	if err != nil {
