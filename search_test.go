@@ -16,7 +16,7 @@ func TestCreateResponseData(t *testing.T) {
 	documentMatch := []search.DocumentMatch{
 		search.DocumentMatch{
 			Score: .87,
-			Fields: map[string]string{
+			Fields: map[string]interface{}{
 				"title":   "test page",
 				"path":    "/test_page.md",
 				"body":    "test page body",
@@ -27,7 +27,7 @@ func TestCreateResponseData(t *testing.T) {
 		},
 		search.DocumentMatch{
 			Score: .63,
-			Fields: map[string]string{
+			Fields: map[string]interface{}{
 				"title":   "other page",
 				"path":    "/other_page.md",
 				"body":    "other page body",
@@ -69,6 +69,9 @@ func TestCreateResponseData(t *testing.T) {
 		},
 	}
 
+	if testData[0].pageOffset != 0 {
+		t.Fatal("testData was not propagated")
+	}
 }
 
 func TestGetURIPath(t *testing.T) {
