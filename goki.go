@@ -4,7 +4,6 @@ import (
 	//"html/template"
 	//"io/ioutil"
 	"log"
-	"os/signal"
 
 	//"regexp"
 	"os"
@@ -24,34 +23,33 @@ var configFile = flag.String("config", "config.json", "specify a configuration f
 
 var quitChan = make(chan os.Signal, 1)
 
-/*
- func cleanup() {
-	_ = <- quitChan
-		log.Println("Recieved an interrupt, shutting down")
-		for _, index := range indexes {
-			index.CloseIndex()
-		}
-}
-*/
+// func cleanup() {
+// 	_ = <-quitChan
+// 	log.Println("Recieved an interrupt, shutting down")
+// 	for _, index := range indexes {
+// 		index.CloseIndex()
+// 	}
+// 	os.Exit(0)
+// }
 
 func main() {
 	flag.Parse()
 
 	// ##TODO## check for false returnear- if null, the config could not be loaded
 	if err := LoadConfig(*configFile); err != nil {
-		log.Fatal("Could not parse the config, abandoning")
+		log.Fatal(err)
 	}
 
 	config := GetConfig()
 	closer := make(chan struct{})
 
 	// set up my interrupt channel and go routine
-	signal.Notify(quitChan, os.Interrupt)
-	go func() {
-		<-closer
-		<-quitChan
-		close(closer)
-	}()
+	// signal.Notify(quitChan, os.Interrupt)
+	// go func() {
+	// 	<-closer
+	// 	<-quitChan
+	// 	close(closer)
+	// }()
 
 	if err := ParseTemplates(*config); err != nil {
 		log.Fatalf("Error parsing templates, %s", err)
@@ -59,7 +57,7 @@ func main() {
 
 	mux, err := BuildMuxer(*config, closer, log.New(os.Stdout, "", 0))
 	if err != nil {
-		log.Fatal("failed to load muxer")
+		log.Fatal(err)
 	}
 
 	mux = handlers.LoggingHandler(os.Stdout, mux)

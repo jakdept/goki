@@ -159,7 +159,7 @@ func (pdata *PageMetadata) LoadPage(pageName string) error {
 			lineBuffer = append(lineBuffer, newLine...)
 		}
 	}
-	return &Error{Code: ErrPageNoTitle}
+	return &Error{Code: ErrPageNoTitle, value: pageName}
 }
 
 // determines if the next two lines contain a title line

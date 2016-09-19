@@ -70,7 +70,7 @@ var errMsg = map[int]string{
 	ErrReadConfig:           "error reading config [%s] - %v",
 	ErrParseConfig:          "parse config error %v - contents %#v",
 	ErrPageRead:             "error reading from file - %v",
-	ErrPageNoTitle:          "read no titles on the Page",
+	ErrPageNoTitle:          "read no titles on page [%s]",
 	ErrParseTemplates:       "problem parsing templates - %v",
 	ErrPageRestricted:       "hit a restricted page - %s",
 	ErrIndexError:           "problem with index at [%s] - %v",

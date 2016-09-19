@@ -21,7 +21,6 @@ func BuildMuxer(c GlobalSection, closer <-chan struct{},
 	}
 
 	for _, i := range c.Indexes {
-
 		var index Index
 		var err error
 		if i.IndexPath != "" {
@@ -37,6 +36,7 @@ func BuildMuxer(c GlobalSection, closer <-chan struct{},
 		}
 
 		for _, h := range i.Handlers {
+			log.Printf("working with handler [%v]", h)
 			switch h.ServerType {
 			case "markdown":
 				m.Handle(h.Prefix, http.StripPrefix(h.Prefix, Markdown{c: h}))

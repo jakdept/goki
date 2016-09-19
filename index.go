@@ -69,13 +69,15 @@ func OpenIndex(c IndexSection, l *log.Logger) (Index, error) {
 		path := filepath.Clean(each)
 		go i.WatchDir(path)
 		go i.CrawlDir(path)
+		i.log.Printf("watching and walking [%s]", path)
 	}
 
+	// this thing is hanging the server from starting
 	// prime the closing channel
-	go func() {
-		<-i.closer
-	}()
+	i.closer = make(chan struct{}, 1)
 	i.closer <- struct{}{}
+	<-i.closer
+	log.Println("\n\n#############\nmade it this far\n############\n\n")
 
 	return i, nil
 }
@@ -201,8 +203,11 @@ func (i *indexObject) WatchDir(watchPath string) error {
 
 func (i *indexObject) indexFileFunc(rootPath string) filepath.WalkFunc {
 	return func(path string, info os.FileInfo, err error) error {
-		if !info.IsDir() {
-			i.log.Println(i.UpdateURI(path, i.getURI(path, rootPath)))
+		if info != nil && !info.IsDir() {
+			err := i.UpdateURI(path, i.getURI(path, rootPath))
+			if err != nil {
+				i.log.Println(err)
+			}
 		}
 		return nil
 	}
