@@ -64,4 +64,5 @@ func main() {
 	canonical := handlers.CanonicalHost(config.Hostname, http.StatusMovedPermanently)
 
 	log.Println(http.ListenAndServe(config.Address+":"+config.Port, canonical(mux)))
+	// log.Printf("\n\n#############\n[%s]\n############\n\n", filePath)
 }

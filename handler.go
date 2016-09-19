@@ -148,7 +148,8 @@ type Markdown struct {
 
 func (h Markdown) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// If the request is empty, set it to the default.
-	if r.URL.Path == "/" {
+	r.URL.Path = path.Clean(r.URL.Path)
+	if r.URL.Path == "." {
 		r.URL.Path = path.Clean(h.c.Default)
 	}
 
@@ -158,17 +159,18 @@ func (h Markdown) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	pdata := new(PageMetadata)
-	err := pdata.LoadPage(h.c.Path + r.URL.Path)
+	filePath := filepath.Join(h.c.Path, r.URL.Path)
+	err := pdata.LoadPage(filePath)
 	if err != nil {
 		log.Printf("request [ %s ] points bad file target [ %s ] sent to server",
-			r.URL.Path, h.c.Path)
+			r.URL.Path, filePath)
 		http.Error(w, "Page not Found", http.StatusNotFound)
 		return
 	}
 
 	if pdata.MatchedTopic(h.c.Restricted) {
 		log.Printf("request [ %s ] was a page [ %s ] with a restricted tag",
-			r.URL.Path, h.c.Path+r.URL.Path)
+			r.URL.Path, filePath)
 		http.Error(w, "Page not Found", http.StatusNotFound)
 		//http.Error(w, err.Error(), http.StatusForbidden)
 		return

@@ -77,7 +77,6 @@ func OpenIndex(c IndexSection, l *log.Logger) (Index, error) {
 	i.closer = make(chan struct{}, 1)
 	i.closer <- struct{}{}
 	<-i.closer
-	log.Println("\n\n#############\nmade it this far\n############\n\n")
 
 	return i, nil
 }
