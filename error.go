@@ -5,7 +5,6 @@ import "fmt"
 type Error struct {
 	Code       int
 	path       string
-	valType    string
 	value      interface{}
 	innerError error
 }
@@ -17,36 +16,24 @@ func UpgradeError(e error) Error {
 
 // the function `Error` to make my custom errors work
 func (e *Error) Error() string {
-	switch {
-	case e.Code == ErrUpgradedError:
-		return e.innerError.Error()
-	case e.path != "" && e.valType != "" && e.value != nil && e.innerError != nil:
-		return fmt.Sprintf(errMsg[e.Code], e.path, e.valType, e.value, e.innerError)
-	case e.path != "" && e.valType != "" && e.value != nil:
-		return fmt.Sprintf(errMsg[e.Code], e.path, e.valType, e.value)
-	case e.path != "" && e.valType != "" && e.innerError != nil:
-		return fmt.Sprintf(errMsg[e.Code], e.path, e.valType, e.innerError)
-	case e.path != "" && e.value != nil && e.innerError != nil:
-		return fmt.Sprintf(errMsg[e.Code], e.path, e.value, e.innerError)
-	case e.valType != "" && e.value != nil && e.innerError != nil:
-		return fmt.Sprintf(errMsg[e.Code], e.valType, e.value, e.innerError)
-	case e.path != "" && e.valType != "":
-		return fmt.Sprintf(errMsg[e.Code], e.path, e.valType)
-	case e.path != "" && e.value != nil:
-		return fmt.Sprintf(errMsg[e.Code], e.path, e.value)
-	case e.valType != "" && e.value != nil:
-		return fmt.Sprintf(errMsg[e.Code], e.valType, e.value)
-	case e.innerError != nil:
-		return fmt.Sprintf(errMsg[e.Code], e.innerError)
-	case e.value != nil:
-		return fmt.Sprintf(errMsg[e.Code], e.value)
-	case e.valType != "":
-		return fmt.Sprintf(errMsg[e.Code], e.valType)
-	case e.path != "":
-		return fmt.Sprintf(errMsg[e.Code], e.path)
-	default:
+	var args []interface{}
+
+	if e.path != "" {
+		args = append(args, e.path)
+	}
+
+	if e.value != nil {
+		args = append(args, e.value)
+	}
+
+	if e.innerError != nil {
+		args = append(args, e.innerError)
+	}
+
+	if len(args) < 1 {
 		return errMsg[e.Code]
 	}
+	return fmt.Sprintf(errMsg[e.Code], args...)
 }
 
 // assign a unique id to each error
@@ -60,17 +47,41 @@ const (
 	ErrPageRead
 	ErrPageNoTitle
 	ErrParseTemplates
+	ErrPageRestricted
+	ErrIndexError
+	ErrWatcherCreate
+	ErrWatcherAdd
+	ErrIndexCreate
+	ErrIndexClose
+	ErrIndexRemove
+	ErrFileRead
+	ErrInvalidQuery
+	ErrListField
+	ErrFormatSearchResponse
+	ErrResultsFormatType
 )
 
 // specify the error message for each error
 var errMsg = map[int]string{
-	ErrUpgradedError:       "nothing to see here",
-	ErrBadType:             "value at address [%s] is of the wrong type [%s]",
-	ErrBadAddressStructure: "got an address mapping that does not match the formatting",
-	ErrBadAddressIndex:     "got address mapping that does not exist",
-	ErrReadConfig:          "error reading config [%s] - %v",
-	ErrParseConfig:         "parse config error %v - contents %#v",
-	ErrPageRead:            "error reading from file - %v",
-	ErrPageNoTitle:         "read no titles on the Page",
-	ErrParseTemplates:      "problem parsing templates - %v",
+	ErrUpgradedError:        "nothing to see here",
+	ErrBadType:              "value at address [%s] is of the wrong type [%s]",
+	ErrBadAddressStructure:  "got an address mapping that does not match the formatting",
+	ErrBadAddressIndex:      "got address mapping that does not exist",
+	ErrReadConfig:           "error reading config [%s] - %v",
+	ErrParseConfig:          "parse config error %v - contents %#v",
+	ErrPageRead:             "error reading from file - %v",
+	ErrPageNoTitle:          "read no titles on page [%s]",
+	ErrParseTemplates:       "problem parsing templates - %v",
+	ErrPageRestricted:       "hit a restricted page - %s",
+	ErrIndexError:           "problem with index at [%s] - %v",
+	ErrWatcherCreate:        "problem creating a watcher - %v",
+	ErrWatcherAdd:           "problem watching a directory %s - %v",
+	ErrIndexCreate:          "problem creating index at [%s] - %v",
+	ErrIndexClose:           "failed to close index - %v",
+	ErrIndexRemove:          "failed to remove index at %s - %v",
+	ErrFileRead:             "failed to read directory - %s - %v",
+	ErrInvalidQuery:         "bad query passed - %v",
+	ErrListField:            "could not list field - %v",
+	ErrFormatSearchResponse: "ran into an issue formatting the results - %v",
+	ErrResultsFormatType:    "returned %s was of the wrong type - %#v",
 }

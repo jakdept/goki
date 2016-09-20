@@ -1,18 +1,78 @@
 package main
 
 import (
-	"github.com/stretchr/testify/assert"
-	// "os"
-	// "bytes"
-	// "encoding/json"
-	// "path"
-	"path/filepath"
-	"testing"
-	// "log"
-	// "time"
 	"io/ioutil"
+	"path/filepath"
 	"strings"
+	"testing"
+	"time"
+
+	"github.com/blevesearch/bleve"
+	"github.com/blevesearch/bleve/search"
+	"github.com/stretchr/testify/assert"
 )
+
+func TestCreateResponseData(t *testing.T) {
+	documentMatch := []search.DocumentMatch{
+		search.DocumentMatch{
+			Score: .87,
+			Fields: map[string]interface{}{
+				"title":   "test page",
+				"path":    "/test_page.md",
+				"body":    "test page body",
+				"topic":   "a few topics",
+				"keyword": "a few keywords",
+				"author":  "a few authors",
+			},
+		},
+		search.DocumentMatch{
+			Score: .63,
+			Fields: map[string]interface{}{
+				"title":   "other page",
+				"path":    "/other_page.md",
+				"body":    "other page body",
+				"topic":   "a few topics",
+				"keyword": "a few keywords",
+				"author":  "a few authors",
+			},
+		},
+	}
+
+	testData := []struct {
+		rawResult  bleve.SearchResult
+		pageOffset int
+		out        SearchResponse
+		expErr     error
+	}{
+		{
+			rawResult: bleve.SearchResult{
+				Total:    2,
+				MaxScore: .87,
+				Took:     time.Microsecond * 5,
+				Hits: search.DocumentMatchCollection{
+					&documentMatch[0],
+					&documentMatch[1],
+				},
+			},
+			pageOffset: 0,
+			out: SearchResponse{
+				TotalHits:  2,
+				PageOffset: 0,
+				SearchTime: time.Microsecond * 5,
+				Topics:     []string{"a", "few", "topics"},
+				Authors:    []string{"a", "few", "authors"},
+				Results: []SearchResponseResult{
+					{},
+				},
+			},
+			expErr: nil,
+		},
+	}
+
+	if testData[0].pageOffset != 0 {
+		t.Fatal("testData was not propagated")
+	}
+}
 
 func TestGetURIPath(t *testing.T) {
 	var tests = []struct {
@@ -26,9 +86,11 @@ func TestGetURIPath(t *testing.T) {
 		{"/wiki/page.md", "/wiki/", "/", "/page.md"},
 		{"abcdef", "abc", "xyz", "xyz/def"},
 	}
+	i := &indexObject{}
 
 	for _, testSet := range tests {
-		assert.Equal(t, testSet.output, getURIPath(testSet.input, testSet.trim, testSet.add),
+		i.config.IndexPath = testSet.add
+		assert.Equal(t, testSet.output, i.getURI(testSet.input, testSet.trim),
 			"[%q] trimmed [%q] added [%q] but got the wrong result",
 			testSet.input, testSet.trim, testSet.add)
 	}
@@ -41,6 +103,7 @@ func TestCleanupMarkdownFiles(t *testing.T) {
 			t.Errorf("\npanic while processing [%#v]\n", input)
 		}
 	}()
+	i := &indexObject{}
 
 	inputFiles, err := filepath.Glob("./testfiles/*.md")
 	if err != nil {
@@ -63,7 +126,7 @@ func TestCleanupMarkdownFiles(t *testing.T) {
 			return
 		}
 
-		cleanData := cleanupMarkdown(rawData)
+		cleanData := i.cleanupMarkdown(rawData)
 		if cleanData != string(expectedData) {
 			f, err := ioutil.TempFile("", "cleanupMarkdown.")
 			if err != nil {

@@ -1,22 +1,19 @@
 package main
 
 import (
-	"errors"
-	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/JackKnifed/blackfriday"
-	"github.com/JackKnifed/blackfriday-text"
+	blackfridaytext "github.com/JackKnifed/blackfriday-text"
 	"github.com/blevesearch/bleve"
-	"gopkg.in/fsnotify.v1"
+	fsnotify "gopkg.in/fsnotify.v1"
 )
-
-var openWatchers []fsnotify.Watcher
 
 type indexedPage struct {
 	Title    string    `json:"title"`
@@ -24,56 +21,71 @@ type indexedPage struct {
 	Body     string    `json:"body"`
 	Topics   string    `json:"topic"`
 	Keywords string    `json:"keyword"`
-	Authors  string    `json: "author"`
+	Authors  string    `json:"author"`
 	Modified time.Time `json:"modified"`
 }
 
-func createIndex(config IndexSection) bool {
-	newIndex, err := bleve.Open(path.Clean(config.IndexPath))
+type Index interface {
+	Close() error
+	Wipe() error
+	CrawlDir(string) error
+	Query(*bleve.SearchRequest) (*bleve.SearchResult, error)
+	// CreateResponseData(*bleve.SearchResult, int) (SearchResponse, error)
+	// ListField(string) ([]string, error)
+	// ListAllField(string, string, int, int) (SearchResponse, error)
+	// FuzzySearch(FuzzySearchValues) (SearchResponse, error)
+	// QuerySearch(string, int, int) (SearchResponse, error)
+	// FallbackSearchResponse(http.ResponseWriter, string)
+}
+
+type indexObject struct {
+	index      bleve.Index
+	lock       sync.RWMutex
+	updateChan chan indexedPage
+	config     IndexSection
+	log        *log.Logger
+	threads    sync.WaitGroup
+	closer     chan struct{}
+}
+
+func OpenIndex(c IndexSection, l *log.Logger) (Index, error) {
+	i := &indexObject{config: c, log: l}
+	index, err := bleve.Open(path.Clean(i.config.IndexPath))
 	if err == nil {
-		log.Printf("Index already exists %s", config.IndexPath)
+		i.index = index
 	} else if err == bleve.ErrorIndexPathDoesNotExist {
-		log.Printf("Creating new index %s", config.IndexName)
-		// create a mapping
-		indexMapping := buildIndexMapping(config)
-		newIndex, err = bleve.New(path.Clean(config.IndexPath), indexMapping)
+		indexMapping := i.buildIndexMapping()
+		index, err = bleve.New(path.Clean(i.config.IndexPath), indexMapping)
 		if err != nil {
-			log.Printf("Failed to create the new index %s - %v", config.IndexPath, err)
-			return false
-		} else {
+			return nil, &Error{Code: ErrIndexCreate, value: c.IndexPath, innerError: err}
 		}
-	} else {
-		log.Printf("Got an error opening the index %s but it already exists %v", config.IndexPath, err)
-		return false
+
+		i.index = index
 	}
-	newIndex.Close()
-	return true
+
+	// i am confused how the filepath -> uriPaths line up
+	// start watchers
+	for each, _ := range i.config.WatchDirs {
+		path := filepath.Clean(each)
+		go i.WatchDir(path)
+		go i.CrawlDir(path)
+		i.log.Printf("watching and walking [%s]", path)
+	}
+
+	// this thing is hanging the server from starting
+	// prime the closing channel
+	i.closer = make(chan struct{}, 1)
+	i.closer <- struct{}{}
+	<-i.closer
+
+	return i, nil
 }
 
-func EnableIndex(config IndexSection) bool {
-	if !createIndex(config) {
-		return false
-	}
-	for dir, path := range config.WatchDirs {
-		// dir = strings.TrimSuffix(dir, "/")
-		log.Printf("Watching and walking dir %s index %s", dir, config.IndexPath)
-		walkForIndexing(dir, dir, path, config)
-	}
-	return true
-}
-
-func DisableAllIndexes() {
-	log.Println("Stopping all watchers")
-	for _, watcher := range openWatchers {
-		watcher.Close()
-	}
-}
-
-func buildIndexMapping(config IndexSection) *bleve.IndexMapping {
+func (i *indexObject) buildIndexMapping() *bleve.IndexMapping {
 
 	// create a text field type
 	enTextFieldMapping := bleve.NewTextFieldMapping()
-	enTextFieldMapping.Analyzer = config.IndexType
+	enTextFieldMapping.Analyzer = i.config.IndexType
 
 	// create a date field type
 	dateTimeMapping := bleve.NewDateTimeFieldMapping()
@@ -90,50 +102,77 @@ func buildIndexMapping(config IndexSection) *bleve.IndexMapping {
 
 	// add the wiki page mapping to a new index
 	indexMapping := bleve.NewIndexMapping()
-	indexMapping.AddDocumentMapping(config.IndexName, wikiMapping)
-	indexMapping.DefaultAnalyzer = config.IndexType
+	indexMapping.AddDocumentMapping(i.config.IndexName, wikiMapping)
+	indexMapping.DefaultAnalyzer = i.config.IndexType
 
 	return indexMapping
 }
 
-// walks a given path, and runs processUpdate on each File
-func walkForIndexing(path, filePath, requestPath string, config IndexSection) {
-	//watcherLoop(path, filePath, requestPath, config)
-	dirEntries, err := ioutil.ReadDir(path)
-	if err != nil {
-		log.Fatal(err)
+func (i *indexObject) Close() error {
+	// dump something into the channel incase it's currently nil
+	i.closer <- struct{}{}
+	close(i.closer)
+
+	i.threads.Wait()
+
+	if err := i.index.Close(); err != nil {
+		return &Error{Code: ErrIndexClose, innerError: err}
 	}
-	for _, dirEntry := range dirEntries {
-		dirEntryPath := path + string(os.PathSeparator) + dirEntry.Name()
-		if dirEntry.IsDir() {
-			walkForIndexing(dirEntryPath, filePath, requestPath, config)
-		} else if strings.HasSuffix(dirEntry.Name(), config.WatchExtension) {
-			processUpdate(dirEntryPath, getURIPath(dirEntryPath, filePath, requestPath), config)
-		}
-	}
+	return nil
 }
 
-// given all of the inputs, watches afor new/deleted files in that directory
-// adds/removes/udpates index as necessary
-func watcherLoop(watchPath, filePrefix, uriPrefix string, config IndexSection) {
+func (i *indexObject) Wipe() error {
+	i.lock.Lock()
+	if err := i.index.Close(); err != nil {
+		i.lock.Unlock()
+		return &Error{Code: ErrIndexClose, innerError: err}
+	}
+
+	if err := os.RemoveAll(i.config.IndexPath); err != nil {
+		return &Error{Code: ErrIndexRemove, value: i.config.IndexPath, innerError: err}
+	}
+
+	// TODO not sure if needed
+	if err := os.Mkdir(i.config.IndexPath, 644); err != nil {
+		return &Error{Code: ErrIndexCreate, value: i.config, innerError: err}
+	}
+	// remove index
+
+	indexMapping := i.buildIndexMapping()
+	index, err := bleve.New(path.Clean(i.config.IndexPath), indexMapping)
+	if err != nil {
+		close(i.closer)
+		return &Error{Code: ErrIndexCreate, value: i.config, innerError: err}
+	}
+
+	i.index = index
+	i.lock.Unlock()
+	return nil
+}
+
+func (i *indexObject) WatchDir(watchPath string) error {
+	i.log.Printf("watching '%s' for changes...", watchPath)
+
+	i.threads.Add(1)
+	defer i.threads.Done()
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		log.Fatal(err)
+		return &Error{Code: ErrWatcherCreate, innerError: err}
 	}
-	err = watcher.Add(watchPath)
+	defer watcher.Close()
+
+	err = watcher.Add(strings.TrimSuffix(watchPath, "/"))
 	if err != nil {
-		log.Fatal(err)
+		return &Error{Code: ErrWatcherAdd, value: watchPath, innerError: err}
 	}
 
 	idleTimer := time.NewTimer(10 * time.Second)
-	queuedEvents := make([]fsnotify.Event, 0)
+	var queuedEvents []fsnotify.Event
+	var more bool
 
-	openWatchers = append(openWatchers, *watcher)
-
-	log.Printf("watching '%s' for changes...", watchPath)
-
-	for {
+	for more {
 		select {
+		case _, more = <-i.closer:
 		case event := <-watcher.Events:
 			queuedEvents = append(queuedEvents, event)
 			idleTimer.Reset(10 * time.Second)
@@ -141,18 +180,16 @@ func watcherLoop(watchPath, filePrefix, uriPrefix string, config IndexSection) {
 			log.Fatal(err)
 		case <-idleTimer.C:
 			for _, event := range queuedEvents {
-				if strings.HasSuffix(event.Name, config.WatchExtension) {
+				if strings.HasSuffix(event.Name, i.config.WatchExtension) {
 					switch event.Op {
 					case fsnotify.Remove, fsnotify.Rename:
 						// delete the filePath
-						processDelete(getURIPath(watchPath+event.Name, filePrefix, uriPrefix),
-							config.IndexName)
+						i.DeleteURI(i.config.IndexPath + event.Name)
 					case fsnotify.Create, fsnotify.Write:
 						// update the filePath
-						processUpdate(watchPath+event.Name,
-							getURIPath(watchPath+event.Name, filePrefix, uriPrefix), config)
+						i.UpdateURI(watchPath+event.Name, i.config.IndexPath+event.Name)
 					default:
-						// ignore
+						// no changes, so repeat the cycle
 					}
 				}
 			}
@@ -160,54 +197,83 @@ func watcherLoop(watchPath, filePrefix, uriPrefix string, config IndexSection) {
 			idleTimer.Reset(10 * time.Second)
 		}
 	}
+	return nil
 }
 
-// Update the entry in the index to the output from a given file
-func processUpdate(filePath, uriPath string, config IndexSection) {
-	page, err := generateWikiFromFile(filePath, uriPath, config.Restricted)
-	if err != nil {
-		log.Print(err)
-	} else {
-		index, _ := bleve.Open(config.IndexPath)
-		defer index.Close()
-		index.Index(uriPath, page)
-		log.Printf("updated: %s as %s", filePath, uriPath)
+func (i *indexObject) indexFileFunc(rootPath string) filepath.WalkFunc {
+	return func(path string, info os.FileInfo, err error) error {
+		if info != nil && !info.IsDir() {
+			err := i.UpdateURI(path, i.getURI(path, rootPath))
+			if err != nil {
+				i.log.Println(err)
+			}
+		}
+		return nil
 	}
 }
 
-// Deletes a given path from the wiki entry
-func processDelete(uriPath, indexPath string) {
-	log.Printf("delete: %s", uriPath)
-	index, _ := bleve.Open(indexPath)
-	defer index.Close()
-	err := index.Delete(uriPath)
+func (i *indexObject) CrawlDir(path string) error {
+	err := filepath.Walk(path, i.indexFileFunc(path))
 	if err != nil {
-		log.Print(err)
+		return err
 	}
+	return nil
 }
 
-func cleanupMarkdown(input []byte) string {
-	extensions := 0 | blackfriday.EXTENSION_ALERT_BOXES
-	renderer := blackfridaytext.TextRenderer()
-	output := blackfriday.Markdown(input, renderer, extensions)
-	return string(output)
+func (i *indexObject) DeleteURI(uriPath string) error {
+	i.lock.Lock()
+	defer i.lock.Unlock()
+	i.log.Printf("removing %s", uriPath)
+	err := i.index.Delete(uriPath)
+	if err != nil {
+		return &Error{Code: ErrIndexError, value: uriPath, innerError: err}
+	}
+	return nil
 }
 
-func generateWikiFromFile(filePath, uriPath string, restrictedTopics []string) (*indexedPage, error) {
+func (i *indexObject) UpdateURI(filePath, uriPath string) error {
+	page, err := i.generateWikiFromFile(filePath, uriPath)
+	if err != nil {
+		return err
+	}
+
+	i.lock.Lock()
+	defer i.lock.Unlock()
+	i.log.Printf("updated: %s as %s", filePath, uriPath)
+	err = i.index.Index(uriPath, page)
+	if err != nil {
+		return &Error{Code: ErrIndexError, value: uriPath, innerError: err}
+	}
+	return nil
+}
+
+func (i *indexObject) Query(request *bleve.SearchRequest) (*bleve.SearchResult, error) {
+	i.lock.RLock()
+	defer i.lock.RUnlock()
+
+	searchResults, err := i.index.Search(request)
+	if err != nil {
+		return &bleve.SearchResult{}, &Error{Code: ErrInvalidQuery, innerError: err}
+	}
+
+	return searchResults, nil
+}
+
+func (i *indexObject) generateWikiFromFile(filePath, uriPath string) (*indexedPage, error) {
 	pdata := new(PageMetadata)
 	err := pdata.LoadPage(filePath)
 	if err != nil {
 		return nil, err
 	}
 
-	if pdata.MatchedTopic(restrictedTopics) == true {
-		return nil, errors.New("Hit a restricted page - " + pdata.Title)
+	if pdata.MatchedTopic(i.config.Restricted) == true {
+		return nil, &Error{Code: ErrPageRestricted, value: pdata.Title}
 	}
 
 	topics, keywords, authors := pdata.ListMeta()
 	rv := indexedPage{
 		Title:    pdata.Title,
-		Body:     cleanupMarkdown(pdata.Page),
+		Body:     i.cleanupMarkdown(pdata.Page),
 		URIPath:  uriPath,
 		Topics:   strings.Join(topics, " "),
 		Keywords: strings.Join(keywords, " "),
@@ -218,131 +284,17 @@ func generateWikiFromFile(filePath, uriPath string, restrictedTopics []string) (
 	return &rv, nil
 }
 
-func getURIPath(filePath, filePrefix, uriPrefix string) (uriPath string) {
+func (i *indexObject) cleanupMarkdown(input []byte) string {
+	extensions := 0 | blackfriday.EXTENSION_ALERT_BOXES
+	renderer := blackfridaytext.TextRenderer()
+	output := blackfriday.Markdown(input, renderer, extensions)
+	return string(output)
+}
+
+func (i *indexObject) getURI(filePath, filePrefix string) (uriPath string) {
 	uriPath = strings.TrimPrefix(filePath, filePrefix)
 	uriPath = strings.TrimPrefix(uriPath, "/")
-	uriPrefix = strings.TrimSuffix(uriPrefix, "/")
+	uriPrefix := strings.TrimSuffix(i.config.IndexPath, "/")
 	uriPath = uriPrefix + "/" + uriPath
 	return
-}
-
-// given a path to an index, and a name of field to check
-// lists all unique values for that field in index
-func ListField(indexPath, field string) ([]string, error) {
-	query := bleve.NewMatchAllQuery()
-	searchRequest := bleve.NewSearchRequest(query)
-
-	facet := bleve.NewFacetRequest(field, 1)
-	searchRequest.AddFacet("allValues", facet)
-	if err := query.Validate(); err != nil {
-		return nil, err
-	}
-
-	// Open the index
-	index, err := bleve.Open(indexPath)
-	defer index.Close()
-	if index == nil {
-		return nil, fmt.Errorf("no such index [%s]", indexPath)
-	} else if err != nil {
-		return nil, fmt.Errorf("problem opening index [%s] - %s", indexPath, err)
-	}
-
-	searchResults, err := index.Search(searchRequest)
-	if err != nil {
-		return nil, err
-	}
-
-	results := *new([]string)
-	for _, oneTerm := range searchResults.Facets["allValues"].Terms {
-		results = append(results, oneTerm.Term)
-	}
-
-	return results, nil
-}
-
-type SearchResponse struct {
-	// AllFields []string
-	TotalHits  int
-	PageOffset int
-	SearchTime time.Duration
-	Topics     []string
-	Authors    []string
-	Results    []SearchResponseResult
-}
-
-type SearchResponseResult struct {
-	Title    string
-	URIPath  string
-	Score    float64
-	Topics   []string
-	Keywords []string
-	Authors  []string
-	Body     string
-}
-
-func CreateResponseData(rawResults bleve.SearchResult, pageOffset int, topics []string, authors []string) (SearchResponse, error) {
-	var response SearchResponse
-
-	response.TotalHits = int(rawResults.Total)
-	response.PageOffset = pageOffset
-	response.SearchTime = rawResults.Took
-	response.Topics = topics
-	response.Authors = authors
-	for _, hit := range rawResults.Hits {
-		var newHit SearchResponseResult
-
-		newHit.Score = float64(hit.Score * 100 / rawResults.MaxScore)
-
-		if _, isThere := hit.Fields["title"]; !isThere {
-			newHit.Title = ""
-		} else if str, ok := hit.Fields["title"].(string); ok {
-			newHit.Title = str
-		} else {
-			return response, errors.New("returned title was not a string")
-		}
-
-		if _, isThere := hit.Fields["path"]; !isThere {
-			newHit.URIPath = ""
-		} else if str, ok := hit.Fields["path"].(string); ok {
-			newHit.URIPath = str
-		} else {
-			return response, errors.New("returned path was not a string")
-		}
-
-		if _, isThere := hit.Fields["body"]; !isThere {
-			newHit.Body = ""
-		} else if str, ok := hit.Fields["body"].(string); ok {
-			newHit.Body = str
-		} else {
-			return response, errors.New("returned body was not a string")
-		}
-
-		if _, isThere := hit.Fields["topic"]; !isThere {
-			newHit.Topics = []string{}
-		} else if str, ok := hit.Fields["topic"].(string); ok {
-			newHit.Topics = strings.Split(str, " ")
-		} else {
-			return response, errors.New("returned topics were not a string")
-		}
-
-		if _, isThere := hit.Fields["keyword"]; !isThere {
-			newHit.Keywords = []string{}
-		} else if str, ok := hit.Fields["keyword"].(string); ok {
-			newHit.Keywords = strings.Split(str, " ")
-		} else {
-			return response, errors.New("returned keywords were not a string")
-		}
-
-		if _, isThere := hit.Fields["author"]; !isThere {
-			newHit.Authors = []string{}
-		} else if str, ok := hit.Fields["author"].(string); ok {
-			newHit.Authors = strings.Split(str, " ")
-		} else {
-			return response, errors.New("returned authors were not a string")
-		}
-
-		response.Results = append(response.Results, newHit)
-	}
-
-	return response, nil
 }
