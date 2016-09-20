@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"path"
 	"path/filepath"
+	"strings"
 	"sync"
 )
 
@@ -119,9 +120,12 @@ func CleanConfig(config *GlobalSection) {
 
 		for i := range indexSection.Handlers {
 			indexSection.Handlers[i].Path = filepath.Clean(indexSection.Handlers[i].Path)
-			indexSection.Handlers[i].Prefix = path.Clean(indexSection.Handlers[i].Prefix)
 			indexSection.Handlers[i].Default = path.Clean(indexSection.Handlers[i].Default)
 			indexSection.Handlers[i].TopicURL = path.Clean(indexSection.Handlers[i].TopicURL)
+			indexSection.Handlers[i].Prefix = path.Clean(indexSection.Handlers[i].Prefix)
+			if !strings.HasSuffix(indexSection.Handlers[i].Prefix, "/") {
+				indexSection.Handlers[i].Prefix += "/"
+			}
 		}
 	}
 }
