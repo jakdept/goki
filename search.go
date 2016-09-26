@@ -117,19 +117,19 @@ func ListField(i Index, field string) ([]string, error) {
 func ListAllField(i Index, field, match string, pageSize, page int) (
 	SearchResponse, error) {
 
-		var rawResult *bleve.SearchResponse{}
+	var rawResult *bleve.SearchResult
 
 	switch match {
 	case "":
-		rawResult = &bleve.SearchResponse{}
+		rawResult = &bleve.SearchResult{}
 	default:
 		query := bleve.NewTermQuery(match).SetField(field)
 		searchRequest := bleve.NewSearchRequest(query)
 		searchRequest.Fields = []string{
-			"path", 
-			"title", 
-			"topic", 
-			"author", 
+			"path",
+			"title",
+			"topic",
+			"author",
 			"modified",
 		}
 		searchRequest.Size = pageSize
@@ -139,7 +139,7 @@ func ListAllField(i Index, field, match string, pageSize, page int) (
 			return SearchResponse{}, &Error{Code: ErrInvalidQuery, innerError: err}
 		}
 
-		rawResult, err := i.Query(searchRequest)
+		rawResult, err = i.Query(searchRequest)
 		if err != nil {
 			return SearchResponse{}, &Error{Code: ErrInvalidQuery, innerError: err}
 		}
