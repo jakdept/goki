@@ -13,9 +13,9 @@ import (
 	"github.com/ajg/form"
 )
 
-// Fields is a standard handler that pulls the first folder of the response, and
-//  lists that topic or author. If there is none, it falls back to listing all
-//  topics or authors with the fallback template.
+// FieldsHandler is a standard handler that pulls the first folder of the
+//  response, and lists that topic or author. If there is none, it falls back to
+//  listing all topics or authors with the fallback template.
 type FieldsHandler struct {
 	c ServerSection
 	i Index
@@ -42,8 +42,8 @@ func (h FieldsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// FuzzySearch is a normal search format - it should provide a point and click
-//  interface to allow searching.
+// FuzzySearchHandler is a normal search format - it should provide a point and
+//  click interface to allow searching.
 type FuzzyHandler struct {
 	c ServerSection
 	i Index
@@ -81,7 +81,8 @@ func (h FuzzyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// QuerySearch is a handler that uses a custom search format to do custom queries.
+// QuerySearchHAndler is a handler that uses a custom search format to do
+// custom queries.
 type QueryHandler struct {
 	c ServerSection
 	i Index
@@ -198,7 +199,7 @@ func (h Markdown) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // RawFile is a http.Handler that serves a raw file back, restricting by file
-//  extension if necessary and adding appropiate mime-types.
+//  extension if necessary and adding approipate mime-types.
 type RawFile struct {
 	c ServerSection
 }

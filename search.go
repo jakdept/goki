@@ -33,7 +33,7 @@ type SearchResponseResult struct {
 
 // CreateResponseData takes a search result, and produces a SearchResponse
 //  suitable for passing to a template.
-func CreateResponseData(i Index, rawResults *bleve.SearchResult, pageOffset int) (
+func CreateResponseData(i Index, results *bleve.SearchResult, pageOffset int) (
 	SearchResponse, error) {
 
 	topics, err := ListField(i, "topics")
@@ -47,17 +47,17 @@ func CreateResponseData(i Index, rawResults *bleve.SearchResult, pageOffset int)
 	}
 
 	response := SearchResponse{
-		TotalHits:  int(rawResults.Total),
+		TotalHits:  int(results.Total),
 		PageOffset: pageOffset,
-		SearchTime: rawResults.Took,
+		SearchTime: results.Took,
 		Topics:     topics,
 		Authors:    authors,
 	}
 
-	for _, hit := range rawResults.Hits {
+	for _, hit := range results.Hits {
 		var newHit SearchResponseResult
 
-		newHit.Score = float64(hit.Score * 100 / rawResults.MaxScore)
+		newHit.Score = float64(hit.Score * 100 / results.MaxScore)
 
 		for _, field := range []string{
 			"title",
@@ -147,7 +147,10 @@ func ListAllField(i Index, field, match string, pageSize, page int) (
 
 	result, err := CreateResponseData(i, rawResult, page*pageSize)
 	if err != nil {
-		return SearchResponse{}, &Error{Code: ErrFormatSearchResponse, innerError: err}
+		return SearchResponse{}, &Error{
+			Code:       ErrFormatSearchResponse,
+			innerError: err,
+		}
 	}
 
 	return result, nil
@@ -189,7 +192,10 @@ func FuzzySearch(i Index, v FuzzySearchValues) (SearchResponse, error) {
 
 	err := searchRequest.Query.Validate()
 	if err != nil {
-		return SearchResponse{}, &Error{Code: ErrInvalidQuery, value: searchRequest.Query}
+		return SearchResponse{}, &Error{
+			Code:  ErrInvalidQuery,
+			value: searchRequest.Query,
+		}
 	}
 
 	rawResult, err := i.Query(searchRequest)
@@ -207,7 +213,8 @@ func FuzzySearch(i Index, v FuzzySearchValues) (SearchResponse, error) {
 
 // QuerySearch runs a given query search and returns a SearchResponse against
 //  the given index
-func QuerySearch(i Index, terms string, page, pageSize int) (SearchResponse, error) {
+func QuerySearch(i Index, terms string, page, pageSize int) (
+	SearchResponse, error) {
 	query := bleve.NewQueryStringQuery(terms)
 	searchRequest := bleve.NewSearchRequest(query)
 	searchRequest.Fields = []string{"path", "title", "topic", "author", "modified"}
@@ -216,7 +223,10 @@ func QuerySearch(i Index, terms string, page, pageSize int) (SearchResponse, err
 
 	err := searchRequest.Query.Validate()
 	if err != nil {
-		return SearchResponse{}, &Error{Code: ErrInvalidQuery, value: searchRequest.Query}
+		return SearchResponse{}, &Error{
+			Code:  ErrInvalidQuery,
+			value: searchRequest.Query,
+		}
 	}
 
 	rawResult, err := i.Query(searchRequest)
