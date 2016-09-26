@@ -117,19 +117,32 @@ func ListField(i Index, field string) ([]string, error) {
 func ListAllField(i Index, field, match string, pageSize, page int) (
 	SearchResponse, error) {
 
-	query := bleve.NewTermQuery(match).SetField(field)
-	searchRequest := bleve.NewSearchRequest(query)
-	searchRequest.Fields = []string{"path", "title", "topic", "author", "modified"}
-	searchRequest.Size = pageSize
+		var rawResult *bleve.SearchResponse{}
 
-	err := searchRequest.Query.Validate()
-	if err != nil {
-		return SearchResponse{}, &Error{Code: ErrInvalidQuery, innerError: err}
-	}
+	switch match {
+	case "":
+		rawResult = &bleve.SearchResponse{}
+	default:
+		query := bleve.NewTermQuery(match).SetField(field)
+		searchRequest := bleve.NewSearchRequest(query)
+		searchRequest.Fields = []string{
+			"path", 
+			"title", 
+			"topic", 
+			"author", 
+			"modified",
+		}
+		searchRequest.Size = pageSize
 
-	rawResult, err := i.Query(searchRequest)
-	if err != nil {
-		return SearchResponse{}, &Error{Code: ErrInvalidQuery, innerError: err}
+		err := searchRequest.Query.Validate()
+		if err != nil {
+			return SearchResponse{}, &Error{Code: ErrInvalidQuery, innerError: err}
+		}
+
+		rawResult, err := i.Query(searchRequest)
+		if err != nil {
+			return SearchResponse{}, &Error{Code: ErrInvalidQuery, innerError: err}
+		}
 	}
 
 	result, err := CreateResponseData(i, rawResult, page*pageSize)
@@ -138,7 +151,6 @@ func ListAllField(i Index, field, match string, pageSize, page int) (
 	}
 
 	return result, nil
-
 }
 
 //FuzzySearchValues gives a standard structure to decode and pass to FuzzySearch

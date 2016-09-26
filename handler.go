@@ -29,7 +29,7 @@ func (h FieldsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		FallbackSearchResponse(h.i, w, h.c.FallbackTemplate)
 		return
 	}
-	// to be done if a field was given
+	// to be done if a field was given - might actually have to be 1 idk
 	results, err := ListAllField(h.i, h.c.Default, fields[0], 100, 1)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
