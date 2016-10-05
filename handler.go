@@ -22,9 +22,9 @@ type FieldsHandler struct {
 }
 
 func (h FieldsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	fields := strings.SplitN(r.URL.Path, "/", 3)
+	fields := strings.SplitN(r.URL.Path, "/", 2)
 
-	if len(fields) < 3 || fields[1] == "" {
+	if len(fields) < 2 || fields[1] == "" {
 		// to do if a field was not given
 		FallbackSearchResponse(h.i, w, h.c.FallbackTemplate)
 		return
