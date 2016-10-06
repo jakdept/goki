@@ -8,7 +8,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"strings"
 
 	"github.com/ajg/form"
 )
@@ -22,19 +21,29 @@ type FieldsHandler struct {
 }
 
 func (h FieldsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	fields := strings.SplitN(r.URL.Path, "/", 2)
+	// fields := strings.SplitN(r.URL.Path, "/", 2)
 
-	if len(fields) < 2 || fields[1] == "" {
+	// if len(fields) < 2 || fields[1] == "" {
+	if r.URL.Path == "" {
 		// to do if a field was not given
-		FallbackSearchResponse(h.i, w, h.c.FallbackTemplate)
+		switch h.c.FallbackTemplate {
+		case "":
+			FallbackSearchResponse(h.i, w, h.c.Template)
+		default:
+			FallbackSearchResponse(h.i, w, h.c.FallbackTemplate)
+		}
 		return
 	}
+
 	// to be done if a field was given - might actually have to be 1 idk
-	results, err := ListAllField(h.i, h.c.Default, fields[0], 100, 1)
+	// results, err := ListAllField(h.i, h.c.Default, fields[0], 100, 1)
+	results, err := ListAllField(h.i, h.c.Default, r.URL.Path, 100, 1)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	log.Printf("got back %#v", results)
 
 	err = allTemplates.ExecuteTemplate(w, h.c.Template, results)
 	if err != nil {
@@ -42,8 +51,7 @@ func (h FieldsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// FuzzySearchHandler is a normal search format - it should provide a point and
-//  click interface to allow searching.
+// FuzzySearch is a normal search format - it should provide a point and click interface to allow searching.
 type FuzzyHandler struct {
 	c ServerSection
 	i Index
