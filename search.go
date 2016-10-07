@@ -55,6 +55,9 @@ func CreateResponseData(i Index, results *bleve.SearchResult, pageOffset int) (
 	}
 
 	for _, hit := range results.Hits {
+
+		log.Printf("working with \n %#v\n", hit)
+
 		var newHit SearchResponseResult
 
 		newHit.Score = float64(hit.Score * 100 / results.MaxScore)
@@ -68,7 +71,7 @@ func CreateResponseData(i Index, results *bleve.SearchResult, pageOffset int) (
 			"author",
 		} {
 			if _, isThere := hit.Fields[field]; isThere {
-				if str, ok := hit.Fields["title"].(string); ok {
+				if str, ok := hit.Fields[field].(string); ok {
 					switch field {
 					case "title":
 						newHit.Title = str
@@ -91,6 +94,8 @@ func CreateResponseData(i Index, results *bleve.SearchResult, pageOffset int) (
 				}
 			}
 		}
+
+		log.Printf("working with \n %#v\n", newHit)
 		response.Results = append(response.Results, newHit)
 	}
 	return response, nil
