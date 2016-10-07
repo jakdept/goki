@@ -84,13 +84,13 @@ func TestGetURIPath(t *testing.T) {
 		{"/wiki.md", "/", "/var/www/", "/var/www/wiki.md"},
 		{"/wiki/page.md", "/wiki/", "/var/www/", "/var/www/page.md"},
 		{"/wiki/page.md", "/wiki/", "/", "/page.md"},
-		{"abcdef", "abc", "xyz", "xyz/def"},
+		{"abc/def", "abc/", "xyz/", "xyz/def"},
 	}
 	i := &indexObject{}
 
 	for _, testSet := range tests {
 		i.config.IndexPath = testSet.add
-		assert.Equal(t, testSet.output, i.getURI(testSet.input, testSet.trim),
+		assert.Equal(t, testSet.output, i.getURI(testSet.input, testSet.trim, testSet.add),
 			"[%q] trimmed [%q] added [%q] but got the wrong result",
 			testSet.input, testSet.trim, testSet.add)
 	}

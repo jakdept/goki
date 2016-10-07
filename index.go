@@ -28,7 +28,8 @@ type indexedPage struct {
 type Index interface {
 	Close() error
 	Wipe() error
-	CrawlDir(string) error
+	CrawlDir(string, string) error
+	WatchDir(string, string) error
 	Query(*bleve.SearchRequest) (*bleve.SearchResult, error)
 	// CreateResponseData(*bleve.SearchResult, int) (SearchResponse, error)
 	// ListField(string) ([]string, error)
@@ -63,16 +64,22 @@ func OpenIndex(c IndexSection, l *log.Logger) (Index, error) {
 		i.index = index
 	}
 
-	// i am confused how the filepath -> uriPaths line up
 	// start watchers
-	for each, _ := range i.config.WatchDirs {
-		path := filepath.Clean(each)
-		go i.WatchDir(path)
-		go i.CrawlDir(path)
-		i.log.Printf("watching and walking [%s]", path)
+	for filePrefix, uriPrefix := range i.config.WatchDirs {
+		filePrefix := filepath.Clean(filePrefix)
+		uriPrefix = path.Clean(uriPrefix)
+		if !strings.HasSuffix(filePrefix, "/") {
+			filePrefix += "/"
+		}
+		if !strings.HasSuffix(uriPrefix, "/") {
+			uriPrefix += "/"
+		}
+
+		go i.WatchDir(filePrefix, uriPrefix)
+		go i.CrawlDir(filePrefix, uriPrefix)
+		i.log.Printf("watching and walking [%s]", filePrefix)
 	}
 
-	// this thing is hanging the server from starting
 	// prime the closing channel
 	i.closer = make(chan struct{}, 1)
 	i.closer <- struct{}{}
@@ -150,7 +157,7 @@ func (i *indexObject) Wipe() error {
 	return nil
 }
 
-func (i *indexObject) WatchDir(watchPath string) error {
+func (i *indexObject) WatchDir(watchPath, uriPrefix string) error {
 	i.log.Printf("watching '%s' for changes...", watchPath)
 
 	i.threads.Add(1)
@@ -177,17 +184,17 @@ func (i *indexObject) WatchDir(watchPath string) error {
 			queuedEvents = append(queuedEvents, event)
 			idleTimer.Reset(10 * time.Second)
 		case err := <-watcher.Errors:
-			log.Fatal(err)
+			i.log.Fatal(err)
 		case <-idleTimer.C:
 			for _, event := range queuedEvents {
-				if strings.HasSuffix(event.Name, i.config.WatchExtension) {
+				if filepath.Ext(event.Name) == i.config.WatchExtension {
 					switch event.Op {
 					case fsnotify.Remove, fsnotify.Rename:
 						// delete the filePath
-						i.DeleteURI(i.config.IndexPath + event.Name)
+						i.DeleteURI(uriPrefix + event.Name)
 					case fsnotify.Create, fsnotify.Write:
 						// update the filePath
-						i.UpdateURI(watchPath+event.Name, i.config.IndexPath+event.Name)
+						i.UpdateURI(watchPath+event.Name, uriPrefix+event.Name)
 					default:
 						// no changes, so repeat the cycle
 					}
@@ -200,10 +207,10 @@ func (i *indexObject) WatchDir(watchPath string) error {
 	return nil
 }
 
-func (i *indexObject) indexFileFunc(rootPath string) filepath.WalkFunc {
+func (i *indexObject) indexFileFunc(rootPath, uriPrefix string) filepath.WalkFunc {
 	return func(path string, info os.FileInfo, err error) error {
 		if info != nil && !info.IsDir() {
-			err := i.UpdateURI(path, i.getURI(path, rootPath))
+			err := i.UpdateURI(path, i.getURI(path, rootPath, uriPrefix))
 			if err != nil {
 				i.log.Println(err)
 			}
@@ -212,8 +219,8 @@ func (i *indexObject) indexFileFunc(rootPath string) filepath.WalkFunc {
 	}
 }
 
-func (i *indexObject) CrawlDir(path string) error {
-	err := filepath.Walk(path, i.indexFileFunc(path))
+func (i *indexObject) CrawlDir(path, uriPrefix string) error {
+	err := filepath.Walk(path, i.indexFileFunc(path, uriPrefix))
 	if err != nil {
 		return err
 	}
@@ -239,7 +246,7 @@ func (i *indexObject) UpdateURI(filePath, uriPath string) error {
 
 	i.lock.Lock()
 	defer i.lock.Unlock()
-	i.log.Printf("updated: %s as %s", filePath, uriPath)
+	i.log.Printf("updated: [%s] as [%s] indexed at [%s]", filePath, page.URIPath, uriPath)
 	err = i.index.Index(uriPath, page)
 	if err != nil {
 		return &Error{Code: ErrIndexError, value: uriPath, innerError: err}
@@ -291,10 +298,6 @@ func (i *indexObject) cleanupMarkdown(input []byte) string {
 	return string(output)
 }
 
-func (i *indexObject) getURI(filePath, filePrefix string) (uriPath string) {
-	uriPath = strings.TrimPrefix(filePath, filePrefix)
-	uriPath = strings.TrimPrefix(uriPath, "/")
-	uriPrefix := strings.TrimSuffix(i.config.IndexPath, "/")
-	uriPath = uriPrefix + "/" + uriPath
-	return
+func (i *indexObject) getURI(filePath, trimPrefix, addPrefix string) string {
+	return addPrefix + strings.TrimPrefix(filePath, trimPrefix)
 }
