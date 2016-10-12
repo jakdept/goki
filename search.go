@@ -1,11 +1,13 @@
 package main
 
 import (
-	"bleve"
 	"log"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/blevesearch/bleve"
+	blevequery "github.com/blevesearch/bleve/search/query"
 )
 
 // SearchResponse is the parent type structure that will come back to all
@@ -122,12 +124,14 @@ func ListAllField(i Index, field, match string, pageSize, page int) (
 	SearchResponse, error) {
 
 	var rawResult *bleve.SearchResult
+	var err error
 
 	switch match {
 	case "":
 		rawResult = &bleve.SearchResult{}
 	default:
-		query := bleve.NewTermQuery(match).SetField(field)
+		query := bleve.NewTermQuery(match)
+		query.SetField(field)
 		searchRequest := bleve.NewSearchRequest(query)
 		searchRequest.Fields = []string{
 			"path",
@@ -137,11 +141,6 @@ func ListAllField(i Index, field, match string, pageSize, page int) (
 			"modified",
 		}
 		searchRequest.Size = pageSize
-
-		err := searchRequest.Query.Validate()
-		if err != nil {
-			return SearchResponse{}, &Error{Code: ErrInvalidQuery, innerError: err}
-		}
 
 		rawResult, err = i.Query(searchRequest)
 		if err != nil {
@@ -172,35 +171,27 @@ type FuzzySearchValues struct {
 // FuzzySearch runs a fuzzy search with the given input parameters against
 //  the given query
 func FuzzySearch(i Index, v FuzzySearchValues) (SearchResponse, error) {
-	var topicQuery, authorQuery []bleve.Query
+	var topicQuery, authorQuery []blevequery.Query
 	for _, eachTopic := range v.topics {
-		topicQuery = append(topicQuery, bleve.NewTermQuery(eachTopic))
+		topicQuery = append(topicQuery, blevequery.NewTermQuery(eachTopic))
 	}
 	for _, eachAuthor := range v.authors {
-		authorQuery = append(authorQuery, bleve.NewTermQuery(eachAuthor))
+		authorQuery = append(authorQuery, blevequery.NewTermQuery(eachAuthor))
 	}
 
-	multiQuery := []bleve.Query{bleve.NewFuzzyQuery(v.s)}
+	multiQuery := []blevequery.Query{blevequery.NewFuzzyQuery(v.s)}
 	if len(topicQuery) > 0 {
-		multiQuery = append(multiQuery, bleve.NewDisjunctionQuery(topicQuery))
+		multiQuery = append(multiQuery, blevequery.NewDisjunctionQuery(topicQuery))
 	}
 	if len(authorQuery) > 0 {
-		multiQuery = append(multiQuery, bleve.NewDisjunctionQuery(authorQuery))
+		multiQuery = append(multiQuery, blevequery.NewDisjunctionQuery(authorQuery))
 	}
 
-	query := bleve.NewConjunctionQuery(multiQuery)
+	query := blevequery.NewConjunctionQuery(multiQuery)
 	searchRequest := bleve.NewSearchRequest(query)
 	searchRequest.Fields = []string{"path", "title", "topic", "author", "modified"}
 	searchRequest.Size = v.pageSize
 	searchRequest.From = v.pageSize * v.page
-
-	err := searchRequest.Query.Validate()
-	if err != nil {
-		return SearchResponse{}, &Error{
-			Code:  ErrInvalidQuery,
-			value: searchRequest.Query,
-		}
-	}
 
 	rawResult, err := i.Query(searchRequest)
 	if err != nil {
@@ -224,14 +215,6 @@ func QuerySearch(i Index, terms string, page, pageSize int) (
 	searchRequest.Fields = []string{"path", "title", "topic", "author", "modified"}
 	searchRequest.Size = pageSize
 	searchRequest.From = pageSize * page
-
-	err := searchRequest.Query.Validate()
-	if err != nil {
-		return SearchResponse{}, &Error{
-			Code:  ErrInvalidQuery,
-			value: searchRequest.Query,
-		}
-	}
 
 	rawResult, err := i.Query(searchRequest)
 	if err != nil {

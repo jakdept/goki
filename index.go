@@ -9,8 +9,8 @@ import (
 	"sync"
 	"time"
 
-	"bleve"
-	"bleve/mapping"
+	"github.com/blevesearch/bleve"
+	blevemapping "github.com/blevesearch/bleve/mapping"
 
 	"github.com/JackKnifed/blackfriday"
 	blackfridaytext "github.com/JackKnifed/blackfriday-text"
@@ -90,7 +90,7 @@ func OpenIndex(c IndexSection, l *log.Logger) (Index, error) {
 	return i, nil
 }
 
-func (i *indexObject) buildIndexMapping() mapping.IndexMapping {
+func (i *indexObject) buildIndexMapping() blevemapping.IndexMapping {
 
 	// create a text field type
 	enTextFieldMapping := bleve.NewTextFieldMapping()

@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"bleve"
-	"bleve/search"
+	"github.com/blevesearch/bleve"
+	"github.com/blevesearch/bleve/search"
 
 	"github.com/stretchr/testify/assert"
 )
