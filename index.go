@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bleve"
 	"log"
 	"os"
 	"path"
@@ -11,7 +12,6 @@ import (
 
 	"github.com/JackKnifed/blackfriday"
 	blackfridaytext "github.com/JackKnifed/blackfriday-text"
-	"github.com/blevesearch/bleve"
 	fsnotify "gopkg.in/fsnotify.v1"
 )
 

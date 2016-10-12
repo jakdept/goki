@@ -1,12 +1,11 @@
 package main
 
 import (
+	"bleve"
 	"log"
 	"net/http"
 	"strings"
 	"time"
-
-	"github.com/blevesearch/bleve"
 )
 
 // SearchResponse is the parent type structure that will come back to all
