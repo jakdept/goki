@@ -4,6 +4,10 @@
 
 Markdown based wiki server
 
+More documentation is on various pages.
+
+- [Layout Overview](/layout_plan.md) explains how to use this.
+
 Uses:
 
 https://github.com/sindresorhus/github-markdown-css
