@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"bleve"
-	"search"
+	"bleve/search"
 
 	"github.com/stretchr/testify/assert"
 )

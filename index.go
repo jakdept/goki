@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bleve"
 	"log"
 	"os"
 	"path"
@@ -9,6 +8,9 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"bleve"
+	"bleve/mapping"
 
 	"github.com/JackKnifed/blackfriday"
 	blackfridaytext "github.com/JackKnifed/blackfriday-text"
@@ -88,7 +90,7 @@ func OpenIndex(c IndexSection, l *log.Logger) (Index, error) {
 	return i, nil
 }
 
-func (i *indexObject) buildIndexMapping() *bleve.IndexMapping {
+func (i *indexObject) buildIndexMapping() mapping.IndexMapping {
 
 	// create a text field type
 	enTextFieldMapping := bleve.NewTextFieldMapping()
