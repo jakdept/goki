@@ -19,7 +19,7 @@ An example config section for this handler:
     "handbook"
   ]
   "Template": "wiki.html",
-},
+}
 ```
 
 The elements can appear in any order, and like the rest of the config, this is JSON formatted.
@@ -28,7 +28,7 @@ The elements can appear in any order, and like the rest of the config, this is J
 * `Prefix` is the URL path to handle. The most specific Prefix path is used.
 * `Path` - the phyiscal path to the files on the system.
 * `Default` - the default page to open (for a request that matches the Prefix)
-* `Extension` - the file extension on the end of files
+* `Extension` - the file extension to expect on the end of files
 * `Restricted` - an array of topics that cannot appear 
 * `Template` - the template to build a response from
 
