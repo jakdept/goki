@@ -3,47 +3,58 @@ topic: config
 Configuration
 =============
 
-The configuration file for this server is [JSON based](http://json.org/). It is parsed ot the following struct in Go:
+The configuration file for this server is [JSON based](http://json.org/).
+The major item organization is:
 
 ```go
 type Config struct {
-	Global    GlobalSection
 	Redirects []RedirectSection
-	Indexes   []IndexSection
-	Server    []ServerSection
+	Indexes   []IndexSection{
+    Server    []ServerSection
+  }
 }
 ```
 
 Of note, you have to include `{}` curley braces around each of the server configurations.
 
-Each section within the main section will have it's own array. Further, the items with a `[]` in front of them can have multiple sections.
+Each section within the main section will have it's own array.
+Further, the items with a `[]` in front of them can have multiple sections.
 
 GlobalSection
 -------------
 
-The GlobalSection has the following structure within the application:
+The GlobalSection is the outermost element, and has the following structure:
 
 ```go
 type GlobalSection struct {
+	Address     string
 	Port        string
 	Hostname    string
 	TemplateDir string
+	CertFile    string
+	KeyFile     string
+	Indexes     []IndexSection
+	Redirects   []RedirectSection
 }
 ```
 
-An example `json` configuration is:
+An example `json` configuration:
 
 ```json
 "Global": {
+  "Address":"*",
   "Port": "8080",
   "Hostname": "localhost",
-  "TemplateDir": "wiki-backend/templates/"
+  "TemplateDir": "templates/"
 },
 ```
 
+* `Address` is the address to listen on
 * `Port` is the port that you want the server to listen on
 * `Hostname` is the hostname the server should respond with
 * `TemplateDir` is a directory containing all of the templates, and nothing else
+* `CertFile` is the file containing the certificate
+* `KeyFile` is the file containing the SSL keyfile
 
 RedirectSection
 ---------------
@@ -110,10 +121,11 @@ type IndexSection struct {
 	IndexType      string
 	IndexName      string
 	Restricted     []string
+	Handlers       []ServerSection
 }
 ```
 
-A example `json` redirect section:
+A example `json` index section:
 
 ```json
 "Indexes": [
@@ -128,7 +140,8 @@ A example `json` redirect section:
     "Restricted": [
       "internal",
       "handbookt"
-    ]
+    ],
+    "Handlers":[]
   }
 ] 
 ```
@@ -139,6 +152,7 @@ A example `json` redirect section:
 * `IndexPath` is the location to put the index on the disk
 * `IndexName` specifies the name to give to the index
 * `Restricted` is a list of topics within pages to not index
+* `Handlers` contains the handlers that run under that index for the server
 
 Each file found within a `WatchDir` will be stored with the `URIPath` set as the path to that file, minus the first part of the `WatchDir`, prepended with the second.
 
@@ -159,7 +173,8 @@ You may create multiple distinct indexes:
     "Restricted": [
       "internal",
       "handbookt"
-    ]
+    ],
+    "Handlers":[]
   },
   {
     "WatchDirs": {
@@ -172,7 +187,8 @@ You may create multiple distinct indexes:
     "Restricted": [
       "internal",
       "handbookt"
-    ]
+    ],
+    "Handlers":[]
   }
 ] 
 ```
@@ -194,7 +210,8 @@ You may also map multiple directories in one index:
     "Restricted": [
       "internal",
       "handbookt"
-    ]
+    ],
+    "Handlers":[]
   }
 ] 
 ```
@@ -206,13 +223,14 @@ ServerSection
 
 ```go
 type ServerSection struct {
-	Path       string
-	Prefix     string
-	Default    string
-	Template   string
-	ServerType string
-	TopicURL   string
-	Restricted []string
+	Path               string
+	Prefix             string
+	Default            string
+	Template           string
+	FallbackTemplate   string
+	ServerType         string
+	TopicURL           string
+	Restricted         []string
 }
 ```
 

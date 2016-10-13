@@ -127,10 +127,12 @@ The output to the template will be the search results:
 
 ```go
 type SearchResponse struct {
-	TotalHits int
+	TotalHits  int
 	PageOffset int
 	SearchTime time.Duration
-	Results []SearchResponseResult
+	Topics     []string
+	Authors    []string
+	Results    []SearchResponseResult
 }
 ```
 
@@ -139,19 +141,21 @@ Where:
 * `TotalHits` is the number of results that were matched
 * `PageOffset` is the number of results skipped before the current page
 * `SearchTime` is the amount of time the search took
+* `Topics` is a list of all Topics
+* `Authors` is a list of all Authors
 * `Results` is an array of hits - structure explained later
 
 The Hits are each structured as:
 
 ```go
 type SearchResponseResult struct {
-	Title string
-	URIPath string
-	Score float64
-	Topics []string
+	Title    string
+	URIPath  string
+	Score    float64
+	Topics   []string
 	Keywords []string
-	Authors []string
-	Body string
+	Authors  []string
+	Body     string
 }
 ```
 
