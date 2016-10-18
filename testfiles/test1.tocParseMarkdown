@@ -1,9 +1,7 @@
 <nav>
 <ul>
-<li><a href="#this-is-a-page">This is a page</a>
-<ul>
+<li><a href="#this-is-a-page">This is a page</a></li>
 <li><a href="#numbered-list">Numbered List</a></li>
 <li><a href="#this-section-has-quotes">This section has quotes</a></li>
-</ul></li>
 </ul>
 </nav>
