@@ -45,7 +45,8 @@ const (
 		blackfriday.HTML_SMARTYPANTS_FRACTIONS |
 		blackfriday.HTML_SMARTYPANTS_LATEX_DASHES |
 		blackfriday.HTML_TOC |
-		blackfriday.HTML_OMIT_CONTENTS
+		blackfriday.HTML_OMIT_CONTENTS |
+		blackfriday.HTML_FLAT_TOC
 
 	tocExtensions = 0 |
 		blackfriday.EXTENSION_NO_INTRA_EMPHASIS |

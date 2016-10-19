@@ -4,63 +4,80 @@ Deployment Overview
 Handlers
 --------
 
-The initial plan is to have two types of handlers for requests - raw handlers, and markdown handlers.
+The basic idea is to have two types of handlers for requests - raw handlers, and markdown handlers.
+There are three additional handlers for dealing with different searches.
 
-#### Raw Handler ####
+#### `raw` Handler ####
 
-The following options will be available for raw handlers:
+The following are options for `raw` handlers:
 
 * Allowed extensions/Restricted extensions
 * Default request
 * Directory to serve from
-* Restricted folders
 
-Raw handlers will retrieve the requested file, and return it. Files outside of the requested directory should not be served.
+Raw handlers will retrieve the requested file, and return it.
+Files outside of the requested directory should not be served.
 
-#### Markdown Handler ####
+Further information.
 
-The following options will be available for raw handlers:
+#### `markdown` Handler ####
+
+The following are options for `markdown` handlers:
 
 * Restricted tags
 * Default request
 * Directory to serve from
-* Restricted folders
 * Template to use
 
-Raw handlers will retrieve the requested file, translate any markdown in the file into html, parse it into the template, and return the response. Requests for pages with a restricted tag should not be served - an alternate 403 page will be served.
+Markdown handlers will retrieve the requested file, translate any markdown in the file into html, parse it into the template, and return the response.
+Requests for pages with a restricted tag should not be served - a 403 will be returned.
 
-Content Repositories
---------------------
+Further information.
 
-To facilitate this project, we will use multiple Git repositories. At this point in time, the plan is just to install gitolite on the servers, and use stuff within them for automatic pushing.
+#### `field` Handler ###
 
-* One repository will contain the actual content of the wiki - markdown pages, required images, etc.
-* One repository will contain the site files - templates, css, javascript, config for the server
- * There will be one version of this respository for the internal servers - allows downloading of `.md` files and no restricted tags
- * There will be a second version of this respository for the external servers - do not allow downloading of `.md` files, do not allow viewing of pages with restricted tags
+The `field` handler lists all articles of a given tag with a given value.
+It is typically used to list all articles with a specific topic.
+
+An example configuration might be `domain.com/topic`.
+You then configure the tag you want to match - in this case likely `topic`.
+Anything left in the URL after that location is matched against that tag.
+For instance, `domain.com/topic/ponies` would list all pages where `topic` matches `ponies`.
+
+Further information.
+
+#### `fuzzy` Handler ###
+
+The `fuzzy` handler takes given topics, authors, and a search term.
+It then throws all articles matching that pair into the template.
+
+Further information.
+
+#### `query` Handler ####
+
+The `query` handler is a secondary search handler, that allows you to query in a format specific to the indexing engine.
+
+Further information.
 
 Site Repository Layout
 ----------------------
 
-For the site repositories, the plan is to have the following layout:
+For my primary location for this server, my content repoository has the following layout:
 
 ```
 repository
-	public/								# this directory will be served through a raw handler
-	public/css/						# any site css
-	public/javascript/		# any site javascript
-	public/static/				# any site static files (403 pages, 404 pages, etc)
-	template/							# any site templates
-	githooks/							# git hook scripts for deployment
-	system/								# contains firewall configuration, systemd config
-	system/keys/					# public SSH keys for push access to git repositories/servers
-	system/bin/						# contains sysv init script, program binaries, install script, update script
+	pages/                # markdown pages, the content of the site
+	static/               # various static resources are placed in here to be served as is
+	static/css/           # all static css
+	static/fonts/         # all static fonts
+	static/images/        # all static images
+	static/js/            # all static javascript resources
+	templates/            # location for storage of all templates
+	wiki.index/           # index location, should be ignored and untouched by your source control
 	config.json						# config file for server
 ```
 
-For the content repository, it doesn't really matter what the layout is.
-
-We could create folders, and then lock down edits to files within those folders to just certain departments - for instance, create a secteam+esc folder and only give secteam and escalations permission to edit it, or create just a secteam folder and put the known RBL issues in there?
+It is recommended that you use something like [harpoon](https://github.com/agrison/harpoon) to then listen for git pushes and deploy.
 
 Feature Requests
 ----------------

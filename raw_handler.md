@@ -23,7 +23,7 @@ An example config section for this handler:
 The elements can appear in any order. The entire configuration is in `json` format.
 
 * `ServerType` is always `raw`
-* `Prefix` is the URL path to handle. The most specific Prefix path is used.
+* `Prefix` is the URL path to handle. The most specific Prefix path is used. A trailing `/` will be added automatically.
 * `Path` - the phyiscal path to the files on the system.
 * `Default` - the default file to serve
 * `Restricted` - an array of file extensions that cannot appear

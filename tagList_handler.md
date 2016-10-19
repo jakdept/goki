@@ -2,7 +2,7 @@ topic: handler
 topic: index
 topic: config
 keyword: category
-Field List Handler
+Tag List Handler
 ================
 The Field List handler is used to list all items with a specific field.
 
@@ -14,23 +14,25 @@ An example config section for this handler:
 {
   "ServerType": "fieldList",
   "Prefix": "/topic/",
-  "Path": "/var/www/wiki/",
-  "Default": "readme",
+  "Default": "topic",
   "Template": "topic.html",
-},
+  "FallbackTemplate": "topic.html"
+}
 ```
 
 The elements can appear in any order, and like the rest of the config, this is JSON formatted.
 
 * `ServerType` always `fieldList`
 * `Prefix` the URL path to handle. The most specific Prefix path is used.
-* `Path` - location of the index to list against
 * `Default` - the field within that index to list - likely `topic` or `author`
 * `Template` - the template to build a response with
+* `FallbackTemplate` - the template to be used if no topics are listed
 
-When the request is recieved, it is validated. If it is valid, the Prefix is stripped off. If the next field is blank, all of the unique values of that field are listed; otherwise all entries from the index matching the first section are listed.
+When the request is recieved, it is validated. If it is valid, the Prefix is stripped off.
+If the next field is blank, all of the unique values of that field are listed; otherwise all entries from the index matching the first section are listed.
 
-With the above configuration, `http://domain/topic/` would load a page listing all of the topics within the index, and `http://domain/topic/handler` would list all pages that have the `topic` of `handler`.
+With the above configuration, `http://domain/topic/` would load a page listing all of the topics within the index.
+`http://domain/topic/handler` would list all pages that have the `topic` of `handler`.
 
 Example Template
 ----------------

@@ -3,17 +3,19 @@ topic: index
 topic: search
 topic: config
 keyword: category
-Query Search Handler
-====================
+Search Handler
+==============
 
 The fuzzy search handler is the more traditional search handler. It allows you to work with individual items.
 
 Query URL Syntax
 ------------
 
-THe fuzzy search handler works a bit differently. A general example is:
+THe fuzzy search handler works a bit differently. An example URL to hit it is:
 
-`//localhost/search/?s=query&topic=apache&author=person
+```
+http://localhost/search/?s=query&topic=apache&author=person
+```
 
 * The `topic` field can appear multiple times - specifying multiple topics.
  * At least one `topic` for the page must match one `topic` provided in the query.
@@ -36,23 +38,26 @@ Configuration
 {
   "ServerType": "fuzzySearch"
   "Prefix": "/search/",
-  "Path": "/var/www/wiki.index",
   "Template": "search.html",
-},
+	"FallbackTemplate": search.html"
+}
 ```
 
 The elements can appear in any order, and like the rest of the config, this is JSON formatted.
 
 * `ServerType` always `fuzzySearch`
 * `Prefix` the URL path to handle. The most specific Prefix path is used.
-* `Path` - location of the index to list against
 * `Template` - the template to build a response with
+* `FallbackTemplate` - the template used to build a response if no search or no results
 
 When the request is recieved, the search is validated.
 
-The query string is passed to the handler n the request var `s`. Thus, a valid request for the above configuration might be:
+The query string is passed to the handler in the var `s`.
+Thus, a valid request for the above configuration might be:
 
-`http://localhost/search/?s=searching`
+```
+http://localhost/search/?s=searching
+```
 
 Example Template
 ----------------
@@ -122,10 +127,12 @@ The output to the template will be the search results:
 
 ```go
 type SearchResponse struct {
-	TotalHits int
+	TotalHits  int
 	PageOffset int
 	SearchTime time.Duration
-	Results []SearchResponseResult
+	Topics     []string
+	Authors    []string
+	Results    []SearchResponseResult
 }
 ```
 
@@ -134,19 +141,21 @@ Where:
 * `TotalHits` is the number of results that were matched
 * `PageOffset` is the number of results skipped before the current page
 * `SearchTime` is the amount of time the search took
+* `Topics` is a list of all Topics
+* `Authors` is a list of all Authors
 * `Results` is an array of hits - structure explained later
 
 The Hits are each structured as:
 
 ```go
 type SearchResponseResult struct {
-	Title string
-	URIPath string
-	Score float64
-	Topics []string
+	Title    string
+	URIPath  string
+	Score    float64
+	Topics   []string
 	Keywords []string
-	Authors []string
-	Body string
+	Authors  []string
+	Body     string
 }
 ```
 
