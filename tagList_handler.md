@@ -2,7 +2,7 @@ topic: handler
 topic: index
 topic: config
 keyword: category
-Field List Handler
+Tag List Handler
 ================
 The Field List handler is used to list all items with a specific field.
 

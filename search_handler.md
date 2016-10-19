@@ -3,8 +3,8 @@ topic: index
 topic: search
 topic: config
 keyword: category
-Query Search Handler
-====================
+Search Handler
+==============
 
 The fuzzy search handler is the more traditional search handler. It allows you to work with individual items.
 
