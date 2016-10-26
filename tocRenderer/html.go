@@ -790,7 +790,7 @@ func (options *Html) TocHeaderWithAnchor(text []byte, level int, anchor string) 
 	// }
 
 	// options.toc.WriteString("<li><a href=\"#")
-	options.toc.WriteString("<a href=\"#")
+	options.toc.WriteString("<a class='mdl-navigation__link' href=\"#")
 	if anchor != "" {
 		options.toc.WriteString(anchor)
 	} else {
