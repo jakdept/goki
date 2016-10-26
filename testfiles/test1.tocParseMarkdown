@@ -1,5 +1,5 @@
 <nav>
-<a href="#this-is-a-page">This is a page</a>
-<a href="#numbered-list">Numbered List</a>
-<a href="#this-section-has-quotes">This section has quotes</a>
+<a class='mdl-navigation__link' href="#this-is-a-page">This is a page</a>
+<a class='mdl-navigation__link' href="#numbered-list">Numbered List</a>
+<a class='mdl-navigation__link' href="#this-section-has-quotes">This section has quotes</a>
 </nav>
