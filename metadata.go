@@ -10,6 +10,7 @@ import (
 	"sort"
 
 	"github.com/JackKnifed/blackfriday"
+	tocRenderer "github.com/JackKnifed/goki/tocRenderer"
 )
 
 type PageMetadata struct {
@@ -300,6 +301,6 @@ func bodyParseMarkdown(input []byte) []byte {
 
 func tocParseMarkdown(input []byte) []byte {
 	// set up the HTML renderer
-	renderer := blackfriday.HtmlRenderer(tocHtmlFlags, "", "")
+	renderer := tocRenderer.HtmlRenderer(tocHtmlFlags, "", "")
 	return blackfriday.Markdown(input, renderer, tocExtensions)
 }
