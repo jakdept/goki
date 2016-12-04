@@ -136,6 +136,56 @@ func (h QueryHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// RawFile is a http.Handler that serves a raw file back, restricting by file
+//  extension if necessary and adding approipate mime-types.
+type RawFile struct {
+	c ServerSection
+}
+
+func (h RawFile) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// If the request is empty, set it to the default.
+	if r.URL.Path == "/" {
+		r.URL.Path = path.Clean(h.c.Default)
+	}
+
+	for _, restricted := range h.c.Restricted {
+		if path.Ext(r.URL.Path) == restricted {
+			log.Printf("request %s was has a disallowed extension %s",
+				r.URL.Path, restricted)
+			http.Error(w, "Request not allowed", 403)
+			return
+		}
+	}
+
+	f, err := os.Open(filepath.Join(h.c.Path, r.URL.Path))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusForbidden)
+		log.Print(err)
+		return
+	}
+
+	switch path.Ext(r.URL.Path) {
+	case "js":
+		w.Header().Set("Content-Type", "application/javascript")
+	case "css":
+		w.Header().Set("Content-Type", "text/css")
+	case "gif":
+		w.Header().Set("Content-Type", "image/gif")
+	case "png":
+		w.Header().Set("Content-Type", "image/png")
+	case "jpg":
+		w.Header().Set("Content-Type", "image/jpeg")
+	case "jpeg":
+		w.Header().Set("Content-Type", "image/jpeg")
+	}
+
+	_, err = io.Copy(w, f)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Print(err)
+	}
+}
+
 // Page is a standard data structure used to render markdown pages.
 type Page struct {
 	Title    string
@@ -154,17 +204,11 @@ type Markdown struct {
 }
 
 func (h Markdown) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// If the request is empty, set it to the default.
-	r.URL.Path = path.Clean(r.URL.Path)
-	if r.URL.Path == "." {
-		r.URL.Path = path.Clean(h.c.Default)
-	}
+	defaultPage(h.c.Default, appendExtension(".md",
+		http.HandlerFunc(h.backendServe))).ServeHTTP(w, r)
+}
 
-	// If the request doesn't end in .md, add that
-	if path.Ext(r.URL.Path) != "md" {
-		r.URL.Path = r.URL.Path + ".md"
-	}
-
+func (h Markdown) backendServe(w http.ResponseWriter, r *http.Request) {
 	pdata := new(PageMetadata)
 	filePath := filepath.Join(h.c.Path, r.URL.Path)
 	err := pdata.LoadPage(filePath)
@@ -204,52 +248,23 @@ func (h Markdown) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// RawFile is a http.Handler that serves a raw file back, restricting by file
-//  extension if necessary and adding approipate mime-types.
-type RawFile struct {
-	c ServerSection
+func appendExtension(suffix string, h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// If the request doesn't end in .md, add that
+		if path.Ext(r.URL.Path) != suffix {
+			r.URL.Path = r.URL.Path + suffix
+		}
+		h.ServeHTTP(w, r)
+	})
 }
 
-func (h RawFile) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// If the request is empty, set it to the default.
-	if r.URL.Path == "/" {
-		r.URL.Path = path.Clean(h.c.Default)
-	}
-
-	for _, restricted := range h.c.Restricted {
-		if path.Ext(r.URL.Path) == restricted {
-			log.Printf("request %s was has a disallowed extension %s",
-				r.URL.Path, restricted)
-			http.Error(w, "Request not allowed", 403)
-			return
+func defaultPage(page string, h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// If the request is empty, set it to the default.
+		r.URL.Path = path.Clean(r.URL.Path)
+		if r.URL.Path == "." {
+			r.URL.Path = path.Clean(page)
 		}
-	}
-
-	f, err := os.Open(filepath.Join(h.c.Path, r.URL.Path))
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusForbidden)
-		log.Print(err)
-		return
-	}
-
-	switch path.Ext(r.URL.Path) {
-	case "js":
-		w.Header().Set("Content-Type", "text/javascript")
-	case "css":
-		w.Header().Set("Content-Type", "text/css")
-	case "gif":
-		w.Header().Set("Content-Type", "image/gif")
-	case "png":
-		w.Header().Set("Content-Type", "image/png")
-	case "jpg":
-		w.Header().Set("Content-Type", "image/jpeg")
-	case "jpeg":
-		w.Header().Set("Content-Type", "image/jpeg")
-	}
-
-	_, err = io.Copy(w, f)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		log.Print(err)
-	}
+		h.ServeHTTP(w, r)
+	})
 }
