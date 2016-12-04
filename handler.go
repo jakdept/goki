@@ -213,8 +213,8 @@ func (h Markdown) backendServe() http.Handler {
 		filePath := filepath.Join(h.c.Path, r.URL.Path)
 		err := pdata.LoadPage(filePath)
 		if err != nil {
-			log.Printf("request [ %s ] points bad file target [ %s ] sent to server",
-				r.URL.Path, filePath)
+			log.Printf("request [ %s ] points bad file target [ %s ] sent to server - %v",
+				r.URL.Path, filePath, err)
 			http.Error(w, "Page not Found", http.StatusNotFound)
 			return
 		}

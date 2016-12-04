@@ -3,9 +3,11 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
-	"io"
+	"fmt"
+	"io/ioutil"
+	"log"
+	"net/mail"
 	"os"
 	"sort"
 
@@ -60,18 +62,18 @@ const (
 		blackfriday.EXTENSION_TITLEBLOCK
 )
 
-// take a given line, and check it against every possible type of tag
-func (pdata *PageMetadata) processMetadata(line []byte) {
-	pdata.checkMatch(line, []byte("tag"), &pdata.Topics)
-	pdata.checkMatch(line, []byte("topic"), &pdata.Topics)
-	pdata.checkMatch(line, []byte("category"), &pdata.Topics)
+// // take a given line, and check it against every possible type of tag
+// func (pdata *PageMetadata) processMetadata(line []byte) {
+// 	pdata.checkMatch(line, []byte("tag"), &pdata.Topics)
+// 	pdata.checkMatch(line, []byte("topic"), &pdata.Topics)
+// 	pdata.checkMatch(line, []byte("category"), &pdata.Topics)
 
-	pdata.checkMatch(line, []byte("keyword"), &pdata.Keywords)
-	pdata.checkMatch(line, []byte("meta"), &pdata.Keywords)
+// 	pdata.checkMatch(line, []byte("keyword"), &pdata.Keywords)
+// 	pdata.checkMatch(line, []byte("meta"), &pdata.Keywords)
 
-	pdata.checkMatch(line, []byte("author"), &pdata.Authors)
-	pdata.checkMatch(line, []byte("maintainer"), &pdata.Authors)
-}
+// 	pdata.checkMatch(line, []byte("author"), &pdata.Authors)
+// 	pdata.checkMatch(line, []byte("maintainer"), &pdata.Authors)
+// }
 
 func (pdata *PageMetadata) checkMatch(
 	input []byte, looking []byte, tracker *map[string]bool) {
@@ -115,139 +117,134 @@ func (pdata *PageMetadata) checkMatch(
 	}
 }
 
-func (pdata *PageMetadata) readRestOfPage(r *bufio.Reader) error {
-	// read the rest of the page
-	var restOfPage []byte
-	var err error
-
-	for err == nil {
-		// read a line, and then add it to pdata
-		restOfPage, err = r.ReadBytes('\n')
-		pdata.Page = append(pdata.Page, restOfPage...)
+func convertArr(in []string) map[string]bool {
+	out := make(map[string]bool)
+	log.Printf("\n%#v", in)
+	for _, each := range in {
+		out[each] = true
 	}
-
-	if err == io.EOF {
-		return nil
-	}
-	return err
+	return out
 }
 
 func (pdata *PageMetadata) LoadPage(pageName string) error {
 	// open the file
 	f, err := os.Open(pageName)
-	defer f.Close()
-	reader := bufio.NewReader(f)
 	if err != nil {
-		return err
+		return fmt.Errorf("problem opening file [%q] - %v", pageName, err)
 	}
+	defer f.Close()
 	pdata.FileStats, err = os.Stat(pageName)
 
-	// read a line and sneak a newline on the front
-	lineBuffer, err := reader.ReadBytes('\n')
-	lineBuffer = append([]byte("\n"), lineBuffer...)
-
-	for err != io.EOF {
-		// check the first line you read
-		if err != nil {
-			return &Error{Code: ErrPageRead, innerError: err}
-		}
-		bytesDone := pdata.isTitle(lineBuffer)
-		if bytesDone == len(lineBuffer) {
-			return pdata.readRestOfPage(reader)
-		} else {
-			var newLine []byte
-			lineBuffer = lineBuffer[bytesDone:]
-			newLine, err = reader.ReadBytes('\n')
-			lineBuffer = append(lineBuffer, newLine...)
-		}
+	parsed, err := mail.ReadMessage(f)
+	if err != nil {
+		return fmt.Errorf("problem parsing page [%q] - %v", pageName, err)
 	}
-	return &Error{Code: ErrPageNoTitle, value: pageName}
+
+	log.Printf("\n%#v\n", parsed.Header)
+
+	pdata.Topics = convertArr(parsed.Header["Topic"])
+	pdata.Authors = convertArr(parsed.Header["Author"])
+	pdata.Keywords = convertArr(parsed.Header["Keyword"])
+	if len(parsed.Header["title"]) > 0 {
+		pdata.Title = parsed.Header["Title"][0]
+	} else {
+		pdata.Title = pageName
+	}
+
+	tempPage, err := ioutil.ReadAll(parsed.Body)
+	if err != nil {
+		return fmt.Errorf("problem reading page from parsed version - %v", err)
+	}
+
+	pdata.Page = tempPage
+
+	return nil
 }
 
-// determines if the next two lines contain a title line
-// if the first line is not a line, treat it as metadata
-// return the amount of characters processed if not a new line
-// if title line, return total length of the input
-func (pdata *PageMetadata) isTitle(input []byte) int {
-	newline := []byte("\n")
-	nextLine := bytes.Index(input, newline)
-	if nextLine == -1 {
-		return pdata.isOneLineTitle(input)
-	}
-	if rv := pdata.isOneLineTitle(input[:nextLine+1]); rv != 0 {
-		return rv
-	}
-	if nextLine >= len(input) {
-		return 0
-	}
+// // determines if the next two lines contain a title line
+// // if the first line is not a line, treat it as metadata
+// // return the amount of characters processed if not a new line
+// // if title line, return total length of the input
+// func (pdata *PageMetadata) isTitle(input []byte) int {
+// 	newline := []byte("\n")
+// 	nextLine := bytes.Index(input, newline)
+// 	if nextLine == -1 {
+// 		return pdata.isOneLineTitle(input)
+// 	}
+// 	if rv := pdata.isOneLineTitle(input[:nextLine+1]); rv != 0 {
+// 		return rv
+// 	}
+// 	if nextLine >= len(input) {
+// 		return 0
+// 	}
 
-	lineAfter := bytes.Index(input[nextLine+1:], newline)
-	if lineAfter == -1 {
-		lineAfter = len(input) - 1
-	} else {
-		lineAfter += nextLine + 1
-	}
+// 	lineAfter := bytes.Index(input[nextLine+1:], newline)
+// 	if lineAfter == -1 {
+// 		lineAfter = len(input) - 1
+// 	} else {
+// 		lineAfter += nextLine + 1
+// 	}
 
-	if rv := pdata.isTwoLineTitle(input[:lineAfter+1]); rv != 0 {
-		return rv
-	}
+// 	if rv := pdata.isTwoLineTitle(input[:lineAfter+1]); rv != 0 {
+// 		return rv
+// 	}
 
-	pdata.processMetadata(input[:nextLine])
-	if rv := pdata.isOneLineTitle(input[nextLine+1 : lineAfter+1]); rv != 0 {
-		return rv + nextLine + 1
-	} else {
-		return nextLine + 1
-	}
-}
+// 	pdata.processMetadata(input[:nextLine])
+// 	if rv := pdata.isOneLineTitle(input[nextLine+1 : lineAfter+1]); rv != 0 {
+// 		return rv + nextLine + 1
+// 	} else {
+// 		return nextLine + 1
+// 	}
+// }
 
-// checks to see if the first lines of a []byte contain a markdown title
-// returns the number of characters to lose
-// 0 indicates failure (no characters to lose)
-func (pdata *PageMetadata) isOneLineTitle(input []byte) int {
-	var singleLine []byte
-	var endOfLine int
+// // checks to see if the first lines of a []byte contain a markdown title
+// // returns the number of characters to lose
+// // 0 indicates failure (no characters to lose)
+// func (pdata *PageMetadata) isOneLineTitle(input []byte) int {
+// 	var singleLine []byte
+// 	var endOfLine int
 
-	if endOfLine = pdata.findNextLine(input); endOfLine != -1 {
-		singleLine = bytes.TrimSpace(input[:endOfLine])
-	} else {
-		endOfLine = len(input) - 1
-		singleLine = bytes.TrimSpace(input)
-	}
+// 	if endOfLine = pdata.findNextLine(input); endOfLine != -1 {
+// 		singleLine = bytes.TrimSpace(input[:endOfLine])
+// 	} else {
+// 		endOfLine = len(input) - 1
+// 		singleLine = bytes.TrimSpace(input)
+// 	}
 
-	if len(singleLine) > 2 && singleLine[0] == '#' && singleLine[1] != '#' {
-		singleLine = bytes.Trim(singleLine, "#")
-		pdata.Title = string(bytes.TrimSpace(singleLine))
-		return endOfLine + 1
-	}
-	return 0
-}
+// 	if len(singleLine) > 2 && singleLine[0] == '#' && singleLine[1] != '#' {
+// 		singleLine = bytes.Trim(singleLine, "#")
+// 		pdata.Title = string(bytes.TrimSpace(singleLine))
+// 		return endOfLine + 1
+// 	}
+// 	return 0
+// }
 
-// checks to see if the first two lines of a []byte contain a markdown title
-// returns the number of characters to lose
-// 0 indicates failure (no characters to lose)
-func (pdata *PageMetadata) isTwoLineTitle(input []byte) int {
-	var firstNewLine, secondNewLine int
+// // checks to see if the first two lines of a []byte contain a markdown title
+// // returns the number of characters to lose
+// // 0 indicates failure (no characters to lose)
+// func (pdata *PageMetadata) isTwoLineTitle(input []byte) int {
+// 	var firstNewLine, secondNewLine int
 
-	if firstNewLine = pdata.findNextLine(input); firstNewLine == -1 {
-		return 0
-	}
-	secondNewLine = pdata.findNextLine(input[firstNewLine+1:])
-	if secondNewLine == -1 {
-		secondNewLine = len(input) - 1
-	} else {
-		secondNewLine += firstNewLine + 1
-	}
+// 	if firstNewLine = pdata.findNextLine(input); firstNewLine == -1 {
+// 		return 0
+// 	}
+// 	secondNewLine = pdata.findNextLine(input[firstNewLine+1:])
+// 	if secondNewLine == -1 {
+// 		secondNewLine = len(input) - 1
+// 	} else {
+// 		secondNewLine += firstNewLine + 1
+// 	}
 
-	secondLine := bytes.TrimSpace(input[firstNewLine+1 : secondNewLine+1])
-	if len(secondLine) >= 2 {
-		secondLine = bytes.TrimLeft(secondLine, "=")
-		if len(secondLine) == 0 {
-			pdata.Title = string(bytes.TrimSpace(input[:firstNewLine]))
-			return secondNewLine + 1
-		}
-	}
-	return 0
-}
+// 	secondLine := bytes.TrimSpace(input[firstNewLine+1 : secondNewLine+1])
+// 	if len(secondLine) >= 2 {
+// 		secondLine = bytes.TrimLeft(secondLine, "=")
+// 		if len(secondLine) == 0 {
+// 			pdata.Title = string(bytes.TrimSpace(input[:firstNewLine]))
+// 			return secondNewLine + 1
+// 		}
+// 	}
+// 	return 0
+// }
 
 // given input, find where the next line starts
 func (pdata *PageMetadata) findNextLine(input []byte) int {

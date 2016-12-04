@@ -46,82 +46,82 @@ func TestWriteFileForTest(t *testing.T) {
 	assert.Equal(t, stringToWrite, string(fileContents), "file contents did not match")
 }
 
-func TestIsTitle(t *testing.T) {
+// func TestIsTitle(t *testing.T) {
 
-	var isTitleTests = []struct {
-		expected      int
-		expectedTitle string
-		expectedTopic string
-		input         string
-	}{
-		{12, "title", "", "stuff\n#title"},
-		{9, "title", "", "title\n==="},
-		{7, "title", "", "#title\n\n"},
-		{8, "title", "", "\n#title\n\n"},
-		{1, "", "", "\ntitle\n====\n\n"},
-		{23, "title", "pageTopic", "topic:pageTopic\n#title\n\n"},
-		{22, "title", "pageTopic", "topic:pageTopic\n#title"},
-		{16, "", "pageTopic", "topic:pageTopic\ntitle is too late\n===="},
-		{1, "", "", "\nTest Page\n"},
-	}
+// 	var isTitleTests = []struct {
+// 		expected      int
+// 		expectedTitle string
+// 		expectedTopic string
+// 		input         string
+// 	}{
+// 		{12, "title", "", "stuff\n#title"},
+// 		{9, "title", "", "title\n==="},
+// 		{7, "title", "", "#title\n\n"},
+// 		{8, "title", "", "\n#title\n\n"},
+// 		{1, "", "", "\ntitle\n====\n\n"},
+// 		{23, "title", "pageTopic", "topic:pageTopic\n#title\n\n"},
+// 		{22, "title", "pageTopic", "topic:pageTopic\n#title"},
+// 		{16, "", "pageTopic", "topic:pageTopic\ntitle is too late\n===="},
+// 		{1, "", "", "\nTest Page\n"},
+// 	}
 
-	for _, testSet := range isTitleTests {
-		pdata := new(PageMetadata)
-		assert.Equal(t, testSet.expected, pdata.isTitle([]byte(testSet.input)), "[%q] - wrong amount of characters discarded", testSet.input)
-		assert.Equal(t, testSet.expectedTitle, pdata.Title, "[%q] - title not detected", testSet.input)
-		assert.True(t, stringKeyExistsInMap(pdata.Topics, testSet.expectedTopic), "[%q] - metadata key not found", testSet.input)
-	}
-}
+// 	for _, testSet := range isTitleTests {
+// 		pdata := new(PageMetadata)
+// 		assert.Equal(t, testSet.expected, pdata.isTitle([]byte(testSet.input)), "[%q] - wrong amount of characters discarded", testSet.input)
+// 		assert.Equal(t, testSet.expectedTitle, pdata.Title, "[%q] - title not detected", testSet.input)
+// 		assert.True(t, stringKeyExistsInMap(pdata.Topics, testSet.expectedTopic), "[%q] - metadata key not found", testSet.input)
+// 	}
+// }
 
-func TestIsOneLineTitle(t *testing.T) {
-	var isTitleTests = []struct {
-		expected      int
-		expectedTitle string
-		input         string
-	}{
-		{7, "title", "#title\n"},
-		{6, "title", "#title"},
-		{0, "", "\n#title\n\n"},
-		{0, "", "title#\n"},
-		{9, "yuup", "# yuup #\nother junk that should not matter"},
-		{16, "space stays", "# space stays #\nother junk that should not matter"},
-	}
+// func TestIsOneLineTitle(t *testing.T) {
+// 	var isTitleTests = []struct {
+// 		expected      int
+// 		expectedTitle string
+// 		input         string
+// 	}{
+// 		{7, "title", "#title\n"},
+// 		{6, "title", "#title"},
+// 		{0, "", "\n#title\n\n"},
+// 		{0, "", "title#\n"},
+// 		{9, "yuup", "# yuup #\nother junk that should not matter"},
+// 		{16, "space stays", "# space stays #\nother junk that should not matter"},
+// 	}
 
-	for _, testSet := range isTitleTests {
-		pdata := new(PageMetadata)
-		assert.Equal(t, testSet.expected, pdata.isOneLineTitle([]byte(testSet.input)),
-			"input was [%q]\nwrong amount of characters to discard", testSet.input)
-		assert.Equal(t, testSet.expectedTitle, pdata.Title,
-			"input was [%q]\ntitle not detected", testSet.input)
-	}
-}
+// 	for _, testSet := range isTitleTests {
+// 		pdata := new(PageMetadata)
+// 		assert.Equal(t, testSet.expected, pdata.isOneLineTitle([]byte(testSet.input)),
+// 			"input was [%q]\nwrong amount of characters to discard", testSet.input)
+// 		assert.Equal(t, testSet.expectedTitle, pdata.Title,
+// 			"input was [%q]\ntitle not detected", testSet.input)
+// 	}
+// }
 
-func TestIsTwoLineTitle(t *testing.T) {
-	var isTitleTests = []struct {
-		expected      int
-		expectedTitle string
-		input         string
-	}{
-		{0, "", "#title\n"},
-		{0, "", "#title"},
-		{0, "", "\ntitle\n====\n\n"},
-		{11, "title", "title\n====\n\n"},
-		{10, "title", "title\n===="},
-		{8, "title", "title\n=="},
-		{11, "title", "title\n====\nother stuff that should not matter"},
-		{22, "three word title", "three word title\n====="},
-		{27, "space before", "\t    \t   space before\n====="},
-		{26, "space after", "space after\t    \t   \n====="},
-	}
+// func TestIsTwoLineTitle(t *testing.T) {
+// 	var isTitleTests = []struct {
+// 		expected      int
+// 		expectedTitle string
+// 		input         string
+// 	}{
+// 		{0, "", "#title\n"},
+// 		{0, "", "#title"},
+// 		{0, "", "\ntitle\n====\n\n"},
+// 		{11, "title", "title\n====\n\n"},
+// 		{10, "title", "title\n===="},
+// 		{8, "title", "title\n=="},
+// 		{11, "title", "title\n====\nother stuff that should not matter"},
+// 		{22, "three word title", "three word title\n====="},
+// 		{27, "space before", "\t    \t   space before\n====="},
+// 		{26, "space after", "space after\t    \t   \n====="},
+// 	}
 
-	for _, testSet := range isTitleTests {
-		pdata := new(PageMetadata)
-		assert.Equal(t, testSet.expected, pdata.isTwoLineTitle([]byte(testSet.input)),
-			"input was [%q]\nwrong amount of characters to discard", testSet.input)
-		assert.Equal(t, testSet.expectedTitle, pdata.Title,
-			"input was [%q]\ntitle not detected", testSet.input)
-	}
-}
+// 	for _, testSet := range isTitleTests {
+// 		pdata := new(PageMetadata)
+// 		assert.Equal(t, testSet.expected, pdata.isTwoLineTitle([]byte(testSet.input)),
+// 			"input was [%q]\nwrong amount of characters to discard", testSet.input)
+// 		assert.Equal(t, testSet.expectedTitle, pdata.Title,
+// 			"input was [%q]\ntitle not detected", testSet.input)
+// 	}
+// }
 
 func TestFindNextLine(t *testing.T) {
 	var isTitleTests = []struct {
@@ -173,43 +173,43 @@ func TestCheckMatch(t *testing.T) {
 	}
 }
 
-func TestProcessMetadata(t *testing.T) {
-	var checkProcessMetadata = []struct {
-		metaType string
-		expected string
-		input    string
-	}{
-		{"topic", "a", "topic = a"},
-		{"topic", "b", "topic= b"},
-		{"topic", "c", "topic=c"},
-		{"topic", "c", "topic=c"},
-		{"topic", "d-e-f", "topic=d-e-f"},
-		{"topic", "g-h", "topic=g  h"},
-		{"topic", "i", "topic:i"},
-		{"topic", "j", "topic: j"},
-		{"topic", "k", "topic :k"},
-		{"topic", "l-m-no", "topic : l m   no"},
-		{"keyword", "pqrstuv", "keyword : pqrstuv"},
-		{"keyword", "lock-box", "keyword:lock             box"},
-		{"author", "bob-dole", "author : Bob Dole"},
-	}
+// func TestProcessMetadata(t *testing.T) {
+// 	var checkProcessMetadata = []struct {
+// 		metaType string
+// 		expected string
+// 		input    string
+// 	}{
+// 		{"topic", "a", "topic = a"},
+// 		{"topic", "b", "topic= b"},
+// 		{"topic", "c", "topic=c"},
+// 		{"topic", "c", "topic=c"},
+// 		{"topic", "d-e-f", "topic=d-e-f"},
+// 		{"topic", "g-h", "topic=g  h"},
+// 		{"topic", "i", "topic:i"},
+// 		{"topic", "j", "topic: j"},
+// 		{"topic", "k", "topic :k"},
+// 		{"topic", "l-m-no", "topic : l m   no"},
+// 		{"keyword", "pqrstuv", "keyword : pqrstuv"},
+// 		{"keyword", "lock-box", "keyword:lock             box"},
+// 		{"author", "bob-dole", "author : Bob Dole"},
+// 	}
 
-	for _, testSet := range checkProcessMetadata {
-		pdata := new(PageMetadata)
-		pdata.processMetadata([]byte(testSet.input))
-		switch testSet.metaType {
-		case "topic":
-			assert.True(t, pdata.Topics[testSet.expected],
-				"[%q] - should have seen topic [%q]", testSet.input, testSet.expected)
-		case "keyword":
-			assert.True(t, pdata.Keywords[testSet.expected],
-				"[%q] - should have seen topic [%q]", testSet.input, testSet.expected)
-		case "author":
-			assert.True(t, pdata.Authors[testSet.expected],
-				"[%q] - should have seen topic [%q]", testSet.input, testSet.expected)
-		}
-	}
-}
+// 	for _, testSet := range checkProcessMetadata {
+// 		pdata := new(PageMetadata)
+// 		pdata.processMetadata([]byte(testSet.input))
+// 		switch testSet.metaType {
+// 		case "topic":
+// 			assert.True(t, pdata.Topics[testSet.expected],
+// 				"[%q] - should have seen topic [%q]", testSet.input, testSet.expected)
+// 		case "keyword":
+// 			assert.True(t, pdata.Keywords[testSet.expected],
+// 				"[%q] - should have seen topic [%q]", testSet.input, testSet.expected)
+// 		case "author":
+// 			assert.True(t, pdata.Authors[testSet.expected],
+// 				"[%q] - should have seen topic [%q]", testSet.input, testSet.expected)
+// 		}
+// 	}
+// }
 
 func TestLoadPage(t *testing.T) {
 
@@ -298,33 +298,29 @@ func TestLoadPage(t *testing.T) {
 
 func TestMatchedTag(t *testing.T) {
 	var matchedTagTests = []struct {
-		inputTopics    []string
+		inputTopics    map[string]bool
 		expectedTopics []string
 		falseTopics    []string
 	}{
 		{
-			[]string{"topic : dog", "topic : baNana", "topic : aPPle", "topic : cat"},
+			map[string]bool{"dog": true, "baNana": true, "aPPle": true, "cat": true},
 			[]string{"apple", "banana", "cat", "dog"},
 			[]string{},
 		},
 		{
-			[]string{"topic : tree frog", "topic : eagle", "topic : goat", "topic : hog"},
+			map[string]bool{"tree frog": true, "eagle": true, "goat": true, "hog": true},
 			[]string{"eagle", "tree-frog", "goat", "hog"},
 			[]string{"apple", "banana", "cat", "dog"},
 		},
 		{
-			[]string{"topic : frog", "topic : eagle", "topic : goat", "topic : hog", "topic : iguana"},
+			map[string]bool{"frog": true, "eagle": true, "goat": true, "hog": true, "iguana": true},
 			[]string{},
 			[]string{"jester-and-joker", "kangaroo", "llama"},
 		},
 	}
 	for _, testSet := range matchedTagTests {
 		pdata := new(PageMetadata)
-		pdata.Topics = map[string]bool{}
-		for _, topic := range testSet.inputTopics {
-			pdata.processMetadata([]byte(topic))
-			// pdata.Topics[topic] = true
-		}
+		pdata.Topics = testSet.inputTopics
 
 		for _, singleTopic := range testSet.expectedTopics {
 			assert.True(t, pdata.MatchedTopic([]string{singleTopic}),
@@ -340,7 +336,7 @@ func TestMatchedTag(t *testing.T) {
 
 func TestOldMatchedTag(t *testing.T) {
 	// test a page with two topics
-	filepath := writeFileForTest(t, "topic : junk\ncategory = other junk\nsome other Page\n=========\nsome test content\nthere should be keywords")
+	filepath := writeFileForTest(t, "topic : junk\ncategory = other junk\n\nsome other Page\n=========\nsome test content\nthere should be keywords")
 	pdata := new(PageMetadata)
 	err := pdata.LoadPage(filepath)
 	assert.NoError(t, err)
@@ -354,22 +350,22 @@ func TestOldMatchedTag(t *testing.T) {
 
 func TestListMeta(t *testing.T) {
 	// test a page with two keywords and a topic
-	filepath := writeFileForTest(t, "keyword : junk\ncategory = other junk\nsome other Page\n=========\nsome test content\nthere should be keywords")
+	filepath := writeFileForTest(t, "keyword: junk\ntopic: other junk\n\nsome other Page\n=========\nsome test content\nthere should be keywords")
 	pdata := new(PageMetadata)
 	err := pdata.LoadPage(filepath)
 	allTopics, allKeywords, _ := pdata.ListMeta()
 	assert.NoError(t, err)
-	assert.Equal(t, allTopics, []string{"other-junk"}, "I didn't get the right topic list")
-	assert.Equal(t, allKeywords, []string{"junk"}, "I didn't get the right keyword list")
+	assert.Equal(t, []string{"other-junk"}, allTopics, "I didn't get the right topic list")
+	assert.Equal(t, []string{"junk"}, allKeywords, "I didn't get the right keyword list")
 
 	// test a page with nothing
-	filepath = writeFileForTest(t, "some other Page\n=========\nsome test content\nthere should be keywords")
+	filepath = writeFileForTest(t, "\n\nsome other Page\n=========\nsome test content\nthere should be keywords")
 	pdata = new(PageMetadata)
 	err = pdata.LoadPage(filepath)
 	allTopics, allKeywords, _ = pdata.ListMeta()
 	assert.NoError(t, err)
-	assert.Equal(t, []string(nil), allTopics, "I didn't get the empty topic list")
-	assert.Equal(t, []string(nil), allKeywords, "I didn't get the empty keyword list")
+	assert.Equal(t, []string{}, allTopics, "I didn't get the empty topic list")
+	assert.Equal(t, []string{}, allKeywords, "I didn't get the empty keyword list")
 }
 
 func TestBodyParseMarkdown(t *testing.T) {
