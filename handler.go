@@ -204,48 +204,49 @@ type Markdown struct {
 }
 
 func (h Markdown) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	defaultPage(h.c.Default, appendExtension(".md",
-		http.HandlerFunc(h.backendServe))).ServeHTTP(w, r)
+	defaultPage(h.c.Default, appendExtension(".md", h.backendServe())).ServeHTTP(w, r)
 }
 
-func (h Markdown) backendServe(w http.ResponseWriter, r *http.Request) {
-	pdata := new(PageMetadata)
-	filePath := filepath.Join(h.c.Path, r.URL.Path)
-	err := pdata.LoadPage(filePath)
-	if err != nil {
-		log.Printf("request [ %s ] points bad file target [ %s ] sent to server",
-			r.URL.Path, filePath)
-		http.Error(w, "Page not Found", http.StatusNotFound)
-		return
-	}
+func (h Markdown) backendServe() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		pdata := new(PageMetadata)
+		filePath := filepath.Join(h.c.Path, r.URL.Path)
+		err := pdata.LoadPage(filePath)
+		if err != nil {
+			log.Printf("request [ %s ] points bad file target [ %s ] sent to server",
+				r.URL.Path, filePath)
+			http.Error(w, "Page not Found", http.StatusNotFound)
+			return
+		}
 
-	if pdata.MatchedTopic(h.c.Restricted) {
-		log.Printf("request [ %s ] was a page [ %s ] with a restricted tag",
-			r.URL.Path, filePath)
-		http.Error(w, "Page not Found", http.StatusNotFound)
-		//http.Error(w, err.Error(), http.StatusForbidden)
-		return
-	}
+		if pdata.MatchedTopic(h.c.Restricted) {
+			log.Printf("request [ %s ] was a page [ %s ] with a restricted tag",
+				r.URL.Path, filePath)
+			http.Error(w, "Page not Found", http.StatusNotFound)
+			//http.Error(w, err.Error(), http.StatusForbidden)
+			return
+		}
 
-	// parse any markdown in the input
-	body := template.HTML(bodyParseMarkdown(pdata.Page))
-	toc := template.HTML(tocParseMarkdown(pdata.Page))
-	topics, keywords, authors := pdata.ListMeta()
+		// parse any markdown in the input
+		body := template.HTML(bodyParseMarkdown(pdata.Page))
+		toc := template.HTML(tocParseMarkdown(pdata.Page))
+		topics, keywords, authors := pdata.ListMeta()
 
-	// ##TODO## put this template right in the function call
-	// Then remove the Page Struct above
-	response := Page{
-		Title:    pdata.Title,
-		ToC:      toc,
-		Body:     body,
-		Keywords: keywords,
-		Topics:   topics,
-		Authors:  authors,
-	}
-	err = allTemplates.ExecuteTemplate(w, h.c.Template, response)
-	if err != nil {
-		http.Error(w, err.Error(), 500)
-	}
+		// ##TODO## put this template right in the function call
+		// Then remove the Page Struct above
+		response := Page{
+			Title:    pdata.Title,
+			ToC:      toc,
+			Body:     body,
+			Keywords: keywords,
+			Topics:   topics,
+			Authors:  authors,
+		}
+		err = allTemplates.ExecuteTemplate(w, h.c.Template, response)
+		if err != nil {
+			http.Error(w, err.Error(), 500)
+		}
+	})
 }
 
 func appendExtension(suffix string, h http.Handler) http.Handler {
