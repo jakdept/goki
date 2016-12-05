@@ -161,25 +161,25 @@ func ListAllField(i Index, field, match string, pageSize, page int) (
 
 //FuzzySearchValues gives a standard structure to decode and pass to FuzzySearch
 type FuzzySearchValues struct {
-	s        string   `form:"s"`
-	topics   []string `form:"topic"`
-	authors  []string `form:"author"`
-	page     int      `form:"page"`
-	pageSize int      `form:"pageSize"`
+	Term     string   `form:"s,omitempty"`
+	Topics   []string `form:"topic,omitempty"`
+	Authors  []string `form:"author,omitempty"`
+	Page     int      `form:"page,omitempty"`
+	PageSize int      `form:"pageSize,omitempty"`
 }
 
 // FuzzySearch runs a fuzzy search with the given input parameters against
 //  the given query
 func FuzzySearch(i Index, v FuzzySearchValues) (SearchResponse, error) {
 	var topicQuery, authorQuery []blevequery.Query
-	for _, eachTopic := range v.topics {
+	for _, eachTopic := range v.Topics {
 		topicQuery = append(topicQuery, blevequery.NewTermQuery(eachTopic))
 	}
-	for _, eachAuthor := range v.authors {
+	for _, eachAuthor := range v.Authors {
 		authorQuery = append(authorQuery, blevequery.NewTermQuery(eachAuthor))
 	}
 
-	multiQuery := []blevequery.Query{blevequery.NewFuzzyQuery(v.s)}
+	multiQuery := []blevequery.Query{blevequery.NewFuzzyQuery(v.Term)}
 	if len(topicQuery) > 0 {
 		multiQuery = append(multiQuery, blevequery.NewDisjunctionQuery(topicQuery))
 	}
@@ -190,15 +190,15 @@ func FuzzySearch(i Index, v FuzzySearchValues) (SearchResponse, error) {
 	query := blevequery.NewConjunctionQuery(multiQuery)
 	searchRequest := bleve.NewSearchRequest(query)
 	searchRequest.Fields = []string{"path", "title", "topic", "author", "modified"}
-	searchRequest.Size = v.pageSize
-	searchRequest.From = v.pageSize * v.page
+	searchRequest.Size = v.PageSize
+	searchRequest.From = v.PageSize * v.Page
 
 	rawResult, err := i.Query(searchRequest)
 	if err != nil {
 		return SearchResponse{}, err
 	}
 
-	searchResult, err := CreateResponseData(i, rawResult, v.page)
+	searchResult, err := CreateResponseData(i, rawResult, v.Page)
 	if err != nil {
 		return SearchResponse{}, err
 	}

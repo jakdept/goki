@@ -8,6 +8,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 
 	"github.com/ajg/form"
 )
@@ -56,12 +57,6 @@ type FuzzyHandler struct {
 }
 
 func (h FuzzyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		// to do if a field was not given
-		FallbackSearchResponse(h.i, w, h.c.FallbackTemplate)
-		return
-	}
-
 	err := r.ParseForm()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -69,10 +64,28 @@ func (h FuzzyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var values FuzzySearchValues
-	err = form.DecodeValues(&values, r.Form)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+
+	if _, ok := r.Form["s"]; ok && len(r.Form["s"]) > 0 {
+		values.Term = r.Form["s"][0]
+	}
+	if _, ok := r.Form["topic"]; ok && len(r.Form["topic"]) > 0 {
+		values.Topics = r.Form["topic"]
+	}
+	if _, ok := r.Form["author"]; ok && len(r.Form["author"]) > 0 {
+		values.Authors = r.Form["author"]
+	}
+
+	if _, ok := r.Form["page"]; ok && len(r.Form["page"]) > 0 {
+		i, err := strconv.Atoi(r.Form["page"][0])
+		if err == nil {
+			values.Page = i
+		}
+	}
+	if _, ok := r.Form["pageSize"]; ok && len(r.Form["pageSize"]) > 0 {
+		i, err := strconv.Atoi(r.Form["pageSize"][0])
+		if err == nil {
+			values.Page = i
+		}
 	}
 
 	results, err := FuzzySearch(h.i, values)
@@ -80,6 +93,8 @@ func (h FuzzyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	log.Printf("\n%#v\n%#v\n", values, results)
 
 	err = allTemplates.ExecuteTemplate(w, h.c.Template, results)
 	if err != nil {
