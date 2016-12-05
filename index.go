@@ -283,7 +283,7 @@ func (i *indexObject) generateWikiFromFile(filePath, uriPath string) (*indexedPa
 	rv := indexedPage{
 		Title:    pdata.Title,
 		Body:     i.cleanupMarkdown(pdata.Page),
-		URIPath:  uriPath,
+		URIPath:  strings.TrimSuffix(uriPath, ".md"),
 		Topics:   strings.Join(topics, " "),
 		Keywords: strings.Join(keywords, " "),
 		Authors:  strings.Join(authors, " "),

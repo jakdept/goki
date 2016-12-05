@@ -6,10 +6,10 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/mail"
 	"os"
 	"sort"
+	"strings"
 
 	"github.com/JackKnifed/blackfriday"
 	tocRenderer "github.com/JackKnifed/goki/tocRenderer"
@@ -119,9 +119,8 @@ func (pdata *PageMetadata) checkMatch(
 
 func convertArr(in []string) map[string]bool {
 	out := make(map[string]bool)
-	log.Printf("\n%#v", in)
 	for _, each := range in {
-		out[each] = true
+		out[strings.ToLower(each)] = true
 	}
 	return out
 }
@@ -139,8 +138,6 @@ func (pdata *PageMetadata) LoadPage(pageName string) error {
 	if err != nil {
 		return fmt.Errorf("problem parsing page [%q] - %v", pageName, err)
 	}
-
-	log.Printf("\n%#v\n", parsed.Header)
 
 	pdata.Topics = convertArr(parsed.Header["Topic"])
 	pdata.Authors = convertArr(parsed.Header["Author"])
