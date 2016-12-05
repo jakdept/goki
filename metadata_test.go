@@ -225,27 +225,27 @@ func TestLoadPage(t *testing.T) {
 		{
 			"\n\nTest Page\n=========\nsome test content\nand some more",
 			"\nTest Page\n=========\nsome test content\nand some more",
-			"/Users/jack/tmp/testfile", []string{}, []string{}, []string{}, "",
+			"", []string{}, []string{}, []string{}, "",
 		},
 		{
 			"keyword: junk\n\nsome other Page\n=========\nsome test content\nthere should be keywords",
 			"some other Page\n=========\nsome test content\nthere should be keywords",
-			"/Users/jack/tmp/testfile", []string{"junk"}, []string{}, []string{}, "",
+			"", []string{"junk"}, []string{}, []string{}, "",
 		},
 		{
 			"keyword: junk\nkeyword: other junk\n\nsome other Page\n=========\nsome test content\nthere should be keywords",
 			"some other Page\n=========\nsome test content\nthere should be keywords",
-			"/Users/jack/tmp/testfile", []string{"junk", "other junk"}, []string{}, []string{}, "",
+			"", []string{"junk", "other junk"}, []string{}, []string{}, "",
 		},
 		{
 			"keyword: junk\nkeyword: other junk\n\n#some other Page\nsome test content\nthere should be keywords",
 			"#some other Page\nsome test content\nthere should be keywords",
-			"/Users/jack/tmp/testfile", []string{"junk", "other junk"}, []string{}, []string{}, "",
+			"", []string{"junk", "other junk"}, []string{}, []string{}, "",
 		},
 		{
 			"keyword: junk\nkeyword: other junk\ntopic: very important\ntopic: internal\n\nsome other Page\n=========\nsome test content\nthere should be keywords",
 			"some other Page\n=========\nsome test content\nthere should be keywords",
-			"/Users/jack/tmp/testfile", []string{"junk", "other junk"}, []string{"very important", "internal"}, []string{}, "",
+			"", []string{"junk", "other junk"}, []string{"very important", "internal"}, []string{}, "",
 		},
 		{
 			"junk page\nthat\nhas\nno\ntitle", "", "", []string{}, []string{}, []string{}, "need to hit a title in the file",
@@ -269,8 +269,10 @@ func TestLoadPage(t *testing.T) {
 			assert.NoError(t, err, "[%q] should not have kicked an error, kicked - %q")
 		}
 
+		if testSet.expectedTitle != "" {
+			assert.Equal(t, testSet.expectedTitle, string(pdata.Title), "test #%d input [%q] title did not match", testId, testSet.input)
+		}
 		assert.Equal(t, testSet.expectedOutput, string(pdata.Page), "test #%d input [%q] page did not match", testId, testSet.input)
-		assert.Equal(t, testSet.expectedTitle, string(pdata.Title), "test #%d input [%q] title did not match", testId, testSet.input)
 		assert.Equal(t, len(testSet.expectedKeywords), len(pdata.Keywords), "test #%d input [%q] keyword count did not match", testId, testSet.input)
 		assert.Equal(t, len(testSet.expectedTopics), len(pdata.Topics), "test #%d input [%q] keyword count did not match", testId, testSet.input)
 		assert.Equal(t, len(testSet.expectedAuthors), len(pdata.Authors), "test #%d input [%q] keyword count did not match", testId, testSet.input)
