@@ -94,8 +94,6 @@ func (h FuzzyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("\n%#v\n%#v\n", values, results)
-
 	err = allTemplates.ExecuteTemplate(w, h.c.Template, results)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

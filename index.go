@@ -260,11 +260,15 @@ func (i *indexObject) Query(request *bleve.SearchRequest) (*bleve.SearchResult, 
 	i.lock.RLock()
 	defer i.lock.RUnlock()
 
+	// dump, _ := blevequery.DumpQuery(i.index.Mapping(), request.Query)
+	// log.Println(dump)
+
 	searchResults, err := i.index.Search(request)
 	if err != nil {
 		return &bleve.SearchResult{}, &Error{Code: ErrInvalidQuery, innerError: err}
 	}
 
+	// log.Printf("\nresults: %#v\n", searchResults.Hits)
 	return searchResults, nil
 }
 

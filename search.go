@@ -10,6 +10,9 @@ import (
 	blevequery "github.com/blevesearch/bleve/search/query"
 )
 
+// you probably want this for docs
+// http://localhost:6060/pkg/github.com/JackKnifed/goki/vendor/github.com/blevesearch/bleve/#NewConjunctionQuery
+
 // SearchResponse is the parent type structure that will come back to all
 //  requests. []Results will contain child results.
 type SearchResponse struct {
@@ -96,7 +99,6 @@ func CreateResponseData(i Index, results *bleve.SearchResult, pageOffset int) (
 			}
 		}
 
-		log.Printf("working with \n %#v\n", newHit)
 		response.Results = append(response.Results, newHit)
 	}
 	return response, nil
@@ -171,31 +173,44 @@ type FuzzySearchValues struct {
 // FuzzySearch runs a fuzzy search with the given input parameters against
 //  the given query
 func FuzzySearch(i Index, v FuzzySearchValues) (SearchResponse, error) {
-	var topicQuery, authorQuery []blevequery.Query
+	var optionalQuery []blevequery.Query
+	if v.Term != "" {
+		optionalQuery = append(optionalQuery, bleve.NewFuzzyQuery(v.Term))
+	}
 	for _, eachTopic := range v.Topics {
-		topicQuery = append(topicQuery, blevequery.NewTermQuery(eachTopic))
+		newQuery := bleve.NewTermQuery(eachTopic)
+		newQuery.SetField("topic")
+		optionalQuery = append(optionalQuery, newQuery)
 	}
 	for _, eachAuthor := range v.Authors {
-		authorQuery = append(authorQuery, blevequery.NewTermQuery(eachAuthor))
+		newQuery := bleve.NewTermQuery(eachAuthor)
+		newQuery.SetField("author")
+		optionalQuery = append(optionalQuery, newQuery)
 	}
 
-	multiQuery := []blevequery.Query{blevequery.NewFuzzyQuery(v.Term)}
-	if len(topicQuery) > 0 {
-		multiQuery = append(multiQuery, blevequery.NewDisjunctionQuery(topicQuery))
-	}
-	if len(authorQuery) > 0 {
-		multiQuery = append(multiQuery, blevequery.NewDisjunctionQuery(authorQuery))
+	var query blevequery.Query
+	switch {
+	case len(optionalQuery) == 0:
+		query = bleve.NewMatchAllQuery()
+	case len(optionalQuery) == 0:
+		query = optionalQuery[0]
+	default:
+		query = bleve.NewDisjunctionQuery(optionalQuery...)
+		query.(*blevequery.DisjunctionQuery).SetMin(1)
 	}
 
-	query := blevequery.NewConjunctionQuery(multiQuery)
 	searchRequest := bleve.NewSearchRequest(query)
-	searchRequest.Fields = []string{"path", "title", "topic", "author", "modified"}
-	searchRequest.Size = v.PageSize
-	searchRequest.From = v.PageSize * v.Page
+	searchRequest.Fields = []string{
+		"path",
+		"title",
+		"topic",
+		"author",
+		"modified",
+	}
 
 	rawResult, err := i.Query(searchRequest)
 	if err != nil {
-		return SearchResponse{}, err
+		return SearchResponse{}, &Error{Code: ErrInvalidQuery, innerError: err}
 	}
 
 	searchResult, err := CreateResponseData(i, rawResult, v.Page)
