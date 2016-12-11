@@ -173,30 +173,38 @@ type FuzzySearchValues struct {
 // FuzzySearch runs a fuzzy search with the given input parameters against
 //  the given query
 func FuzzySearch(i Index, v FuzzySearchValues) (SearchResponse, error) {
-	var optionalQuery []blevequery.Query
-	if v.Term != "" {
-		optionalQuery = append(optionalQuery, bleve.NewFuzzyQuery(v.Term))
-	}
+	var disjunctionQuery, conjunctionQuery []blevequery.Query
 	for _, eachTopic := range v.Topics {
 		newQuery := bleve.NewTermQuery(eachTopic)
 		newQuery.SetField("topic")
-		optionalQuery = append(optionalQuery, newQuery)
+		disjunctionQuery = append(disjunctionQuery, newQuery)
 	}
 	for _, eachAuthor := range v.Authors {
 		newQuery := bleve.NewTermQuery(eachAuthor)
 		newQuery.SetField("author")
-		optionalQuery = append(optionalQuery, newQuery)
+		disjunctionQuery = append(disjunctionQuery, newQuery)
+	}
+
+	if v.Term != "" {
+		conjunctionQuery = append(conjunctionQuery, bleve.NewFuzzyQuery(v.Term))
+	}
+
+	switch {
+	case len(disjunctionQuery) > 1:
+		conjunctionQuery = append(conjunctionQuery, bleve.NewDisjunctionQuery(disjunctionQuery))
+		conjunctionQuery[len-1].(*blevequery.DisjunctionQuery).SetMin(1)
+	case len(disjunctionQuery) == 1:
+		conjunctionQuery = append(conjunctionQuery, disjunctionQuery[0])
 	}
 
 	var query blevequery.Query
 	switch {
-	case len(optionalQuery) == 0:
+	case len(conjunctionQuery) == 0:
 		query = bleve.NewMatchAllQuery()
-	case len(optionalQuery) == 0:
-		query = optionalQuery[0]
+	case len(conjunctionQuery) == 1:
+		query = conjunctionQuery[0]
 	default:
-		query = bleve.NewDisjunctionQuery(optionalQuery...)
-		query.(*blevequery.DisjunctionQuery).SetMin(1)
+		query = bleve.NewConjunctionQuery(conjunctionQuery...)
 	}
 
 	searchRequest := bleve.NewSearchRequest(query)
@@ -206,7 +214,10 @@ func FuzzySearch(i Index, v FuzzySearchValues) (SearchResponse, error) {
 		"topic",
 		"author",
 		"modified",
+		"body",
 	}
+	searchRequest.Highlight = bleve.NewHighlight()
+	searchRequest.Highlight.AddField("body")
 
 	rawResult, err := i.Query(searchRequest)
 	if err != nil {
