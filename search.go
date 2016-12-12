@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/blevesearch/bleve"
 	blevequery "github.com/blevesearch/bleve/search/query"
@@ -191,8 +192,8 @@ func FuzzySearch(i Index, v FuzzySearchValues) (SearchResponse, error) {
 
 	switch {
 	case len(disjunctionQuery) > 1:
-		conjunctionQuery = append(conjunctionQuery, bleve.NewDisjunctionQuery(disjunctionQuery))
-		conjunctionQuery[len-1].(*blevequery.DisjunctionQuery).SetMin(1)
+		conjunctionQuery = append(conjunctionQuery, bleve.NewDisjunctionQuery(disjunctionQuery...))
+		conjunctionQuery[len(conjunctionQuery)-1].(*blevequery.DisjunctionQuery).SetMin(1)
 	case len(disjunctionQuery) == 1:
 		conjunctionQuery = append(conjunctionQuery, disjunctionQuery[0])
 	}
@@ -222,6 +223,24 @@ func FuzzySearch(i Index, v FuzzySearchValues) (SearchResponse, error) {
 	rawResult, err := i.Query(searchRequest)
 	if err != nil {
 		return SearchResponse{}, &Error{Code: ErrInvalidQuery, innerError: err}
+	}
+
+	for id, each := range rawResult.Hits {
+		oldBody, ok := each.Fields["body"].(string)
+		if !ok {
+			continue
+		}
+		if len(oldBody) > 2048 {
+			newBody := oldBody[:2048]
+			for !unicode.IsSpace(rune(newBody[len(newBody)-1])) {
+				if len(newBody) < 100 {
+					break
+				}
+				newBody = newBody[:len(newBody)-2]
+			}
+			newBody += "..."
+			rawResult.Hits[id].Fields["body"] = newBody
+		}
 	}
 
 	searchResult, err := CreateResponseData(i, rawResult, v.Page)
