@@ -230,8 +230,8 @@ func FuzzySearch(i Index, v FuzzySearchValues) (SearchResponse, error) {
 		if !ok {
 			continue
 		}
-		if len(oldBody) > 2048 {
-			newBody := oldBody[:2048]
+		if len(oldBody) > 480 {
+			newBody := oldBody[:480]
 			for !unicode.IsSpace(rune(newBody[len(newBody)-1])) {
 				if len(newBody) < 100 {
 					break
