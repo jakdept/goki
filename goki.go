@@ -1,22 +1,15 @@
 package main
 
 import (
-	//"html/template"
-	//"io/ioutil"
 	"log"
 
-	//"regexp"
 	"os"
 
-	// "os/signal"
 	"net/http"
 
 	"flag"
 
 	"github.com/gorilla/handlers"
-	//"github.com/JackKnifed/blackfriday"
-	//"github.com/JackKnifed/goki"
-	//"github.com/russross/blackfriday"
 )
 
 var configFile = flag.String("config", "config.json", "specify a configuration file")
