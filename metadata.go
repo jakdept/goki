@@ -142,7 +142,7 @@ func (pdata *PageMetadata) LoadPage(pageName string) error {
 	pdata.Topics = convertArr(parsed.Header["Topic"])
 	pdata.Authors = convertArr(parsed.Header["Author"])
 	pdata.Keywords = convertArr(parsed.Header["Keyword"])
-	if len(parsed.Header["title"]) > 0 {
+	if len(parsed.Header["Title"]) > 0 {
 		pdata.Title = parsed.Header["Title"][0]
 	} else {
 		pdata.Title = pageName
